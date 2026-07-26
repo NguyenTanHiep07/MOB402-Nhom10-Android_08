@@ -67,10 +67,10 @@ Luồng hủy:
 ## 10. Danh sách thành viên
 | STT | Họ và tên | MSSV | Công việc phụ trách |
 |---|---|---|---|
-| 1 | Chưa cập nhật | Chưa cập nhật | Use Case |
-| 2 | Chưa cập nhật | Chưa cập nhật | Activity Diagram |
-| 3 | Chưa cập nhật | Chưa cập nhật | State Diagram và ERD |
-| 4 | Chưa cập nhật | Chưa cập nhật | Screen Flow và Architecture |
+| 1 | Nguyễn Tấn Hiệp | 087205010642 | Use Case |
+| 2 | Nguyễn Lâm Hữu Hùng | 079205019508 | Activity Diagram |
+| 3 | Huỳnh Nhật Nam | 080206015277 | State Diagram và ERD |
+| 4 | Nguyễn Quốc Thịnh | 052206007772 | Screen Flow và Architecture |
 
 ## 11. Yêu cầu môi trường
 - Android Studio: Chưa cập nhật
