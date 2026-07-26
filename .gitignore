@@ -1,0 +1,43 @@
+# Android và Gradle
+.gradle/
+**/build/
+local.properties
+*.apk
+*.aab
+captures/
+.externalNativeBuild/
+.cxx/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Log và file tạm
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# Environment và bảo mật
+.env
+.env.*
+*api_key*
+*apikey*
+*password*
+*secret*
+*private_key*
+*.pem
+*.jks
+*.keystore
+
+!gradlew
+!gradlew.bat
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
