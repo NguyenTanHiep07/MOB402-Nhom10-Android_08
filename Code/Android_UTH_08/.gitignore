@@ -1,0 +1,53 @@
+# Android project specific gitignore
+
+# Gradle
+.gradle/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+!**/src/androidTest/**/build/
+
+# Android Studio
+*.iml
+.idea/
+misc.xml
+deploymentTargetDropDown.xml
+render.experimental.xml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Local configuration
+local.properties
+
+# macOS
+.DS_Store
+
+# APK / Bundle
+*.apk
+*.ap_
+*.aab
+
+# Log files
+*.log
+
+# ProGuard mapping (keep if you share mapping files)
+# /app/proguard/
+
+# Keystore files
+*.jks
+*.keystore
+
+# Environment files
+.env
+.env.*
+
+# Native
+lib/
+
+# Ensure these are always tracked (override any parent ignore)
+!gradlew
+!gradlew.bat
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
