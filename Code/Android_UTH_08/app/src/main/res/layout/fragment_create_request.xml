@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tạo yêu cầu giao hàng"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp" />
+
+        <EditText
+            android:id="@+id/etReceiverName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Tên người nhận"
+            android:inputType="textPersonName" />
+
+        <EditText
+            android:id="@+id/etAddress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Địa chỉ giao hàng"
+            android:inputType="textPostalAddress" />
+
+        <EditText
+            android:id="@+id/etDistance"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Khoảng cách (km)"
+            android:inputType="numberDecimal" />
+
+        <EditText
+            android:id="@+id/etWeight"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Khối lượng hàng (kg)"
+            android:inputType="numberDecimal" />
+
+        <Button
+            android:id="@+id/btnCalculateFee"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Tính phí giao hàng"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:id="@+id/tvFeeResult"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Tổng phí: 0 VNĐ"
+            android:textSize="18sp"
+            android:textColor="#D32F2F"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp"
+            android:gravity="center" />
+
+        <Button
+            android:id="@+id/btnSubmitOrder"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Xác nhận tạo đơn"
+            android:layout_marginTop="16dp" />
+
+    </LinearLayout>
+</ScrollView>
+
