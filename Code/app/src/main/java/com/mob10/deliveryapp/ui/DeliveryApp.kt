@@ -1,5 +1,6 @@
 package com.mob10.deliveryapp.ui
 
+
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.mob10.deliveryapp.ui.auth.LoginScreen
@@ -39,7 +40,7 @@ fun DeliveryApp() {
                             Toast.makeText(context, "Sai mật khẩu!", Toast.LENGTH_SHORT).show()
                         }
                     }
-                )
+
             }
         }
     }

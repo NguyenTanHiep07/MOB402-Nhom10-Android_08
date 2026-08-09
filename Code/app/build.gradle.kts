@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.compose.compiler)
 }
 
 android {
@@ -34,25 +35,24 @@ android {
         jvmTarget = "11"
     }
     buildFeatures {
-        viewBinding = true
+        compose = true
     }
 }
 
 dependencies {
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
+    val composeBom = platform("androidx.compose:compose-bom:${libs.versions.composeBom.get()}")
+    implementation(composeBom)
+    androidTestImplementation(composeBom)
+
+    implementation(libs.androidx.activity.compose)
     implementation(libs.material)
-<<<<<<< Updated upstream
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
-=======
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
-
->>>>>>> Stashed changes
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+
 import androidx.compose.ui.graphics.Color
 import android.app.Activity
 import androidx.compose.runtime.SideEffect
@@ -48,6 +49,7 @@ private val DarkColors = darkColorScheme(
     outline = Color(0xFF8D909F),
     outlineVariant = Color(0xFF414452),
     error = Color(0xFFFFB4AB)
+
 )
 
 @Composable
@@ -55,6 +57,7 @@ fun Android08Theme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
+
     val colorScheme = if (darkTheme) DarkColors else LightColors
     val view = LocalView.current
     if (!view.isInEditMode) {
@@ -67,6 +70,7 @@ fun Android08Theme(
 
     MaterialTheme(
         colorScheme = colorScheme,
+
         content = content
     )
 }

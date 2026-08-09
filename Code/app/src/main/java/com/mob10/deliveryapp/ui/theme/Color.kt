@@ -2,6 +2,7 @@ package com.mob10.deliveryapp.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+
 // GoDrop brand palette. Keep the purple-blue as the main identity and use
 // orange only for important actions and attention states.
 val UthPrimary = Color(0xFF4F46E5)
@@ -22,3 +23,4 @@ val UthSuccessContainer = Color(0xFFDCFCE7)
 val UthWarning = Color(0xFFF59E0B)
 val UthWarningContainer = Color(0xFFFFF7D6)
 val UthError = Color(0xFFBA1A1A)
+
