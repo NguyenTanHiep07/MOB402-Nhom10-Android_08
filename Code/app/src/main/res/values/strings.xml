@@ -1,5 +1,18 @@
 <resources>
-    <string name="app_name">Delivery</string>
+    <string name="app_name">GoDrop</string>
     <string name="welcome_title">Delivery</string>
     <string name="project_code">Android_08</string>
+    <string name="login_logo_description">Biểu tượng giao hàng</string>
+    <string name="login_title">GoDrop</string>
+    <string name="login_subtitle">Quản lý yêu cầu giao hàng nhanh chóng</string>
+    <string name="email_label">Số điện thoại</string>
+    <string name="password_label">Mật khẩu</string>
+    <string name="show_password">Hiện mật khẩu</string>
+    <string name="hide_password">Ẩn mật khẩu</string>
+    <string name="forgot_password">Quên mật khẩu?</string>
+    <string name="login_button">Đăng nhập</string>
+    <string name="demo_accounts">Tài khoản Demo</string>
+    <string name="demo_client">Khách hàng</string>
+    <string name="demo_delivery">Giao hàng</string>
+    <string name="demo_admin">Admin</string>
 </resources>

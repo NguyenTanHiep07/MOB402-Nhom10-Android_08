@@ -1,49 +1,46 @@
 package com.mob10.deliveryapp.ui
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.mob10.deliveryapp.R
+import com.mob10.deliveryapp.ui.auth.LoginScreen
 import com.mob10.deliveryapp.ui.theme.Android08Theme
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import com.mob10.deliveryapp.ui.admin.AdminHomeScreen
+import com.mob10.deliveryapp.ui.driver.DriverHomeScreen
+import com.mob10.deliveryapp.ui.customer.CustomerHomeScreen
 
 @Composable
 fun DeliveryApp() {
+    var userRole by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+
     Android08Theme {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
-        ) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.welcome_title),
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = stringResource(R.string.project_code),
-                    fontSize = 16.sp,
-                    textAlign = TextAlign.Center
-                )
+        when (userRole) {
+            "admin" -> AdminHomeScreen(adminName = "Sếp")
+            "driver" -> DriverHomeScreen(driverName = "Nguyễn Văn A")
+            "customer" -> CustomerHomeScreen(customerName = "Khách hàng VIP")
+            else -> {
+                LoginScreen(
+                    onLogin = { phone, password ->
+                        if (password == "12345678") {
+                            when (phone) {
+                                "0987654321" -> userRole = "admin"
+                                "0912345678" -> userRole = "driver"
+                                "0900000000" -> userRole = "customer"
+                                else -> Toast.makeText(context, "Tài khoản không tồn tại!", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            Toast.makeText(context, "Sai mật khẩu!", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+
             }
         }
     }
