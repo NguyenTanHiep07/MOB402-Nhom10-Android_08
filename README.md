@@ -4,7 +4,7 @@
 - Course Code: MOB402
 - Group Code: Nhom10
 - Project Code: Android_08
-- Repository: MOB402-Nhom10-Android_08
+- Repository: MOB402-Nhom10-Android-08
 
 ## 2. Giới thiệu
 Ứng dụng Android hỗ trợ tạo, phân công, theo dõi và cập nhật yêu cầu giao hàng.
