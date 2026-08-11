@@ -4,7 +4,7 @@
 - Course Code: MOB402
 - Group Code: Nhom10
 - Project Code: Android_08
-- Repository: MOB402-Nhom10-Android_08
+- Repository: MOB402-Nhom10-Android-08
 
 ## 2. Giới thiệu
 Ứng dụng Android hỗ trợ tạo, phân công, theo dõi và cập nhật yêu cầu giao hàng.
@@ -64,19 +64,19 @@ Luồng hủy:
 - **Extra**: Chứa các sơ đồ thiết kế (Use Case, Activity, State, ERD, v.v.), minh chứng kiểm thử, hình ảnh và video liên quan đến dự án.
 - **PPTX**: Chứa file trình chiếu thuyết trình (PowerPoint).
 
-## 10. Danh sách thành viên
+## 10. Danh sách thành viên và Phân công công việc
 | STT | Họ và tên | MSSV | Công việc phụ trách |
 |---|---|---|---|
-| 1 | Nguyễn Tấn Hiệp | 087205010642 | Use Case |
-| 2 | Nguyễn Lâm Hữu Hùng | 079205019508 | Activity Diagram |
-| 3 | Huỳnh Nhật Nam | 080206015277 | State Diagram và ERD |
-| 4 | Nguyễn Quốc Thịnh | 052206007772 | Screen Flow và Architecture |
+| 1 | Nguyễn Tấn Hiệp | 087205010642 | Use Case <br> Core, Stitch UI, đăng nhập và điều hướng |
+| 2 | Nguyễn Lâm Hữu Hùng | 079205019508 | Activity Diagram <br> Giao diện và chức năng Khách hàng |
+| 3 | Huỳnh Nhật Nam | 080206015277 | State Diagram và ERD <br> Room Database và tầng dữ liệu |
+| 4 | Nguyễn Quốc Thịnh | 052206007772 | Screen Flow và Architecture <br> Giao diện và chức năng Nhân viên giao hàng |
 
 ## 11. Yêu cầu môi trường
-- Android Studio: Chưa cập nhật
-- JDK: Chưa cập nhật
-- Android SDK: Chưa cập nhật
-- Kotlin: Chưa cập nhật
+- Android Studio: Iguana / Koala (hoặc mới hơn)
+- JDK: Java 11 (JavaVersion.VERSION_11)
+- Android SDK: API 36 (Min SDK 24)
+- Giao diện: Jetpack Compose (Material 3)
 
 ## 12. Hướng dẫn chạy
 *Lưu ý: Source code Android chưa được thêm vào repository. Hướng dẫn chi tiết sẽ cập nhật sau khi source code được upload.*
