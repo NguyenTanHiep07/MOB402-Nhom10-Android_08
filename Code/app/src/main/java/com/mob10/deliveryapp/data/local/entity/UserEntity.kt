@@ -1,15 +1,23 @@
 package com.mob10.deliveryapp.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.mob10.deliveryapp.data.model.Role
 
-@Entity(tableName = "users")
+@Entity(
+    tableName = "users",
+    indices = [
+        Index(value = ["username"], unique = true),
+        Index(value = ["phoneNumber"], unique = true)
+    ]
+)
 data class UserEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val username: String,
-    val password: String = "123456",
+    val password: String,
     val fullName: String,
     val phoneNumber: String,
-    val role: Role
+    val role: Role,
+    val createdAt: Long = System.currentTimeMillis()
 )

@@ -1,7 +1,9 @@
 package com.mob10.deliveryapp.ui.auth
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.mob10.deliveryapp.data.local.DatabaseInitializer
 import com.mob10.deliveryapp.data.local.entity.UserEntity
 import com.mob10.deliveryapp.data.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -9,37 +11,64 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-sealed class LoginState {
-    data object Idle : LoginState()
-    data object Loading : LoginState()
-    data class Success(val user: UserEntity) : LoginState()
-    data class Error(val message: String) : LoginState()
-}
+data class AuthUiState(
+    val isInitializing: Boolean = true,
+    val currentUser: UserEntity? = null,
+    val errorMessage: String? = null
+)
 
 class AuthViewModel(
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val databaseInitializer: DatabaseInitializer
 ) : ViewModel() {
+    private val _uiState = MutableStateFlow(AuthUiState())
+    val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
-    private val _loginState = MutableStateFlow<LoginState>(LoginState.Idle)
-    val loginState: StateFlow<LoginState> = _loginState.asStateFlow()
+    init {
+        viewModelScope.launch {
+            runCatching { databaseInitializer.initialize() }
+                .onSuccess {
+                    _uiState.value = _uiState.value.copy(isInitializing = false)
+                }
+                .onFailure {
+                    _uiState.value = _uiState.value.copy(
+                        isInitializing = false,
+                        errorMessage = "Không thể khởi tạo dữ liệu tài khoản."
+                    )
+                }
+        }
+    }
 
     fun login(phoneNumber: String, password: String) {
-        if (phoneNumber.isBlank() || password.isBlank()) {
-            _loginState.value = LoginState.Error("Vui lòng nhập đầy đủ thông tin")
+        if (_uiState.value.isInitializing) {
+            _uiState.value = _uiState.value.copy(errorMessage = "Dữ liệu đang được khởi tạo, vui lòng thử lại.")
             return
         }
+
         viewModelScope.launch {
-            _loginState.value = LoginState.Loading
-            val user = userRepository.login(phoneNumber.trim(), password)
-            _loginState.value = if (user != null) {
-                LoginState.Success(user)
+            val user = userRepository.login(phoneNumber, password)
+            _uiState.value = if (user == null) {
+                _uiState.value.copy(errorMessage = "Số điện thoại hoặc mật khẩu không đúng.")
             } else {
-                LoginState.Error("Số điện thoại hoặc mật khẩu không đúng")
+                _uiState.value.copy(currentUser = user, errorMessage = null)
             }
         }
     }
 
-    fun resetState() {
-        _loginState.value = LoginState.Idle
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+}
+
+class AuthViewModelFactory(
+    private val userRepository: UserRepository,
+    private val databaseInitializer: DatabaseInitializer
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
+            return AuthViewModel(userRepository, databaseInitializer) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
 }
