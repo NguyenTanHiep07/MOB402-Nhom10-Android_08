@@ -28,6 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,8 +56,17 @@ import com.mob10.deliveryapp.ui.theme.UthWarning
 import com.mob10.deliveryapp.ui.theme.UthWarningContainer
 
 @Composable
-fun AdminHomeScreen(adminName: String = "Quản trị viên") {
+fun AdminHomeScreen(
+    adminName: String = "Quản trị viên",
+    viewModel: AdminViewModel? = null
+) {
     var selectedTab by remember { mutableStateOf(0) }
+
+    // Collect state từ ViewModel (nếu có), fallback về 0
+    val totalRequests by (viewModel?.totalRequestCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsState()
+    val pendingCount by (viewModel?.pendingRequestCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsState()
+    val totalUsers by (viewModel?.totalUserCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsState()
+    val driverCount by (viewModel?.driverCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsState()
 
     DashboardScaffold(
         selectedTab = selectedTab,
@@ -83,15 +93,15 @@ fun AdminHomeScreen(adminName: String = "Quản trị viên") {
             MetricCard(
                 modifier = Modifier.weight(1f),
                 label = "Tổng yêu cầu",
-                value = "1,248",
-                helper = "+12% tuần này",
+                value = totalRequests.toString(),
+                helper = "Toàn bộ đơn hàng",
                 icon = Icons.Default.Inventory
             )
             MetricCard(
                 modifier = Modifier.weight(1f),
-                label = "Người dùng",
-                value = "8,592",
-                helper = "+5 hôm nay",
+                label = "Khách hàng",
+                value = totalUsers.toString(),
+                helper = "Đã đăng ký",
                 icon = Icons.Default.Person
             )
         }
@@ -102,21 +112,21 @@ fun AdminHomeScreen(adminName: String = "Quản trị viên") {
             MetricCard(
                 modifier = Modifier.weight(1f),
                 label = "Chờ phân công",
-                value = "42",
-                helper = "Cần xử lý ngay",
+                value = pendingCount.toString(),
+                helper = if (pendingCount > 0) "Cần xử lý ngay" else "Không có đơn chờ",
                 icon = Icons.Default.PendingActions,
-                highlighted = true
+                highlighted = pendingCount > 0
             )
             MetricCard(
                 modifier = Modifier.weight(1f),
-                label = "Tài xế hoạt động",
-                value = "156",
-                helper = "Đang trực tuyến",
+                label = "Tài xế hiện có",
+                value = driverCount.toString(),
+                helper = "Trong hệ thống",
                 icon = Icons.Default.LocalShipping
             )
         }
 
-        AdminAttentionCard()
+        AdminAttentionCard(pendingCount = pendingCount)
 
         SectionTitle(title = "Quản trị nhanh")
         QuickActionCard(
@@ -143,7 +153,7 @@ fun AdminHomeScreen(adminName: String = "Quản trị viên") {
 }
 
 @Composable
-private fun AdminAttentionCard() {
+private fun AdminAttentionCard(pendingCount: Int = 0) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(19.dp),
@@ -173,7 +183,7 @@ private fun AdminAttentionCard() {
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "42 yêu cầu đang chờ phân công",
+                    text = "$pendingCount yêu cầu đang chờ phân công",
                     color = UthOnSurface,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
@@ -201,3 +211,4 @@ private fun AdminHomeScreenPreview() {
         AdminHomeScreen()
     }
 }
+

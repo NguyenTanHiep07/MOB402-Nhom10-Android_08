@@ -5,6 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.mob10.deliveryapp.data.local.dao.*
 import com.mob10.deliveryapp.data.local.entity.*
 
@@ -15,7 +16,7 @@ import com.mob10.deliveryapp.data.local.entity.*
         PackageEntity::class,
         StatusHistoryEntity::class
     ],
-    version = 1,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -36,7 +37,14 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "delivery_database"
                 )
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(dropAllTables = true)
+                .addCallback(object : Callback() {
+                    override fun onOpen(db: SupportSQLiteDatabase) {
+                        super.onOpen(db)
+                        // Bật thực thi Foreign Key constraints (Room tắt theo mặc định)
+                        db.execSQL("PRAGMA foreign_keys = ON")
+                    }
+                })
                 .build()
                 INSTANCE = instance
                 instance
@@ -44,3 +52,4 @@ abstract class AppDatabase : RoomDatabase() {
         }
     }
 }
+

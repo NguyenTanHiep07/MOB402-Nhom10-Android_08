@@ -31,6 +31,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,9 +61,16 @@ import com.mob10.deliveryapp.ui.theme.UthWarning
 import com.mob10.deliveryapp.ui.theme.UthWarningContainer
 
 @Composable
-fun DriverHomeScreen(driverName: String = "Tài xế") {
+fun DriverHomeScreen(
+    driverName: String = "Tài xế",
+    viewModel: DriverViewModel? = null
+) {
     var selectedTab by remember { mutableStateOf(0) }
     var isAvailable by remember { mutableStateOf(true) }
+
+    val pendingRequests by (viewModel?.pendingRequests ?: remember { kotlinx.coroutines.flow.MutableStateFlow(emptyList()) }).collectAsState()
+    val deliveredToday by (viewModel?.deliveredTodayCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsState()
+    val activeDelivery by (viewModel?.activeDelivery ?: remember { kotlinx.coroutines.flow.MutableStateFlow(null) }).collectAsState()
 
     DashboardScaffold(
         selectedTab = selectedTab,
@@ -91,16 +99,16 @@ fun DriverHomeScreen(driverName: String = "Tài xế") {
             MetricCard(
                 modifier = Modifier.weight(1f),
                 label = "Đơn đang chờ",
-                value = "12",
-                helper = "Có thể nhận ngay",
+                value = pendingRequests.size.toString(),
+                helper = if (pendingRequests.isNotEmpty()) "Có thể nhận ngay" else "Không có đơn",
                 icon = Icons.Default.Inventory,
-                highlighted = true
+                highlighted = pendingRequests.isNotEmpty()
             )
             MetricCard(
                 modifier = Modifier.weight(1f),
                 label = "Đã giao hôm nay",
-                value = "08",
-                helper = "+2 so với hôm qua",
+                value = String.format("%02d", deliveredToday),
+                helper = "Hoàn thành hôm nay",
                 icon = Icons.Default.CheckCircle
             )
         }
@@ -111,7 +119,40 @@ fun DriverHomeScreen(driverName: String = "Tài xế") {
         )
 
         SectionTitle(title = "Đơn đang thực hiện")
-        ActiveDeliveryCard()
+        if (activeDelivery != null) {
+            ActiveDeliveryCard(
+                requestCode = "#GD-${activeDelivery!!.id}",
+                pickupAddress = activeDelivery!!.pickupAddress,
+                deliveryAddress = activeDelivery!!.deliveryAddress,
+                statusLabel = when (activeDelivery!!.status.name) {
+                    "ACCEPTED" -> "Đã nhận đơn"
+                    "PICKED_UP" -> "Đã lấy hàng"
+                    "IN_TRANSIT" -> "Đang giao"
+                    else -> activeDelivery!!.status.name
+                }
+            )
+        } else {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Đưa có đơn nào đang thực hiện",
+                        color = UthOnSurfaceVariant,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+        }
 
         SectionTitle(title = "Thao tác nhanh")
         QuickActionCard(
@@ -198,7 +239,12 @@ private fun DriverAvailabilityCard(
 }
 
 @Composable
-private fun ActiveDeliveryCard() {
+private fun ActiveDeliveryCard(
+    requestCode: String = "#GD-0000",
+    pickupAddress: String = "Địa chỉ lấy hàng",
+    deliveryAddress: String = "Địa chỉ giao hàng",
+    statusLabel: String = "Đang giao"
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
@@ -210,7 +256,7 @@ private fun ActiveDeliveryCard() {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "#GD-1018",
+                        text = requestCode,
                         color = UthOnSurface,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
@@ -222,7 +268,7 @@ private fun ActiveDeliveryCard() {
                     )
                 }
                 StatusPill(
-                    text = "Đang lấy hàng",
+                    text = statusLabel,
                     containerColor = UthWarningContainer,
                     contentColor = UthWarning,
                     dotColor = UthWarning
@@ -238,7 +284,7 @@ private fun ActiveDeliveryCard() {
                 )
                 Spacer(modifier = Modifier.width(9.dp))
                 Text(
-                    text = "24 Trần Hưng Đạo, Quận 1",
+                    text = pickupAddress,
                     color = UthOnSurface,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium
@@ -254,7 +300,7 @@ private fun ActiveDeliveryCard() {
                 )
                 Spacer(modifier = Modifier.width(9.dp))
                 Text(
-                    text = "108 Võ Văn Tần, Quận 3",
+                    text = deliveryAddress,
                     color = UthOnSurface,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium
@@ -263,6 +309,7 @@ private fun ActiveDeliveryCard() {
         }
     }
 }
+
 
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
