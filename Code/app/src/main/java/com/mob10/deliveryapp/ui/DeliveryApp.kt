@@ -31,9 +31,12 @@ fun DeliveryApp(authViewModel: AuthViewModel) {
 
     Android08Theme {
         when (currentUser?.role) {
-            Role.ADMIN -> AdminHomeScreen(adminName = currentUser?.fullName.orEmpty())
-            Role.DELIVERY -> DriverHomeScreen(driverName = currentUser?.fullName.orEmpty())
-            Role.CLIENT -> CustomerHomeScreen(customerName = currentUser?.fullName.orEmpty())
+            Role.ADMIN -> AdminHomeScreen(adminName = currentUser.fullName)
+            Role.DELIVERY -> DriverHomeScreen(
+                currentUser = currentUser,
+                onLogout = authViewModel::logout
+            )
+            Role.CLIENT -> CustomerHomeScreen(customerName = currentUser.fullName)
             else -> {
                 LoginScreen(
                     onLogin = authViewModel::login

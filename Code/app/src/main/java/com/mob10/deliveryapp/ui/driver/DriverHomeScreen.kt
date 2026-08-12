@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mob10.deliveryapp.data.local.entity.UserEntity
 import com.mob10.deliveryapp.ui.components.DashboardNavItem
 import com.mob10.deliveryapp.ui.components.DashboardScaffold
 import com.mob10.deliveryapp.ui.components.GoDropHeader
@@ -59,8 +60,9 @@ import com.mob10.deliveryapp.ui.theme.UthSuccessContainer
 import com.mob10.deliveryapp.ui.theme.UthWarning
 import com.mob10.deliveryapp.ui.theme.UthWarningContainer
 
+
 @Composable
-fun DriverHomeScreen(driverName: String = "Tài xế") {
+fun DriverHomeScreen(currentUser: UserEntity? = null, onLogout: () -> Unit = {}) {
     var selectedTab by remember { mutableStateOf(0) }
     var isAvailable by remember { mutableStateOf(true) }
 
@@ -76,69 +78,86 @@ fun DriverHomeScreen(driverName: String = "Tài xế") {
         header = {
             GoDropHeader(
                 roleLabel = "Khu vực tài xế",
-                name = driverName,
+                name = currentUser?.fullName ?: "Tài xế",
                 subtitle = "Sẵn sàng làm việc hôm nay",
                 statusLabel = if (isAvailable) "Đang trực tuyến" else "Tạm nghỉ",
                 statusColor = if (isAvailable) UthSuccess else UthWarning
             )
         }
     ) {
-        SectionTitle(title = "Hiệu suất hôm nay", actionLabel = "Chi tiết")
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            MetricCard(
-                modifier = Modifier.weight(1f),
-                label = "Đơn đang chờ",
-                value = "12",
-                helper = "Có thể nhận ngay",
-                icon = Icons.Default.Inventory,
-                highlighted = true
+        if (selectedTab == 0) {
+            SectionTitle(title = "Hiệu suất hôm nay", actionLabel = "Chi tiết")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                MetricCard(
+                    modifier = Modifier.weight(1f),
+                    label = "Đơn đang chờ",
+                    value = "12",
+                    helper = "Có thể nhận ngay",
+                    icon = Icons.Default.Inventory,
+                    highlighted = true
+                )
+                MetricCard(
+                    modifier = Modifier.weight(1f),
+                    label = "Đã giao hôm nay",
+                    value = "08",
+                    helper = "+2 so với hôm qua",
+                    icon = Icons.Default.CheckCircle
+                )
+            }
+
+            DriverAvailabilityCard(
+                isAvailable = isAvailable,
+                onAvailabilityChanged = { isAvailable = it }
             )
-            MetricCard(
-                modifier = Modifier.weight(1f),
-                label = "Đã giao hôm nay",
-                value = "08",
-                helper = "+2 so với hôm qua",
-                icon = Icons.Default.CheckCircle
+
+            SectionTitle(title = "Đơn đang thực hiện")
+            ActiveDeliveryCard()
+
+            SectionTitle(title = "Thao tác nhanh")
+            QuickActionCard(
+                title = "Đơn đang chờ",
+                subtitle = "Xem các đơn trong khu vực của bạn",
+                icon = Icons.Default.ListAlt
             )
+            QuickActionCard(
+                title = "Đơn của tôi",
+                subtitle = "Quản lý các đơn đã nhận",
+                icon = Icons.Default.Assignment
+            )
+            QuickActionCard(
+                title = "Cập nhật trạng thái",
+                subtitle = "Thông báo tiến độ cho khách hàng",
+                icon = Icons.Default.Update
+            )
+            QuickActionCard(
+                title = "Lịch sử giao hàng",
+                subtitle = "Xem lại hiệu suất và thu nhập",
+                icon = Icons.Default.History
+            )
+        } else if (selectedTab == 3) {
+            DriverProfileTab(
+                currentUser = currentUser,
+                isAvailable = isAvailable,
+                onAvailabilityChanged = { isAvailable = it },
+                onLogout = onLogout
+            )
+        } else {
+            // Placeholder for other tabs
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "Tính năng đang phát triển", color = UthOnSurfaceVariant)
+            }
         }
-
-        DriverAvailabilityCard(
-            isAvailable = isAvailable,
-            onAvailabilityChanged = { isAvailable = it }
-        )
-
-        SectionTitle(title = "Đơn đang thực hiện")
-        ActiveDeliveryCard()
-
-        SectionTitle(title = "Thao tác nhanh")
-        QuickActionCard(
-            title = "Đơn đang chờ",
-            subtitle = "Xem các đơn trong khu vực của bạn",
-            icon = Icons.Default.ListAlt
-        )
-        QuickActionCard(
-            title = "Đơn của tôi",
-            subtitle = "Quản lý các đơn đã nhận",
-            icon = Icons.Default.Assignment
-        )
-        QuickActionCard(
-            title = "Cập nhật trạng thái",
-            subtitle = "Thông báo tiến độ cho khách hàng",
-            icon = Icons.Default.Update
-        )
-        QuickActionCard(
-            title = "Lịch sử giao hàng",
-            subtitle = "Xem lại hiệu suất và thu nhập",
-            icon = Icons.Default.History
-        )
     }
 }
 
 @Composable
-private fun DriverAvailabilityCard(
+fun DriverAvailabilityCard(
     isAvailable: Boolean,
     onAvailabilityChanged: (Boolean) -> Unit
 ) {
