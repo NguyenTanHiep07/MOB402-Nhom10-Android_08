@@ -31,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,8 +59,15 @@ import com.mob10.deliveryapp.ui.theme.UthPrimary
 import com.mob10.deliveryapp.ui.theme.UthSecondary
 
 @Composable
-fun CustomerHomeScreen(customerName: String = "Khách hàng") {
+fun CustomerHomeScreen(
+    customerName: String = "Khách hàng",
+    viewModel: CustomerViewModel? = null
+) {
     var selectedTab by remember { mutableStateOf(0) }
+
+    val activeCount by (viewModel?.activeOrderCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsState()
+    val completedCount by (viewModel?.completedOrderCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsState()
+    val recentOrder by (viewModel?.recentOrder ?: remember { kotlinx.coroutines.flow.MutableStateFlow(null) }).collectAsState()
 
     DashboardScaffold(
         selectedTab = selectedTab,
@@ -86,17 +94,17 @@ fun CustomerHomeScreen(customerName: String = "Khách hàng") {
             MetricCard(
                 modifier = Modifier.weight(1f),
                 label = "Đang xử lý",
-                value = "03",
-                helper = "Cần theo dõi",
+                value = String.format("%02d", activeCount),
+                helper = if (activeCount > 0) "Cần theo dõi" else "Không có đơn chờ",
                 icon = Icons.Default.PendingActions
             )
             MetricCard(
                 modifier = Modifier.weight(1f),
                 label = "Đã hoàn tất",
-                value = "12",
-                helper = "+8% so với tháng trước",
+                value = completedCount.toString(),
+                helper = "Tổng cộng",
                 icon = Icons.Default.TaskAlt,
-                highlighted = true
+                highlighted = completedCount > 0
             )
         }
 
@@ -120,7 +128,44 @@ fun CustomerHomeScreen(customerName: String = "Khách hàng") {
         )
 
         SectionTitle(title = "Đơn gần đây", actionLabel = "Xem tất cả")
-        RecentOrderCard()
+        if (recentOrder != null) {
+            RecentOrderCard(
+                requestCode = "#GD-${recentOrder!!.id}",
+                pickupAddress = recentOrder!!.pickupAddress,
+                deliveryAddress = recentOrder!!.deliveryAddress,
+                totalCost = recentOrder!!.totalCost,
+                statusLabel = when (recentOrder!!.status.name) {
+                    "PENDING" -> "Đang chờ"
+                    "ACCEPTED" -> "Đã nhận"
+                    "PICKED_UP" -> "Đã lấy hàng"
+                    "IN_TRANSIT" -> "Đang giao"
+                    "DELIVERED" -> "Đã giao"
+                    "CANCELLED" -> "Đã huỷ"
+                    else -> recentOrder!!.status.name
+                }
+            )
+        } else {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Chưa có đơn hàng nào",
+                        color = UthOnSurfaceVariant,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -186,7 +231,13 @@ private fun CreateDeliveryCard() {
 }
 
 @Composable
-private fun RecentOrderCard() {
+private fun RecentOrderCard(
+    requestCode: String = "#GD-0000",
+    pickupAddress: String = "Địa chỉ lấy hàng",
+    deliveryAddress: String = "Địa chỉ giao hàng",
+    totalCost: Double = 0.0,
+    statusLabel: String = "Đang giao"
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
@@ -198,29 +249,24 @@ private fun RecentOrderCard() {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "#GD-1024",
+                        text = requestCode,
                         color = UthOnSurface,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(
-                        text = "Hôm nay, 09:40",
-                        color = UthOnSurfaceVariant,
-                        fontSize = 11.sp
-                    )
                 }
-                StatusPill(text = "Đang giao")
+                StatusPill(text = statusLabel)
             }
             Spacer(modifier = Modifier.size(14.dp))
             OrderRouteRow(
                 icon = Icons.Default.LocationOn,
-                text = "12 Nguyễn Trãi, Quận 5",
+                text = pickupAddress,
                 iconColor = UthPrimary
             )
             Spacer(modifier = Modifier.size(7.dp))
             OrderRouteRow(
                 icon = Icons.Default.LocalShipping,
-                text = "85 Lê Lợi, Quận 1",
+                text = deliveryAddress,
                 iconColor = UthSecondary
             )
             Spacer(modifier = Modifier.size(13.dp))
@@ -235,7 +281,7 @@ private fun RecentOrderCard() {
                     fontSize = 11.sp
                 )
                 Text(
-                    text = "55.000đ",
+                    text = "${String.format("%,.0f", totalCost)}đ",
                     color = UthOnSurface,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
@@ -244,6 +290,7 @@ private fun RecentOrderCard() {
         }
     }
 }
+
 
 @Composable
 private fun OrderRouteRow(icon: ImageVector, text: String, iconColor: Color) {

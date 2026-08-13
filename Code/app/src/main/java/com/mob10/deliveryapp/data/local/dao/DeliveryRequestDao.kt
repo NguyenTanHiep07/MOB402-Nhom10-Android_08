@@ -16,8 +16,26 @@ interface DeliveryRequestDao {
     @Query("SELECT * FROM delivery_requests WHERE deliveryPersonId = :deliveryId ORDER BY createdAt DESC")
     fun getRequestsByDelivery(deliveryId: Int): Flow<List<DeliveryRequestEntity>>
 
+    @Query("SELECT * FROM delivery_requests WHERE status = 'PENDING' ORDER BY createdAt DESC")
+    fun getPendingRequests(): Flow<List<DeliveryRequestEntity>>
+
     @Query("SELECT * FROM delivery_requests WHERE id = :id")
     suspend fun getRequestById(id: Int): DeliveryRequestEntity?
+
+    @Query("SELECT COUNT(*) FROM delivery_requests")
+    fun getTotalCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM delivery_requests WHERE status = 'PENDING'")
+    fun getPendingCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM delivery_requests WHERE clientId = :clientId AND status NOT IN ('PENDING','CANCELLED')")
+    fun getActiveCountForClient(clientId: Int): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM delivery_requests WHERE clientId = :clientId AND status = 'DELIVERED'")
+    fun getDeliveredCountForClient(clientId: Int): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM delivery_requests WHERE deliveryPersonId = :deliveryId AND status = 'DELIVERED' AND actualDeliveryTime >= :startOfDay")
+    fun getDeliveredTodayCountForDriver(deliveryId: Int, startOfDay: Long): Flow<Int>
 
     @Insert
     suspend fun insert(request: DeliveryRequestEntity): Long
@@ -31,3 +49,4 @@ interface DeliveryRequestDao {
     @Query("UPDATE delivery_requests SET deliveryPersonId = :deliveryId, status = :status WHERE id = :requestId")
     suspend fun assignToDelivery(requestId: Int, deliveryId: Int, status: DeliveryStatus)
 }
+

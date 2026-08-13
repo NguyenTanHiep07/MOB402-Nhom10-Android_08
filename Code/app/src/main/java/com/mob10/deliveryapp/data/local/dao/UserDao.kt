@@ -2,6 +2,7 @@ package com.mob10.deliveryapp.data.local.dao
 
 import androidx.room.*
 import com.mob10.deliveryapp.data.local.entity.UserEntity
+import com.mob10.deliveryapp.data.model.Role
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -20,4 +21,15 @@ interface UserDao {
 
     @Query("SELECT * FROM users")
     fun getAllUsers(): Flow<List<UserEntity>>
+
+    @Query("SELECT * FROM users WHERE role = :role")
+    fun getUsersByRole(role: Role): Flow<List<UserEntity>>
+
+    @Query("SELECT COUNT(*) FROM users WHERE role = :role")
+    fun getCountByRole(role: Role): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM users")
+    fun getTotalUserCount(): Flow<Int>
 }
+
+

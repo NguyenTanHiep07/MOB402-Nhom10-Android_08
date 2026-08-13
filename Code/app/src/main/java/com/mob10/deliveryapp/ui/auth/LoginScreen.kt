@@ -64,10 +64,10 @@ import com.mob10.deliveryapp.ui.theme.UthSecondaryContainer
 
 @Composable
 fun LoginScreen(
-    onLogin: (identifier: String, password: String) -> Unit = { _, _ -> },
+    onLogin: (phoneNumber: String, password: String) -> Unit = { _, _ -> },
     onForgotPassword: () -> Unit = {}
 ) {
-    var identifier by rememberSaveable { mutableStateOf("") }
+    var phoneNumber by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var showValidationError by rememberSaveable { mutableStateOf(false) }
@@ -140,9 +140,9 @@ fun LoginScreen(
                     Spacer(modifier = Modifier.height(26.dp))
 
                     LoginTextField(
-                        value = identifier,
+                        value = phoneNumber,
                         onValueChange = {
-                            identifier = it
+                            phoneNumber = it
                             showValidationError = false
                         },
                         label = stringResource(R.string.email_label),
@@ -199,10 +199,10 @@ fun LoginScreen(
                     }
                     Button(
                         onClick = {
-                            if (identifier.isBlank() || password.isBlank()) {
+                            if (phoneNumber.isBlank() || password.isBlank()) {
                                 showValidationError = true
                             } else {
-                                onLogin(identifier.trim(), password)
+                                onLogin(phoneNumber.trim(), password)
                             }
                         },
                         modifier = Modifier

@@ -1,10 +1,15 @@
 package com.mob10.deliveryapp.data.local
 
+import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
+import com.mob10.deliveryapp.data.local.entity.PackageEntity
+import com.mob10.deliveryapp.data.local.entity.StatusHistoryEntity
 import com.mob10.deliveryapp.data.local.entity.UserEntity
+import com.mob10.deliveryapp.data.model.DeliveryStatus
 import com.mob10.deliveryapp.data.model.Role
 import kotlinx.coroutines.flow.first
 
 class DatabaseInitializer(private val db: AppDatabase) {
+
     suspend fun initialize() {
         val userDao = db.userDao()
         val existingUsers = userDao.getAllUsers().first().associateBy { it.username }
@@ -66,3 +71,4 @@ class DatabaseInitializer(private val db: AppDatabase) {
         }
     }
 }
+
