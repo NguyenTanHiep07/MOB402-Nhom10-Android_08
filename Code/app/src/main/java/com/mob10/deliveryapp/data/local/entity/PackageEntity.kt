@@ -23,8 +23,8 @@ data class PackageEntity(
     val name: String,
     val packageType: String? = null,
     val weightKg: Double,
+    val quantity: Int = 1,
     val notes: String? = null,
+    val note: String? = null,
     val isFragile: Boolean = false
 )
-
-

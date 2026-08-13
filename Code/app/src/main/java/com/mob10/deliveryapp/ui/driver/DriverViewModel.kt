@@ -1,52 +1,92 @@
 package com.mob10.deliveryapp.ui.driver
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.mob10.deliveryapp.data.local.AppDatabase
 import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
+import com.mob10.deliveryapp.data.local.entity.PackageEntity
 import com.mob10.deliveryapp.data.model.DeliveryStatus
 import com.mob10.deliveryapp.data.repository.DeliveryRepository
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import java.util.Calendar
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
-class DriverViewModel(
-    private val deliveryRepository: DeliveryRepository,
-    val driverId: Int
-) : ViewModel() {
+data class DriverUiState(
+    val newOrders: List<DeliveryRequestEntity> = emptyList(),
+    val activeOrders: List<DeliveryRequestEntity> = emptyList(),
+    val packagesByOrder: Map<Int, List<PackageEntity>> = emptyMap(),
+    val isLoading: Boolean = false,
+    val error: String? = null
+)
 
-    private val startOfToday: Long
-        get() {
-            val cal = Calendar.getInstance()
-            cal.set(Calendar.HOUR_OF_DAY, 0)
-            cal.set(Calendar.MINUTE, 0)
-            cal.set(Calendar.SECOND, 0)
-            cal.set(Calendar.MILLISECOND, 0)
-            return cal.timeInMillis
+class DriverViewModel(private val repository: DeliveryRepository) : ViewModel() {
+    private val _uiState = MutableStateFlow(DriverUiState(isLoading = true))
+    val uiState: StateFlow<DriverUiState> = _uiState.asStateFlow()
+
+    fun loadDriverData(driverId: Int) {
+        viewModelScope.launch {
+            repository.allRequests.collect { allRequests ->
+                val newOrders = allRequests.filter { it.status == DeliveryStatus.CHO_TIEP_NHAN }
+                val activeOrders = allRequests.filter {
+                    it.deliveryPersonId == driverId && it.status in listOf(
+                        DeliveryStatus.DA_CHAP_NHAN,
+                        DeliveryStatus.DA_DEN_NHA_HANG,
+                        DeliveryStatus.DA_LAY_HANG,
+                        DeliveryStatus.DA_DEN_KHACH_HANG
+                    )
+                }
+
+                // Load packages for these orders
+                val packagesMap = mutableMapOf<Int, List<PackageEntity>>()
+                val relevantOrders = newOrders + activeOrders
+                for (order in relevantOrders) {
+                    val packages = repository.getRequestPackages(order.id)
+                    packagesMap[order.id] = packages
+                }
+
+                _uiState.value = _uiState.value.copy(
+                    newOrders = newOrders,
+                    activeOrders = activeOrders,
+                    packagesByOrder = packagesMap,
+                    isLoading = false
+                )
+            }
         }
+    }
 
-    /** Danh sách đơn chờ được nhận (toàn hệ thống PENDING) */
-    val pendingRequests: StateFlow<List<DeliveryRequestEntity>> = deliveryRepository
-        .pendingRequests
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    /** Đơn tài xế đang thực hiện (ACCEPTED hoặc PICKED_UP hoặc IN_TRANSIT) */
-    val myActiveRequests: StateFlow<List<DeliveryRequestEntity>> = deliveryRepository
-        .getRequestsForDelivery(driverId)
-        .map { list ->
-            list.filter { it.status in listOf(DeliveryStatus.ACCEPTED, DeliveryStatus.PICKED_UP, DeliveryStatus.IN_TRANSIT) }
+    fun acceptOrder(orderId: Int, driverId: Int) {
+        viewModelScope.launch {
+            repository.acceptRequest(orderId, driverId)
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    }
 
-    /** Đơn đang giao gần nhất (active delivery) */
-    val activeDelivery: StateFlow<DeliveryRequestEntity?> = myActiveRequests
-        .map { it.firstOrNull { req -> req.status == DeliveryStatus.IN_TRANSIT }
-            ?: it.firstOrNull() }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    fun rejectOrder(orderId: Int) {
+        // Simple implementation: for now we don't do anything because "rejecting" just means the driver ignores it
+        // and it remains in the pool for others.
+    }
 
-    /** Số đơn đã giao hôm nay */
-    val deliveredTodayCount: StateFlow<Int> = deliveryRepository
-        .getDeliveredTodayCountForDriver(driverId, startOfToday)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+    fun updateOrderStatus(orderId: Int, newStatus: DeliveryStatus, note: String = "") {
+        viewModelScope.launch {
+            repository.updateRequestStatus(orderId, newStatus, note = note)
+        }
+    }
+}
+
+class DriverViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(DriverViewModel::class.java)) {
+            val db = AppDatabase.getDatabase(context)
+            val repository = DeliveryRepository(
+                db.deliveryRequestDao(),
+                db.packageDao(),
+                db.statusHistoryDao()
+            )
+            return DriverViewModel(repository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
 }

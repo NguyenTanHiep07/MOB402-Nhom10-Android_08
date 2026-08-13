@@ -31,7 +31,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,10 +39,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mob10.deliveryapp.data.local.entity.UserEntity
 import com.mob10.deliveryapp.ui.components.DashboardNavItem
 import com.mob10.deliveryapp.ui.components.DashboardScaffold
 import com.mob10.deliveryapp.ui.components.GoDropHeader
@@ -60,17 +64,23 @@ import com.mob10.deliveryapp.ui.theme.UthSuccessContainer
 import com.mob10.deliveryapp.ui.theme.UthWarning
 import com.mob10.deliveryapp.ui.theme.UthWarningContainer
 
+
 @Composable
-fun DriverHomeScreen(
-    driverName: String = "Tài xế",
-    viewModel: DriverViewModel? = null
-) {
+fun DriverHomeScreen(currentUser: UserEntity? = null, onLogout: () -> Unit = {}) {
     var selectedTab by remember { mutableStateOf(0) }
     var isAvailable by remember { mutableStateOf(true) }
+    
+    val context = LocalContext.current
+    val viewModel: DriverViewModel = viewModel(
+        factory = DriverViewModelFactory(context)
+    )
+    val uiState by viewModel.uiState.collectAsState()
 
-    val pendingRequests by (viewModel?.pendingRequests ?: remember { kotlinx.coroutines.flow.MutableStateFlow(emptyList()) }).collectAsState()
-    val deliveredToday by (viewModel?.deliveredTodayCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsState()
-    val activeDelivery by (viewModel?.activeDelivery ?: remember { kotlinx.coroutines.flow.MutableStateFlow(null) }).collectAsState()
+    LaunchedEffect(currentUser?.id) {
+        if (currentUser != null) {
+            viewModel.loadDriverData(currentUser.id)
+        }
+    }
 
     DashboardScaffold(
         selectedTab = selectedTab,
@@ -84,102 +94,99 @@ fun DriverHomeScreen(
         header = {
             GoDropHeader(
                 roleLabel = "Khu vực tài xế",
-                name = driverName,
+                name = currentUser?.fullName ?: "Tài xế",
                 subtitle = "Sẵn sàng làm việc hôm nay",
                 statusLabel = if (isAvailable) "Đang trực tuyến" else "Tạm nghỉ",
                 statusColor = if (isAvailable) UthSuccess else UthWarning
             )
         }
     ) {
-        SectionTitle(title = "Hiệu suất hôm nay", actionLabel = "Chi tiết")
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            MetricCard(
-                modifier = Modifier.weight(1f),
-                label = "Đơn đang chờ",
-                value = pendingRequests.size.toString(),
-                helper = if (pendingRequests.isNotEmpty()) "Có thể nhận ngay" else "Không có đơn",
-                icon = Icons.Default.Inventory,
-                highlighted = pendingRequests.isNotEmpty()
-            )
-            MetricCard(
-                modifier = Modifier.weight(1f),
-                label = "Đã giao hôm nay",
-                value = String.format("%02d", deliveredToday),
-                helper = "Hoàn thành hôm nay",
-                icon = Icons.Default.CheckCircle
-            )
-        }
+        if (selectedTab == 0) {
+            SectionTitle(title = "Hiệu suất hôm nay", actionLabel = "Chi tiết")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                MetricCard(
+                    modifier = Modifier.weight(1f),
+                    label = "Đơn đang chờ",
+                    value = "12",
+                    helper = "Có thể nhận ngay",
+                    icon = Icons.Default.Inventory,
+                    highlighted = true
+                )
+                MetricCard(
+                    modifier = Modifier.weight(1f),
+                    label = "Đã giao hôm nay",
+                    value = "08",
+                    helper = "+2 so với hôm qua",
+                    icon = Icons.Default.CheckCircle
+                )
+            }
 
-        DriverAvailabilityCard(
-            isAvailable = isAvailable,
-            onAvailabilityChanged = { isAvailable = it }
-        )
+            DriverAvailabilityCard(
+                isAvailable = isAvailable,
+                onAvailabilityChanged = { isAvailable = it }
+            )
 
-        SectionTitle(title = "Đơn đang thực hiện")
-        if (activeDelivery != null) {
-            ActiveDeliveryCard(
-                requestCode = "#GD-${activeDelivery!!.id}",
-                pickupAddress = activeDelivery!!.pickupAddress,
-                deliveryAddress = activeDelivery!!.deliveryAddress,
-                statusLabel = when (activeDelivery!!.status.name) {
-                    "ACCEPTED" -> "Đã nhận đơn"
-                    "PICKED_UP" -> "Đã lấy hàng"
-                    "IN_TRANSIT" -> "Đang giao"
-                    else -> activeDelivery!!.status.name
-                }
+            SectionTitle(title = "Đơn đang thực hiện")
+            ActiveDeliveryCard()
+
+            SectionTitle(title = "Thao tác nhanh")
+            QuickActionCard(
+                title = "Đơn đang chờ",
+                subtitle = "Xem các đơn trong khu vực của bạn",
+                icon = Icons.Default.ListAlt
+            )
+            QuickActionCard(
+                title = "Đơn của tôi",
+                subtitle = "Quản lý các đơn đã nhận",
+                icon = Icons.Default.Assignment
+            )
+            QuickActionCard(
+                title = "Cập nhật trạng thái",
+                subtitle = "Thông báo tiến độ cho khách hàng",
+                icon = Icons.Default.Update
+            )
+            QuickActionCard(
+                title = "Lịch sử giao hàng",
+                subtitle = "Xem lại hiệu suất và thu nhập",
+                icon = Icons.Default.History
+            )
+        } else if (selectedTab == 1) {
+            NewOrdersTab(
+                newOrders = uiState.newOrders,
+                packagesByOrder = uiState.packagesByOrder,
+                onAcceptOrder = { orderId -> currentUser?.id?.let { viewModel.acceptOrder(orderId, it) } },
+                onRejectOrder = { orderId -> viewModel.rejectOrder(orderId) }
+            )
+        } else if (selectedTab == 2) {
+            ActiveOrderTab(
+                activeOrders = uiState.activeOrders,
+                packagesByOrder = uiState.packagesByOrder,
+                onUpdateStatus = { orderId, newStatus -> viewModel.updateOrderStatus(orderId, newStatus) }
+            )
+        } else if (selectedTab == 3) {
+            DriverProfileTab(
+                currentUser = currentUser,
+                isAvailable = isAvailable,
+                onAvailabilityChanged = { isAvailable = it },
+                onLogout = onLogout
             )
         } else {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            // Placeholder for other tabs
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(32.dp),
+                contentAlignment = Alignment.Center
             ) {
-                androidx.compose.foundation.layout.Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Đưa có đơn nào đang thực hiện",
-                        color = UthOnSurfaceVariant,
-                        fontSize = 13.sp
-                    )
-                }
+                Text(text = "Tính năng đang phát triển", color = UthOnSurfaceVariant)
             }
         }
-
-        SectionTitle(title = "Thao tác nhanh")
-        QuickActionCard(
-            title = "Đơn đang chờ",
-            subtitle = "Xem các đơn trong khu vực của bạn",
-            icon = Icons.Default.ListAlt
-        )
-        QuickActionCard(
-            title = "Đơn của tôi",
-            subtitle = "Quản lý các đơn đã nhận",
-            icon = Icons.Default.Assignment
-        )
-        QuickActionCard(
-            title = "Cập nhật trạng thái",
-            subtitle = "Thông báo tiến độ cho khách hàng",
-            icon = Icons.Default.Update
-        )
-        QuickActionCard(
-            title = "Lịch sử giao hàng",
-            subtitle = "Xem lại hiệu suất và thu nhập",
-            icon = Icons.Default.History
-        )
     }
 }
 
 @Composable
-private fun DriverAvailabilityCard(
+fun DriverAvailabilityCard(
     isAvailable: Boolean,
     onAvailabilityChanged: (Boolean) -> Unit
 ) {
@@ -239,12 +246,7 @@ private fun DriverAvailabilityCard(
 }
 
 @Composable
-private fun ActiveDeliveryCard(
-    requestCode: String = "#GD-0000",
-    pickupAddress: String = "Địa chỉ lấy hàng",
-    deliveryAddress: String = "Địa chỉ giao hàng",
-    statusLabel: String = "Đang giao"
-) {
+private fun ActiveDeliveryCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
@@ -256,7 +258,7 @@ private fun ActiveDeliveryCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = requestCode,
+                        text = "#GD-1018",
                         color = UthOnSurface,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
@@ -268,7 +270,7 @@ private fun ActiveDeliveryCard(
                     )
                 }
                 StatusPill(
-                    text = statusLabel,
+                    text = "Đang lấy hàng",
                     containerColor = UthWarningContainer,
                     contentColor = UthWarning,
                     dotColor = UthWarning
@@ -284,7 +286,7 @@ private fun ActiveDeliveryCard(
                 )
                 Spacer(modifier = Modifier.width(9.dp))
                 Text(
-                    text = pickupAddress,
+                    text = "24 Trần Hưng Đạo, Quận 1",
                     color = UthOnSurface,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium
@@ -300,7 +302,7 @@ private fun ActiveDeliveryCard(
                 )
                 Spacer(modifier = Modifier.width(9.dp))
                 Text(
-                    text = deliveryAddress,
+                    text = "108 Võ Văn Tần, Quận 3",
                     color = UthOnSurface,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium
@@ -309,7 +311,6 @@ private fun ActiveDeliveryCard(
         }
     }
 }
-
 
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable

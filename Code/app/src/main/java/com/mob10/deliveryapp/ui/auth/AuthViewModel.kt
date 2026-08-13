@@ -58,6 +58,10 @@ class AuthViewModel(
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
     }
+
+    fun logout() {
+        _uiState.value = _uiState.value.copy(currentUser = null, errorMessage = null)
+    }
 }
 
 class AuthViewModelFactory(
