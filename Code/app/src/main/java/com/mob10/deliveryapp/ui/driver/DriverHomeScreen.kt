@@ -39,6 +39,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -65,6 +69,18 @@ import com.mob10.deliveryapp.ui.theme.UthWarningContainer
 fun DriverHomeScreen(currentUser: UserEntity? = null, onLogout: () -> Unit = {}) {
     var selectedTab by remember { mutableStateOf(0) }
     var isAvailable by remember { mutableStateOf(true) }
+    
+    val context = LocalContext.current
+    val viewModel: DriverViewModel = viewModel(
+        factory = DriverViewModelFactory(context)
+    )
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(currentUser?.id) {
+        if (currentUser != null) {
+            viewModel.loadDriverData(currentUser.id)
+        }
+    }
 
     DashboardScaffold(
         selectedTab = selectedTab,
@@ -136,6 +152,19 @@ fun DriverHomeScreen(currentUser: UserEntity? = null, onLogout: () -> Unit = {})
                 title = "Lịch sử giao hàng",
                 subtitle = "Xem lại hiệu suất và thu nhập",
                 icon = Icons.Default.History
+            )
+        } else if (selectedTab == 1) {
+            NewOrdersTab(
+                newOrders = uiState.newOrders,
+                packagesByOrder = uiState.packagesByOrder,
+                onAcceptOrder = { orderId -> currentUser?.id?.let { viewModel.acceptOrder(orderId, it) } },
+                onRejectOrder = { orderId -> viewModel.rejectOrder(orderId) }
+            )
+        } else if (selectedTab == 2) {
+            ActiveOrderTab(
+                activeOrders = uiState.activeOrders,
+                packagesByOrder = uiState.packagesByOrder,
+                onUpdateStatus = { orderId, newStatus -> viewModel.updateOrderStatus(orderId, newStatus) }
             )
         } else if (selectedTab == 3) {
             DriverProfileTab(

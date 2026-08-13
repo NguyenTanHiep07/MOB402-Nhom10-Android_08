@@ -15,6 +15,7 @@ data class NewPackageInfo(
     val name: String,
     val packageType: String? = null,
     val weightKg: Double,
+    val quantity: Int = 1,
     val notes: String? = null,
     val isFragile: Boolean = false
 )
@@ -82,7 +83,7 @@ class DeliveryRepository(
             pricingRuleId = pricingRuleId,
             scheduledPickupTime = scheduledPickupTime,
             note = note,
-            status = DeliveryStatus.PENDING
+            status = DeliveryStatus.CHO_TIEP_NHAN
         )
 
         // 1. Tạo đơn giao hàng
@@ -96,6 +97,7 @@ class DeliveryRepository(
                     name = pkg.name,
                     packageType = pkg.packageType,
                     weightKg = pkg.weightKg,
+                    quantity = pkg.quantity,
                     notes = pkg.notes,
                     isFragile = pkg.isFragile
                 )
@@ -107,7 +109,7 @@ class DeliveryRepository(
             StatusHistoryEntity(
                 deliveryRequestId = requestId,
                 fromStatus = null,
-                toStatus = DeliveryStatus.PENDING,
+                toStatus = DeliveryStatus.CHO_TIEP_NHAN,
                 updatedBy = clientId,
                 note = "Đơn hàng được tạo"
             )
@@ -145,18 +147,18 @@ class DeliveryRepository(
     }
 
     /**
-     * Tài xế nhận đơn – phân công tài xế và chuyển PENDING → ACCEPTED trong transaction.
+     * Tài xế nhận đơn – phân công tài xế và chuyển CHO_TIEP_NHAN → DA_CHAP_NHAN trong transaction.
      */
     suspend fun acceptRequest(requestId: Int, deliveryPersonId: Int): Boolean = db.withTransaction {
         val currentRequest = requestDao.getRequestById(requestId) ?: return@withTransaction false
-        if (currentRequest.status != DeliveryStatus.PENDING) return@withTransaction false
+        if (currentRequest.status != DeliveryStatus.CHO_TIEP_NHAN) return@withTransaction false
 
-        requestDao.assignToDelivery(requestId, deliveryPersonId, DeliveryStatus.ACCEPTED)
+        requestDao.assignToDelivery(requestId, deliveryPersonId, DeliveryStatus.DA_CHAP_NHAN)
         historyDao.insert(
             StatusHistoryEntity(
                 deliveryRequestId = requestId,
-                fromStatus = DeliveryStatus.PENDING,
-                toStatus = DeliveryStatus.ACCEPTED,
+                fromStatus = DeliveryStatus.CHO_TIEP_NHAN,
+                toStatus = DeliveryStatus.DA_CHAP_NHAN,
                 updatedBy = deliveryPersonId,
                 note = "Tài xế đã nhận đơn"
             )
@@ -164,14 +166,14 @@ class DeliveryRepository(
         true
     }
 
-
     private fun isValidTransition(from: DeliveryStatus, to: DeliveryStatus): Boolean {
         return when (from) {
-            DeliveryStatus.PENDING -> to == DeliveryStatus.ACCEPTED || to == DeliveryStatus.CANCELLED
-            DeliveryStatus.ACCEPTED -> to == DeliveryStatus.PICKED_UP || to == DeliveryStatus.CANCELLED
-            DeliveryStatus.PICKED_UP -> to == DeliveryStatus.IN_TRANSIT
-            DeliveryStatus.IN_TRANSIT -> to == DeliveryStatus.DELIVERED
-            else -> false // DELIVERED và CANCELLED là trạng thái cuối
+            DeliveryStatus.CHO_TIEP_NHAN -> to == DeliveryStatus.DA_CHAP_NHAN || to == DeliveryStatus.DA_HUY
+            DeliveryStatus.DA_CHAP_NHAN -> to == DeliveryStatus.DA_DEN_NHA_HANG || to == DeliveryStatus.DA_HUY
+            DeliveryStatus.DA_DEN_NHA_HANG -> to == DeliveryStatus.DA_LAY_HANG
+            DeliveryStatus.DA_LAY_HANG -> to == DeliveryStatus.DA_DEN_KHACH_HANG
+            DeliveryStatus.DA_DEN_KHACH_HANG -> to == DeliveryStatus.DA_GIAO
+            else -> false // DA_GIAO and DA_HUY are terminal states
         }
     }
 
