@@ -20,10 +20,14 @@ import java.util.Calendar
 data class DriverUiState(
     val newOrders: List<DeliveryRequestEntity> = emptyList(),
     val activeOrders: List<DeliveryRequestEntity> = emptyList(),
+    val historyOrders: List<DeliveryRequestEntity> = emptyList(),
     val packagesByOrder: Map<Int, List<PackageEntity>> = emptyMap(),
     val historiesByOrder: Map<Int, List<StatusHistoryEntity>> = emptyMap(),
     val pendingCount: Int = 0,
     val deliveredTodayCount: Int = 0,
+    val totalEarnings: Double = 0.0,
+    val todayEarnings: Double = 0.0,
+    val completedCount: Int = 0,
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -62,11 +66,25 @@ class DriverViewModel(private val repository: DeliveryRepository) : ViewModel() 
                         DeliveryStatus.DA_DEN_KHACH_HANG
                     )
                 }
+                val historyOrders = allRequests.filter {
+                    it.deliveryPersonId == driverId && it.status in listOf(
+                        DeliveryStatus.DA_GIAO,
+                        DeliveryStatus.DA_HUY
+                    )
+                }
 
-                // Load packages and histories for these orders
+                val completedOrders = historyOrders.filter { it.status == DeliveryStatus.DA_GIAO }
+                val totalEarnings = completedOrders.sumOf { it.totalCost }
+                val todayCompletedOrders = completedOrders.filter {
+                    (it.actualDeliveryTime ?: it.createdAt) >= startOfDay
+                }
+                val todayEarnings = todayCompletedOrders.sumOf { it.totalCost }
+                val completedCount = completedOrders.size
+
+                // Load packages and histories for all relevant orders
                 val packagesMap = mutableMapOf<Int, List<PackageEntity>>()
                 val historiesMap = mutableMapOf<Int, List<StatusHistoryEntity>>()
-                val relevantOrders = newOrders + activeOrders
+                val relevantOrders = newOrders + activeOrders + historyOrders
                 for (order in relevantOrders) {
                     val packages = repository.getRequestPackages(order.id)
                     packagesMap[order.id] = packages
@@ -77,10 +95,14 @@ class DriverViewModel(private val repository: DeliveryRepository) : ViewModel() 
                 _uiState.value = _uiState.value.copy(
                     newOrders = newOrders,
                     activeOrders = activeOrders,
+                    historyOrders = historyOrders,
                     packagesByOrder = packagesMap,
                     historiesByOrder = historiesMap,
                     pendingCount = pendingCount,
                     deliveredTodayCount = deliveredTodayCount,
+                    totalEarnings = totalEarnings,
+                    todayEarnings = todayEarnings,
+                    completedCount = completedCount,
                     isLoading = false
                 )
             }
@@ -99,8 +121,19 @@ class DriverViewModel(private val repository: DeliveryRepository) : ViewModel() 
     }
 
     fun updateOrderStatus(orderId: Int, newStatus: DeliveryStatus, driverId: Int? = currentDriverId, note: String = "") {
+        val finalNote = note.ifBlank {
+            when (newStatus) {
+                DeliveryStatus.DA_CHAP_NHAN -> "Tài xế đã nhận đơn"
+                DeliveryStatus.DA_DEN_NHA_HANG -> "Tài xế tới điểm lấy hàng"
+                DeliveryStatus.DA_LAY_HANG -> "Đã lấy hàng thành công"
+                DeliveryStatus.DA_DEN_KHACH_HANG -> "Đã tới điểm giao cho khách"
+                DeliveryStatus.DA_GIAO -> "Giao hàng thành công cho khách"
+                DeliveryStatus.DA_HUY -> "Đã hủy đơn hàng"
+                else -> "Cập nhật trạng thái"
+            }
+        }
         viewModelScope.launch {
-            repository.updateRequestStatus(orderId, newStatus, updatedBy = driverId, note = note)
+            repository.updateRequestStatus(orderId, newStatus, updatedBy = driverId, note = finalNote)
         }
     }
 }

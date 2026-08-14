@@ -133,7 +133,11 @@ class DeliveryRepository(
 
         if (!isValidTransition(currentStatus, newStatus)) return@withTransaction false
 
-        requestDao.updateStatus(requestId, newStatus)
+        if (newStatus == DeliveryStatus.DA_GIAO) {
+            requestDao.updateStatusWithTime(requestId, newStatus, System.currentTimeMillis())
+        } else {
+            requestDao.updateStatus(requestId, newStatus)
+        }
         historyDao.insert(
             StatusHistoryEntity(
                 deliveryRequestId = requestId,

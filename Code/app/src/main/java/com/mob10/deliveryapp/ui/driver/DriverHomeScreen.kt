@@ -99,14 +99,18 @@ fun DriverHomeScreen(currentUser: UserEntity? = null, onLogout: () -> Unit = {})
             GoDropHeader(
                 roleLabel = "Khu vực tài xế",
                 name = currentUser?.fullName ?: "Tài xế",
-                subtitle = "Sẵn sàng làm việc hôm nay",
+                subtitle = if (selectedTab == 4) "Lịch sử giao hàng & Thu nhập" else "Sẵn sàng làm việc hôm nay",
                 statusLabel = if (isAvailable) "Đang trực tuyến" else "Tạm nghỉ",
                 statusColor = if (isAvailable) UthSuccess else UthWarning
             )
         }
     ) {
         if (selectedTab == 0) {
-            SectionTitle(title = "Hiệu suất hôm nay", actionLabel = "Chi tiết")
+            SectionTitle(
+                title = "Hiệu suất hôm nay",
+                actionLabel = "Chi tiết",
+                onActionClick = { selectedTab = 4 }
+            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -187,9 +191,7 @@ fun DriverHomeScreen(currentUser: UserEntity? = null, onLogout: () -> Unit = {})
                 title = "Lịch sử giao hàng",
                 subtitle = "Xem lại hiệu suất và thu nhập",
                 icon = Icons.Default.History,
-                onClick = { 
-                    android.widget.Toast.makeText(context, "Tính năng đang phát triển", android.widget.Toast.LENGTH_SHORT).show() 
-                }
+                onClick = { selectedTab = 4 }
             )
         } else if (selectedTab == 1) {
             NewOrdersTab(
@@ -212,6 +214,16 @@ fun DriverHomeScreen(currentUser: UserEntity? = null, onLogout: () -> Unit = {})
                 isAvailable = isAvailable,
                 onAvailabilityChanged = { isAvailable = it },
                 onLogout = onLogout
+            )
+        } else if (selectedTab == 4) {
+            DeliveryHistoryTab(
+                historyOrders = uiState.historyOrders,
+                packagesByOrder = uiState.packagesByOrder,
+                historiesByOrder = uiState.historiesByOrder,
+                totalEarnings = uiState.totalEarnings,
+                todayEarnings = uiState.todayEarnings,
+                completedCount = uiState.completedCount,
+                deliveredTodayCount = uiState.deliveredTodayCount
             )
         } else {
             // Placeholder for other tabs

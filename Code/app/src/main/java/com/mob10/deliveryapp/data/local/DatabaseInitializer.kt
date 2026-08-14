@@ -77,10 +77,16 @@ class DatabaseInitializer(private val db: AppDatabase) {
         val hasActiveOrders = allRequests.any { it.status == com.mob10.deliveryapp.data.model.DeliveryStatus.DA_CHAP_NHAN }
         val packageDao = db.packageDao()
 
+        // Lấy user IDs thực tế từ DB thay vì hard-code
+        val allUsers = userDao.getAllUsers().first()
+        val client1Id = allUsers.find { it.username == "client1" }?.id ?: return
+        val client2Id = allUsers.find { it.username == "client2" }?.id ?: return
+        val shipper1Id = allUsers.find { it.username == "shipper1" }?.id ?: return
+
         if (!hasNewOrders) {
             // Dummy Order 1 (New Order - Chờ tiếp nhận)
             val request1 = com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity(
-                clientId = 1,
+                clientId = client1Id,
                 distanceKm = 2.5,
                 baseFee = 10000.0,
                 distanceFee = 12500.0,
@@ -101,9 +107,8 @@ class DatabaseInitializer(private val db: AppDatabase) {
 
         if (!hasActiveOrders) {
             // Dummy Order 2 (Active Order - Đã nhận đơn - assigned to shipper1)
-            val shipper1Id = userDao.getAllUsers().first().find { it.username == "shipper1" }?.id ?: 3
             val request2 = com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity(
-                clientId = 2,
+                clientId = client2Id,
                 deliveryPersonId = shipper1Id,
                 distanceKm = 4.0,
                 baseFee = 10000.0,
