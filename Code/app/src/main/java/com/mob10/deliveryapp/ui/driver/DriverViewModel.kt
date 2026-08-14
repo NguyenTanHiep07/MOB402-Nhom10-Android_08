@@ -7,17 +7,23 @@ import androidx.lifecycle.viewModelScope
 import com.mob10.deliveryapp.data.local.AppDatabase
 import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
 import com.mob10.deliveryapp.data.local.entity.PackageEntity
+import com.mob10.deliveryapp.data.local.entity.StatusHistoryEntity
 import com.mob10.deliveryapp.data.model.DeliveryStatus
 import com.mob10.deliveryapp.data.repository.DeliveryRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import java.util.Calendar
 
 data class DriverUiState(
     val newOrders: List<DeliveryRequestEntity> = emptyList(),
     val activeOrders: List<DeliveryRequestEntity> = emptyList(),
     val packagesByOrder: Map<Int, List<PackageEntity>> = emptyMap(),
+    val historiesByOrder: Map<Int, List<StatusHistoryEntity>> = emptyMap(),
+    val pendingCount: Int = 0,
+    val deliveredTodayCount: Int = 0,
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -26,9 +32,27 @@ class DriverViewModel(private val repository: DeliveryRepository) : ViewModel() 
     private val _uiState = MutableStateFlow(DriverUiState(isLoading = true))
     val uiState: StateFlow<DriverUiState> = _uiState.asStateFlow()
 
+    // Lưu driverId để dùng cho updateOrderStatus
+    private var currentDriverId: Int? = null
+
     fun loadDriverData(driverId: Int) {
+        currentDriverId = driverId
+
+        val startOfDay = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
         viewModelScope.launch {
-            repository.allRequests.collect { allRequests ->
+            combine(
+                repository.allRequests,
+                repository.getPendingCount(),
+                repository.getDeliveredTodayCountForDriver(driverId, startOfDay)
+            ) { allRequests, pendingCount, deliveredTodayCount ->
+                Triple(allRequests, pendingCount, deliveredTodayCount)
+            }.collect { (allRequests, pendingCount, deliveredTodayCount) ->
                 val newOrders = allRequests.filter { it.status == DeliveryStatus.CHO_TIEP_NHAN }
                 val activeOrders = allRequests.filter {
                     it.deliveryPersonId == driverId && it.status in listOf(
@@ -39,18 +63,24 @@ class DriverViewModel(private val repository: DeliveryRepository) : ViewModel() 
                     )
                 }
 
-                // Load packages for these orders
+                // Load packages and histories for these orders
                 val packagesMap = mutableMapOf<Int, List<PackageEntity>>()
+                val historiesMap = mutableMapOf<Int, List<StatusHistoryEntity>>()
                 val relevantOrders = newOrders + activeOrders
                 for (order in relevantOrders) {
                     val packages = repository.getRequestPackages(order.id)
                     packagesMap[order.id] = packages
+                    val histories = repository.getRequestHistory(order.id)
+                    historiesMap[order.id] = histories
                 }
 
                 _uiState.value = _uiState.value.copy(
                     newOrders = newOrders,
                     activeOrders = activeOrders,
                     packagesByOrder = packagesMap,
+                    historiesByOrder = historiesMap,
+                    pendingCount = pendingCount,
+                    deliveredTodayCount = deliveredTodayCount,
                     isLoading = false
                 )
             }
@@ -68,9 +98,9 @@ class DriverViewModel(private val repository: DeliveryRepository) : ViewModel() 
         // and it remains in the pool for others.
     }
 
-    fun updateOrderStatus(orderId: Int, newStatus: DeliveryStatus, note: String = "") {
+    fun updateOrderStatus(orderId: Int, newStatus: DeliveryStatus, driverId: Int? = currentDriverId, note: String = "") {
         viewModelScope.launch {
-            repository.updateRequestStatus(orderId, newStatus, note = note)
+            repository.updateRequestStatus(orderId, newStatus, updatedBy = driverId, note = note)
         }
     }
 }
@@ -91,3 +121,4 @@ class DriverViewModelFactory(private val context: Context) : ViewModelProvider.F
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
+
