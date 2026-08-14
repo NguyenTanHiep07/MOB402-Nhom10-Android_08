@@ -70,7 +70,8 @@ fun Android08Theme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-
+        typography = GoDropTypography,
+        shapes = GoDropShapes,
         content = content
     )
 }

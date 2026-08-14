@@ -58,7 +58,8 @@ import com.mob10.deliveryapp.ui.theme.UthWarningContainer
 @Composable
 fun AdminHomeScreen(
     adminName: String = "Quản trị viên",
-    viewModel: AdminViewModel? = null
+    viewModel: AdminViewModel? = null,
+    onLogout: () -> Unit = {}
 ) {
     var selectedTab by remember { mutableStateOf(0) }
 
@@ -81,7 +82,8 @@ fun AdminHomeScreen(
             GoDropHeader(
                 roleLabel = "Trung tâm quản trị",
                 name = adminName,
-                subtitle = "Tổng quan hệ thống ngày hôm nay"
+                subtitle = "Tổng quan hệ thống ngày hôm nay",
+                onLogout = onLogout
             )
         }
     ) {
@@ -211,4 +213,3 @@ private fun AdminHomeScreenPreview() {
         AdminHomeScreen()
     }
 }
-

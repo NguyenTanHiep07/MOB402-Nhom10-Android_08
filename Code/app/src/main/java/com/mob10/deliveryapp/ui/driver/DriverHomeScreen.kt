@@ -97,7 +97,8 @@ fun DriverHomeScreen(currentUser: UserEntity? = null, onLogout: () -> Unit = {})
                 name = currentUser?.fullName ?: "Tài xế",
                 subtitle = "Sẵn sàng làm việc hôm nay",
                 statusLabel = if (isAvailable) "Đang trực tuyến" else "Tạm nghỉ",
-                statusColor = if (isAvailable) UthSuccess else UthWarning
+                statusColor = if (isAvailable) UthSuccess else UthWarning,
+                onLogout = onLogout
             )
         }
     ) {

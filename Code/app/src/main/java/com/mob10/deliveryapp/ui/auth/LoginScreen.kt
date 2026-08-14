@@ -28,6 +28,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -65,7 +66,8 @@ import com.mob10.deliveryapp.ui.theme.UthSecondaryContainer
 @Composable
 fun LoginScreen(
     onLogin: (phoneNumber: String, password: String) -> Unit = { _, _ -> },
-    onForgotPassword: () -> Unit = {}
+    onForgotPassword: () -> Unit = {},
+    isLoading: Boolean = false
 ) {
     var phoneNumber by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
@@ -132,7 +134,7 @@ fun LoginScreen(
                     )
                     Spacer(modifier = Modifier.height(5.dp))
                     Text(
-                        text = "Đăng nhập để tiếp tục hành trình giao hàng",
+                        text = stringResource(R.string.login_subtitle),
                         color = UthOnSurfaceVariant,
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center
@@ -208,6 +210,7 @@ fun LoginScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(53.dp),
+                        enabled = !isLoading,
                         shape = RoundedCornerShape(15.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = UthPrimary,
@@ -215,18 +218,26 @@ fun LoginScreen(
                         ),
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
                     ) {
-                        Text(
-                            text = stringResource(R.string.login_button),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(22.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = stringResource(R.string.login_button),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "© 2025 GoDrop · Giao hàng nhanh, quản lý dễ dàng",
+                text = stringResource(R.string.login_copyright),
                 color = UthOnSurfaceVariant.copy(alpha = 0.8f),
                 fontSize = 11.sp,
                 textAlign = TextAlign.Center

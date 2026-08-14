@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Person
@@ -126,7 +127,8 @@ fun GoDropHeader(
     subtitle: String,
     statusLabel: String? = null,
     statusColor: Color = UthSuccess,
-    onProfileClick: () -> Unit = {}
+    onProfileClick: () -> Unit = {},
+    onLogout: (() -> Unit)? = null
 ) {
     val greeting = dashboardGreeting(name)
 
@@ -180,6 +182,23 @@ fun GoDropHeader(
                         tint = Color.White,
                         modifier = Modifier.size(21.dp)
                     )
+                }
+                if (onLogout != null) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(
+                        onClick = onLogout,
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.16f))
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                            contentDescription = "Đăng xuất",
+                            tint = Color.White,
+                            modifier = Modifier.size(21.dp)
+                        )
+                    }
                 }
             }
 

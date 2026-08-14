@@ -132,7 +132,7 @@ fun NewOrderCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(text = "Khoảng cách: ${String.format("%.1f", order.distanceKm)} km")
-                Text(text = "Phí giao: ${order.baseFee + order.distanceFee}đ", fontWeight = FontWeight.Bold, color = UthSuccess)
+                Text(text = "Phí giao: ${String.format("%,.0f", order.totalCost)}đ", fontWeight = FontWeight.Bold, color = UthSuccess)
             }
 
             Spacer(modifier = Modifier.height(16.dp))

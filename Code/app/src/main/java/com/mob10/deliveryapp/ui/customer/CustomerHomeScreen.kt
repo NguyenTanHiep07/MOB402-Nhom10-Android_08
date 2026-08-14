@@ -61,7 +61,8 @@ import com.mob10.deliveryapp.ui.theme.UthSecondary
 @Composable
 fun CustomerHomeScreen(
     customerName: String = "Khách hàng",
-    viewModel: CustomerViewModel? = null
+    viewModel: CustomerViewModel? = null,
+    onLogout: () -> Unit = {}
 ) {
     var selectedTab by remember { mutableStateOf(0) }
 
@@ -82,7 +83,8 @@ fun CustomerHomeScreen(
             GoDropHeader(
                 roleLabel = "Khu vực khách hàng",
                 name = customerName,
-                subtitle = "Quản lý giao hàng của bạn hôm nay"
+                subtitle = "Quản lý giao hàng của bạn hôm nay",
+                onLogout = onLogout
             )
         }
     ) {
