@@ -81,6 +81,7 @@ class DriverViewModelFactory(private val context: Context) : ViewModelProvider.F
         if (modelClass.isAssignableFrom(DriverViewModel::class.java)) {
             val db = AppDatabase.getDatabase(context)
             val repository = DeliveryRepository(
+                db,
                 db.deliveryRequestDao(),
                 db.packageDao(),
                 db.statusHistoryDao()

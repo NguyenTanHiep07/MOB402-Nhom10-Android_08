@@ -16,7 +16,7 @@ interface DeliveryRequestDao {
     @Query("SELECT * FROM delivery_requests WHERE deliveryPersonId = :deliveryId ORDER BY createdAt DESC")
     fun getRequestsByDelivery(deliveryId: Int): Flow<List<DeliveryRequestEntity>>
 
-    @Query("SELECT * FROM delivery_requests WHERE status = 'PENDING' ORDER BY createdAt DESC")
+    @Query("SELECT * FROM delivery_requests WHERE status = 'CHO_TIEP_NHAN' ORDER BY createdAt DESC")
     fun getPendingRequests(): Flow<List<DeliveryRequestEntity>>
 
     @Query("SELECT * FROM delivery_requests WHERE id = :id")
@@ -25,16 +25,16 @@ interface DeliveryRequestDao {
     @Query("SELECT COUNT(*) FROM delivery_requests")
     fun getTotalCount(): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM delivery_requests WHERE status = 'PENDING'")
+    @Query("SELECT COUNT(*) FROM delivery_requests WHERE status = 'CHO_TIEP_NHAN'")
     fun getPendingCount(): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM delivery_requests WHERE clientId = :clientId AND status NOT IN ('PENDING','CANCELLED')")
+    @Query("SELECT COUNT(*) FROM delivery_requests WHERE clientId = :clientId AND status NOT IN ('CHO_TIEP_NHAN','DA_HUY')")
     fun getActiveCountForClient(clientId: Int): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM delivery_requests WHERE clientId = :clientId AND status = 'DELIVERED'")
+    @Query("SELECT COUNT(*) FROM delivery_requests WHERE clientId = :clientId AND status = 'DA_GIAO'")
     fun getDeliveredCountForClient(clientId: Int): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM delivery_requests WHERE deliveryPersonId = :deliveryId AND status = 'DELIVERED' AND actualDeliveryTime >= :startOfDay")
+    @Query("SELECT COUNT(*) FROM delivery_requests WHERE deliveryPersonId = :deliveryId AND status = 'DA_GIAO' AND actualDeliveryTime >= :startOfDay")
     fun getDeliveredTodayCountForDriver(deliveryId: Int, startOfDay: Long): Flow<Int>
 
     @Insert

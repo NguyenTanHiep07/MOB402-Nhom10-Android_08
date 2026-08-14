@@ -148,11 +148,11 @@ fun ActiveOrderCard(
             // Progress tracking style UI based on status
             when (order.status) {
                 DeliveryStatus.DA_CHAP_NHAN -> {
-                    InfoRow(icon = Icons.Default.Store, title = "Điểm lấy hàng", desc = order.restaurantName, address = order.restaurantAddress)
+                    InfoRow(icon = Icons.Default.Store, title = "Điểm lấy hàng", desc = order.senderName, address = order.pickupAddress)
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedButton(
-                            onClick = { openMaps(order.restaurantAddress) },
+                            onClick = { openMaps(order.pickupAddress) },
                             modifier = Modifier.weight(1f),
                             contentPadding = PaddingValues(0.dp)
                         ) {
@@ -181,11 +181,11 @@ fun ActiveOrderCard(
                     }
                 }
                 DeliveryStatus.DA_LAY_HANG -> {
-                    InfoRow(icon = Icons.Default.Person, title = "Giao đến khách", desc = order.customerName, address = order.customerAddress)
+                    InfoRow(icon = Icons.Default.Person, title = "Giao đến khách", desc = order.recipientName, address = order.deliveryAddress)
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedButton(
-                            onClick = { openMaps(order.customerAddress) },
+                            onClick = { openMaps(order.deliveryAddress) },
                             modifier = Modifier.weight(1f),
                             contentPadding = PaddingValues(0.dp)
                         ) {
@@ -203,7 +203,7 @@ fun ActiveOrderCard(
                     }
                 }
                 DeliveryStatus.DA_DEN_KHACH_HANG -> {
-                    InfoRow(icon = Icons.Default.Person, title = "Khách hàng", desc = order.customerName, address = order.customerAddress)
+                    InfoRow(icon = Icons.Default.Person, title = "Khách hàng", desc = order.recipientName, address = order.deliveryAddress)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(text = "Đơn hàng #${order.id}", style = MaterialTheme.typography.bodySmall, color = UthOnSurfaceVariant)
                     Spacer(modifier = Modifier.height(16.dp))

@@ -19,11 +19,16 @@ data class DeliveryRequestEntity(
     val weightFee: Double,
     val totalCost: Double,
     val status: DeliveryStatus,
-    val restaurantName: String = "",
-    val restaurantAddress: String = "",
-    val restaurantPhone: String = "",
-    val customerName: String = "",
-    val customerAddress: String = "",
-    val customerPhone: String = "",
-    val createdAt: Long = System.currentTimeMillis()
+    val pickupAddress: String = "",
+    val deliveryAddress: String = "",
+    val senderName: String = "",
+    val senderPhone: String = "",
+    val recipientName: String = "",
+    val recipientPhone: String = "",
+    val fragileCharge: Double = 0.0,
+    val pricingRuleId: Int? = null,
+    val scheduledPickupTime: Long? = null,
+    val note: String? = null,
+    val createdAt: Long = System.currentTimeMillis(),
+    val actualDeliveryTime: Long? = null
 )

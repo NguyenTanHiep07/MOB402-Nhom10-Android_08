@@ -87,12 +87,12 @@ class DatabaseInitializer(private val db: AppDatabase) {
                 weightFee = 5000.0,
                 totalCost = 27500.0,
                 status = com.mob10.deliveryapp.data.model.DeliveryStatus.CHO_TIEP_NHAN,
-                restaurantName = "Nhà hàng ABC",
-                restaurantAddress = "123 Nguyễn Văn A, Quận 1",
-                restaurantPhone = "0901234567",
-                customerName = "Nguyễn Văn B",
-                customerAddress = "456 Lê Văn B, Quận 3",
-                customerPhone = "0987654321"
+                senderName = "Nhà hàng ABC",
+                pickupAddress = "123 Nguyễn Văn A, Quận 1",
+                senderPhone = "0901234567",
+                recipientName = "Nguyễn Văn B",
+                deliveryAddress = "456 Lê Văn B, Quận 3",
+                recipientPhone = "0987654321"
             )
             val req1Id = deliveryDao.insert(request1).toInt()
             packageDao.insert(com.mob10.deliveryapp.data.local.entity.PackageEntity(deliveryRequestId = req1Id, name = "Cơm gà", weightKg = 0.5, quantity = 1, note = "Nhiều cơm"))
@@ -111,12 +111,12 @@ class DatabaseInitializer(private val db: AppDatabase) {
                 weightFee = 0.0,
                 totalCost = 30000.0,
                 status = com.mob10.deliveryapp.data.model.DeliveryStatus.DA_CHAP_NHAN,
-                restaurantName = "Phở Hòa",
-                restaurantAddress = "260C Pasteur, Quận 3",
-                restaurantPhone = "0900000000",
-                customerName = "Trần Thị C",
-                customerAddress = "789 Lý Tự Trọng, Quận 1",
-                customerPhone = "0111111111"
+                senderName = "Phở Hòa",
+                pickupAddress = "260C Pasteur, Quận 3",
+                senderPhone = "0900000000",
+                recipientName = "Trần Thị C",
+                deliveryAddress = "789 Lý Tự Trọng, Quận 1",
+                recipientPhone = "0111111111"
             )
             val req2Id = deliveryDao.insert(request2).toInt()
             packageDao.insert(com.mob10.deliveryapp.data.local.entity.PackageEntity(deliveryRequestId = req2Id, name = "Phở Bò", weightKg = 0.6, quantity = 2))

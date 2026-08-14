@@ -89,8 +89,8 @@ fun NewOrderCard(
                 Icon(Icons.Default.Store, contentDescription = null, tint = UthPrimary, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
-                    Text(text = order.restaurantName.ifEmpty { "Nhà hàng chưa rõ" }, fontWeight = FontWeight.SemiBold)
-                    Text(text = order.restaurantAddress.ifEmpty { "Địa chỉ chưa rõ" }, style = MaterialTheme.typography.bodySmall)
+                    Text(text = order.senderName.ifEmpty { "Nhà hàng chưa rõ" }, fontWeight = FontWeight.SemiBold)
+                    Text(text = order.pickupAddress.ifEmpty { "Địa chỉ chưa rõ" }, style = MaterialTheme.typography.bodySmall)
                 }
             }
 
@@ -101,8 +101,8 @@ fun NewOrderCard(
                 Icon(Icons.Default.Person, contentDescription = null, tint = UthSuccess, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
-                    Text(text = order.customerName.ifEmpty { "Khách hàng" }, fontWeight = FontWeight.SemiBold)
-                    Text(text = order.customerAddress.ifEmpty { "Địa chỉ giao" }, style = MaterialTheme.typography.bodySmall)
+                    Text(text = order.recipientName.ifEmpty { "Khách hàng" }, fontWeight = FontWeight.SemiBold)
+                    Text(text = order.deliveryAddress.ifEmpty { "Địa chỉ giao" }, style = MaterialTheme.typography.bodySmall)
                 }
             }
 

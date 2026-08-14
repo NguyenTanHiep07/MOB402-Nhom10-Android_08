@@ -23,13 +23,13 @@ class CustomerViewModel(
     /** Số đơn đang xử lý (không phải DELIVERED hay CANCELLED) */
     val activeOrderCount: StateFlow<Int> = myRequests
         .map { list ->
-            list.count { it.status !in listOf(DeliveryStatus.DELIVERED, DeliveryStatus.CANCELLED) }
+            list.count { it.status !in listOf(DeliveryStatus.DA_GIAO, DeliveryStatus.DA_HUY) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     /** Số đơn đã hoàn tất */
     val completedOrderCount: StateFlow<Int> = myRequests
-        .map { list -> list.count { it.status == DeliveryStatus.DELIVERED } }
+        .map { list -> list.count { it.status == DeliveryStatus.DA_GIAO } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     /** Đơn gần đây nhất */
@@ -40,7 +40,7 @@ class CustomerViewModel(
     /** Danh sách đơn đang hoạt động (để hiển thị danh sách) */
     val activeOrders: StateFlow<List<DeliveryRequestEntity>> = myRequests
         .map { list ->
-            list.filter { it.status !in listOf(DeliveryStatus.DELIVERED, DeliveryStatus.CANCELLED) }
+            list.filter { it.status !in listOf(DeliveryStatus.DA_GIAO, DeliveryStatus.DA_HUY) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 }
