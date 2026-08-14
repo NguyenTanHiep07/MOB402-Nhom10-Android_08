@@ -46,6 +46,9 @@ interface DeliveryRequestDao {
     @Query("UPDATE delivery_requests SET status = :status WHERE id = :requestId")
     suspend fun updateStatus(requestId: Int, status: DeliveryStatus)
 
+    @Query("UPDATE delivery_requests SET status = :status, actualDeliveryTime = :deliveryTime WHERE id = :requestId")
+    suspend fun updateStatusWithTime(requestId: Int, status: DeliveryStatus, deliveryTime: Long)
+
     @Query("UPDATE delivery_requests SET deliveryPersonId = :deliveryId, status = :status WHERE id = :requestId")
     suspend fun assignToDelivery(requestId: Int, deliveryId: Int, status: DeliveryStatus)
 }
