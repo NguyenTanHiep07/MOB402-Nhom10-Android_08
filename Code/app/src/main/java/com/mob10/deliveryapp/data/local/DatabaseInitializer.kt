@@ -1,3 +1,94 @@
+
+package com.mob10.deliveryapp.data.local
+
+import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
+import com.mob10.deliveryapp.data.local.entity.PackageEntity
+import com.mob10.deliveryapp.data.local.entity.StatusHistoryEntity
+import com.mob10.deliveryapp.data.local.entity.UserEntity
+import com.mob10.deliveryapp.data.model.DeliveryStatus
+import com.mob10.deliveryapp.data.model.Role
+import kotlinx.coroutines.flow.first
+
+class DatabaseInitializer(private val db: AppDatabase) {
+
+    suspend fun initialize() {
+        val userDao = db.userDao()
+        val existingUsers = userDao.getAllUsers().first().associateBy { it.username }
+
+        // Remove the temporary accounts from the previous UI-only seed.
+        userDao.deleteByUsernames(listOf("customer", "driver"))
+
+        val sampleUsers = listOf(
+            // Sample Clients
+            UserEntity(
+                username = "client1",
+                password = "123456",
+                fullName = "Nguyễn Văn A",
+                phoneNumber = "0123456789",
+                role = Role.CLIENT
+            ),
+            UserEntity(
+                username = "client2",
+                password = "123456",
+                fullName = "Trần Thị B",
+                phoneNumber = "0987654321",
+                role = Role.CLIENT
+            ),
+            // Sample Delivery Staff
+            UserEntity(
+                username = "shipper1",
+                password = "123456",
+                fullName = "Lê Văn C",
+                phoneNumber = "0111222333",
+                role = Role.DELIVERY
+            ),
+            UserEntity(
+                username = "shipper2",
+                password = "123456",
+                fullName = "Phạm Văn D",
+                phoneNumber = "0444555666",
+                role = Role.DELIVERY
+            ),
+            // Sample Admin
+            UserEntity(
+                username = "admin",
+                password = "123456",
+                fullName = "Quản trị viên",
+                phoneNumber = "0000000000",
+                role = Role.ADMIN
+            )
+        )
+
+        sampleUsers.forEach { sampleUser ->
+            val existingUser = existingUsers[sampleUser.username]
+            if (existingUser == null ||
+                existingUser.password != sampleUser.password ||
+                existingUser.fullName != sampleUser.fullName ||
+                existingUser.phoneNumber != sampleUser.phoneNumber ||
+                existingUser.role != sampleUser.role
+            ) {
+                userDao.insert(sampleUser)
+            }
+        }
+
+        // Add Dummy Delivery Requests if missing
+        val deliveryDao = db.deliveryRequestDao()
+        val allRequests = deliveryDao.getAllRequests().first()
+        val hasNewOrders = allRequests.any { it.status == com.mob10.deliveryapp.data.model.DeliveryStatus.CHO_TIEP_NHAN }
+        val hasActiveOrders = allRequests.any { it.status == com.mob10.deliveryapp.data.model.DeliveryStatus.DA_CHAP_NHAN }
+        val packageDao = db.packageDao()
+
+        // Lấy user IDs thực tế từ DB thay vì hard-code
+        val allUsers = userDao.getAllUsers().first()
+        val client1Id = allUsers.find { it.username == "client1" }?.id ?: return
+        val client2Id = allUsers.find { it.username == "client2" }?.id ?: return
+        val shipper1Id = allUsers.find { it.username == "shipper1" }?.id ?: return
+
+        if (!hasNewOrders) {
+            // Dummy Order 1 (New Order - Chờ tiếp nhận)
+            val request1 = com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity(
+                clientId = client1Id,
+                distanceKm = 2.5,
                 baseFee = 10000.0,
                 distanceFee = 12500.0,
                 weightFee = 5000.0,
@@ -17,9 +108,8 @@
 
         if (!hasActiveOrders) {
             // Dummy Order 2 (Active Order - Đã nhận đơn - assigned to shipper1)
-            val shipper1Id = userDao.getAllUsers().first().find { it.username == "shipper1" }?.id ?: 3
             val request2 = com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity(
-                clientId = 2,
+                clientId = client2Id,
                 deliveryPersonId = shipper1Id,
                 distanceKm = 4.0,
                 baseFee = 10000.0,

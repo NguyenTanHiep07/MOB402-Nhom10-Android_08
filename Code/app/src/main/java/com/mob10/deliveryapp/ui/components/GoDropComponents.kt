@@ -268,7 +268,11 @@ fun dashboardGreeting(name: String): Pair<String, String> {
 }
 
 @Composable
-fun SectionTitle(title: String, actionLabel: String? = null) {
+fun SectionTitle(
+    title: String,
+    actionLabel: String? = null,
+    onActionClick: (() -> Unit)? = null
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -285,7 +289,11 @@ fun SectionTitle(title: String, actionLabel: String? = null) {
                 text = actionLabel,
                 color = UthPrimary,
                 fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .clickable(enabled = onActionClick != null) { onActionClick?.invoke() }
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
             )
         }
     }
