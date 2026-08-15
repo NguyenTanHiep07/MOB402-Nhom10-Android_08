@@ -63,7 +63,7 @@ fun OrderConfirmationScreen(
                         Text(pendingOrder.packageType, color = TextPrimary)
                     }
 
-                    // Hiển thị phụ phí nếu đơn hàng vượt quá 2kg
+
                     if (pendingOrder.extraFee > 0) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
