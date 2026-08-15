@@ -25,8 +25,8 @@ class MainActivity : ComponentActivity() {
                         navController = navController,
                         startDestination = "client_home"
                     ) {
-                         1️⃣ TRANG CHỦ KHÁCH HÀNG
-                         1️⃣ TRANG CHỦ KHÁCH HÀNG
+                        // 1️⃣ TRANG CHỦ KHÁCH HÀNG
+                        // 1️⃣ TRANG CHỦ KHÁCH HÀNG
                         composable("client_home") {
                             ClientHomeScreen(
                                 orderViewModel = orderViewModel, // 👈 Thêm dòng này vào là hết lỗi đỏ!
@@ -35,7 +35,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                         2️⃣ TẠO YÊU CẦU GIAO HÀNG
+                        // 2️⃣ TẠO YÊU CẦU GIAO HÀNG
                         composable("create_request") {
                             CreateRequestScreen(
                                 onNextToConfirm = { sName, sPhone, sAddr, rName, rPhone, rAddr, weight, pType ->
@@ -45,7 +45,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                         3️⃣ XÁC NHẬN ĐƠN HÀNG
+                        // 3️⃣ XÁC NHẬN ĐƠN HÀNG
                         composable("confirm_order") {
                             OrderConfirmationScreen(
                                 orderViewModel = orderViewModel,
@@ -59,7 +59,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                         4️⃣ LỊCH SỬ & THEO DÕI ĐƠN HÀNG
+                        // 4️⃣ LỊCH SỬ & THEO DÕI ĐƠN HÀNG
                         composable("order_tracking") {
                             OrderTrackingScreen(
                                 orderViewModel = orderViewModel,
