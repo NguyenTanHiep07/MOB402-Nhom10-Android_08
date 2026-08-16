@@ -1,164 +1,131 @@
 package com.mob10.deliveryapp
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.ListAlt
+import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.PendingActions
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.TaskAlt
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mob10.deliveryapp.data.model.DeliveryStatus
+import com.mob10.deliveryapp.ui.components.DashboardNavItem
+import com.mob10.deliveryapp.ui.components.DashboardScaffold
+import com.mob10.deliveryapp.ui.components.GoDropHeader
+import com.mob10.deliveryapp.ui.components.MetricCard
+import com.mob10.deliveryapp.ui.components.QuickActionCard
+import com.mob10.deliveryapp.ui.components.SectionTitle
+import com.mob10.deliveryapp.ui.theme.UthPrimary
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClientHomeScreen(
+    customerName: String,
     orderViewModel: OrderViewModel,
     onCreateRequestClick: () -> Unit,
-    onOrderListClick: () -> Unit
+    onOrderListClick: () -> Unit,
+    onLogout: () -> Unit
 ) {
-    // Lấy danh sách đơn hàng thực tế
     val orderList by orderViewModel.orderHistory.collectAsState()
+    val pendingCount = orderList.count { it.status !in listOf(DeliveryStatus.DA_GIAO, DeliveryStatus.DA_HUY) }
+    val completedCount = orderList.count { it.status == DeliveryStatus.DA_GIAO }
 
-    // Đếm số đơn thực tế (Tự động cập nhật khi tạo đơn mới)
-    val pendingCount = orderList.count { it.status == "Đang xử lý" }
-    val completedCount = orderList.count { it.status == "Đã hoàn tất" }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("≡  UTH Delivery", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Text("👤", fontSize = 18.sp)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
+    DashboardScaffold(
+        selectedTab = 0,
+        onTabSelected = { if (it != 0) onOrderListClick() },
+        navItems = listOf(
+            DashboardNavItem("Trang chủ", Icons.Default.Home),
+            DashboardNavItem("Đơn hàng", Icons.Default.ListAlt),
+            DashboardNavItem("Theo dõi", Icons.Default.LocalShipping),
+            DashboardNavItem("Hồ sơ", Icons.Default.Person)
+        ),
+        header = {
+            GoDropHeader(
+                roleLabel = "Khu vực khách hàng",
+                name = customerName,
+                subtitle = "Quản lý giao hàng của bạn hôm nay",
+                onLogout = onLogout
             )
-        },
-        containerColor = DarkBackground
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            // LỜI CHÀO
-            Column {
-                Text("Xin chào, Khách hàng 👋", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("Quản lý giao hàng của bạn hôm nay", color = TextSecondary, fontSize = 13.sp)
-            }
-
-            // 2 KHUNG THỐNG KÊ (Hiển thị số liệu thực tế)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Card(
-                    modifier = Modifier.weight(1f),
-                    colors = CardDefaults.cardColors(containerColor = CardBackground),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Đơn đang xử lý", color = TextSecondary, fontSize = 12.sp)
-                            Text("🕒", fontSize = 12.sp)
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("$pendingCount", color = TextPrimary, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-
-                Card(
-                    modifier = Modifier.weight(1f),
-                    colors = CardDefaults.cardColors(containerColor = CardBackground),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Đơn hoàn tất", color = TextSecondary, fontSize = 12.sp)
-                            Text("☑", fontSize = 12.sp)
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("$completedCount", color = TextPrimary, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-
-            // NÚT TẠO ĐƠN
-            Button(
-                onClick = onCreateRequestClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("+ Tạo yêu cầu giao hàng", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            }
-
-            // TRUY CẬP NHANH
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("TRUY CẬP NHANH", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-
-                QuickAccessCard(
-                    title = "Danh sách đơn của tôi",
-                    subtitle = "Xem tất cả các yêu cầu",
-                    onClick = onOrderListClick
-                )
-
-                QuickAccessCard(
-                    title = "Theo dõi trạng thái",
-                    subtitle = "Định vị trực tiếp đơn hàng",
-                    onClick = onOrderListClick
-                )
-
-                QuickAccessCard(
-                    title = "Lịch sử trạng thái",
-                    subtitle = "Báo cáo & thống kê sự cố",
-                    onClick = onOrderListClick
-                )
-            }
         }
+    ) {
+        SectionTitle(title = "Tổng quan đơn hàng", actionLabel = "Hôm nay")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            MetricCard(
+                modifier = Modifier.weight(1f),
+                label = "Đang xử lý",
+                value = "%02d".format(pendingCount),
+                helper = if (pendingCount > 0) "Cần theo dõi" else "Không có đơn chờ",
+                icon = Icons.Default.PendingActions,
+                highlighted = pendingCount > 0
+            )
+            MetricCard(
+                modifier = Modifier.weight(1f),
+                label = "Đã hoàn tất",
+                value = "%02d".format(completedCount),
+                helper = "Tổng số đơn đã giao",
+                icon = Icons.Default.TaskAlt
+            )
+        }
+        ClientCreateDeliveryCard(onCreateRequestClick)
+        SectionTitle(title = "Thao tác nhanh")
+        QuickActionCard("Danh sách đơn của tôi", "Xem tất cả yêu cầu giao hàng", Icons.Default.ListAlt, onOrderListClick)
+        QuickActionCard("Theo dõi trạng thái", "Kiểm tra tiến độ đơn hàng", Icons.Default.LocalShipping, onOrderListClick)
+        QuickActionCard("Lịch sử hoạt động", "Xem lại các cập nhật trạng thái", Icons.Default.History, onOrderListClick)
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QuickAccessCard(title: String, subtitle: String, onClick: () -> Unit) {
+private fun ClientCreateDeliveryCard(onClick: () -> Unit) {
     Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
-        shape = RoundedCornerShape(12.dp)
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = UthPrimary),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(title, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(subtitle, color = TextSecondary, fontSize = 12.sp)
+            Box(
+                modifier = Modifier.size(48.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.16f)),
+                contentAlignment = Alignment.Center
+            ) { Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(25.dp)) }
+            Spacer(Modifier.width(13.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Tạo yêu cầu giao hàng", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Gửi hàng nhanh chóng chỉ trong vài bước", color = Color.White.copy(alpha = 0.76f), fontSize = 11.sp)
             }
-            Text(">", color = TextSecondary, fontSize = 14.sp)
+            Surface(shape = RoundedCornerShape(11.dp), color = Color.White) {
+                Text("Bắt đầu", color = UthPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 11.dp, vertical = 8.dp))
+            }
         }
     }
 }

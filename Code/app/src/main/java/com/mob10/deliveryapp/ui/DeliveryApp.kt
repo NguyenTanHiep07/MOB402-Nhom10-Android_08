@@ -11,7 +11,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mob10.deliveryapp.ui.admin.AdminHomeScreen
 import com.mob10.deliveryapp.ui.admin.AdminViewModel
 import com.mob10.deliveryapp.ui.admin.AdminViewModelFactory
-import com.mob10.deliveryapp.ui.customer.CustomerHomeScreen
+import com.mob10.deliveryapp.ui.customer.ClientFeatureFlow
 import com.mob10.deliveryapp.ui.driver.DriverHomeScreen
 import com.mob10.deliveryapp.ui.auth.AuthViewModel
 import com.mob10.deliveryapp.ui.auth.LoginScreen
@@ -49,10 +49,12 @@ fun DeliveryApp(authViewModel: AuthViewModel) {
                 currentUser = currentUser,
                 onLogout = authViewModel::logout
             )
-            AppDestination.CLIENT_HOME -> CustomerHomeScreen(
-                customerName = currentUser?.fullName.orEmpty(),
-                onLogout = authViewModel::logout
-            )
+            AppDestination.CLIENT_HOME -> currentUser?.let { user ->
+                ClientFeatureFlow(
+                    currentUser = user,
+                    onLogout = authViewModel::logout
+                )
+            }
             AppDestination.LOGIN -> {
                 XmlLoginScreen(
                     onLogin = authViewModel::login,
