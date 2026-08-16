@@ -1,0 +1,8 @@
+flowchart LR
+    USER[Người dùng] --> LOGIN((Đăng nhập))
+    LOGIN -.include.-> VALIDATE((Kiểm tra dữ liệu nhập))
+    LOGIN -.include.-> AUTH((Xác thực Room))
+    AUTH -.include.-> ROUTE((Xác định role))
+    ROUTE --> CLIENT[Client Home]
+    ROUTE --> DELIVERY[Delivery Home]
+    ROUTE --> ADMIN[Admin Home]

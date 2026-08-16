@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Android_UTH_08"
+rootProject.name = "Android_08"
 include(":app")

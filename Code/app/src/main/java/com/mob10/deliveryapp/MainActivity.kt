@@ -10,12 +10,28 @@ import androidx.compose.material3.Surface
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.ViewModelProvider
+import com.mob10.deliveryapp.data.local.AppDatabase
+import com.mob10.deliveryapp.data.local.DatabaseInitializer
+import com.mob10.deliveryapp.data.repository.UserRepository
+import com.mob10.deliveryapp.ui.DeliveryApp
+import com.mob10.deliveryapp.ui.auth.AuthViewModel
+import com.mob10.deliveryapp.ui.auth.AuthViewModelFactory
 
 class MainActivity : ComponentActivity() {
     private val orderViewModel: OrderViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val database = AppDatabase.getDatabase(applicationContext)
+        val authViewModel = ViewModelProvider(
+            this,
+            AuthViewModelFactory(
+                userRepository = UserRepository(database.userDao()),
+                databaseInitializer = DatabaseInitializer(database)
+            )
+        )[AuthViewModel::class.java]
+
         setContent {
             MaterialTheme {
                 Surface {

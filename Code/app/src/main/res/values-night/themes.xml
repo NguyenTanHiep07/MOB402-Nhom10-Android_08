@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Base.Theme.AndroidUTH08" parent="android:Theme.Material.NoActionBar">
+<resources>
+
+    <style name="Base.Theme.Android08" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Primary brand color. -->
+        <item name="colorPrimary">@color/godrop_primary</item>
+        <item name="colorPrimaryVariant">@color/godrop_primary_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <!-- Secondary brand color. -->
+        <item name="colorSecondary">@color/godrop_secondary</item>
+        <item name="colorSecondaryVariant">@color/godrop_secondary</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <!-- Status bar color. -->
+        <item name="android:fontFamily">sans</item>
+        <item name="android:statusBarColor">#10131C</item>
     </style>
+
 </resources>
