@@ -1,102 +1,143 @@
 package com.mob10.deliveryapp
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
+import com.mob10.deliveryapp.data.model.DeliveryStatus
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OrderTrackingScreen(
-    orderViewModel: OrderViewModel,
-    onCreateNewOrder: () -> Unit,
-    onBackToHome: () -> Unit // Callback quay về Trang chủ
-) {
+fun OrderTrackingScreen(orderViewModel: OrderViewModel, onCreateNewOrder: () -> Unit, onBackToHome: () -> Unit) {
     val orders by orderViewModel.orderHistory.collectAsState()
-
+    val selectedOrder by orderViewModel.selectedOrder.collectAsState()
+    val history by orderViewModel.selectedHistory.collectAsState()
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Đơn hàng của tôi", color = TextPrimary, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBackToHome) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Trở về trang chủ",
-                            tint = TextPrimary
-                        )
-                    }
-                },
+                navigationIcon = { IconButton(onClick = onBackToHome) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Trở về trang chủ", tint = TextPrimary) } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
             )
         },
         containerColor = DarkBackground,
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onCreateNewOrder,
-                containerColor = PrimaryBlue
-            ) {
-                Text("+ Tạo đơn", color = Color.White, modifier = Modifier.padding(horizontal = 12.dp))
-            }
-        }
+        floatingActionButton = { FloatingActionButton(onClick = onCreateNewOrder, containerColor = PrimaryBlue) { Text("+ Tạo đơn", color = Color.White, modifier = Modifier.padding(horizontal = 12.dp)) } }
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-        ) {
+        Box(Modifier.fillMaxSize().padding(paddingValues).padding(16.dp)) {
             if (orders.isEmpty()) {
-                Column(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Chưa có đơn hàng nào", color = TextSecondary, fontSize = 16.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text("Hãy tạo đơn hàng đầu tiên của bạn!", color = TextSecondary, fontSize = 13.sp)
                 }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(orders) { item ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = CardBackground),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(item.id, color = PrimaryBlue, fontWeight = FontWeight.Bold)
-                                    Text(item.status, color = Color(0xFFEAB308), fontSize = 12.sp)
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text("Người nhận: ${item.receiverName}", color = TextPrimary)
-                                Text("Địa chỉ: ${item.address}", color = TextSecondary, fontSize = 13.sp)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("Loại: ${item.packageType} (${item.weight}kg)", color = TextSecondary, fontSize = 12.sp)
-                                    Text("${formatMoney(item.totalFee)} đ", color = TextPrimary, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
+                    items(orders, key = { it.id }) { order -> OrderCard(order) { orderViewModel.selectOrder(order) } }
                 }
             }
         }
     }
+    selectedOrder?.let { order ->
+        AlertDialog(
+            onDismissRequest = orderViewModel::clearSelectedOrder,
+            title = { Text("Lịch sử #GD-${order.id}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Trạng thái hiện tại: ${order.status.label()}", fontWeight = FontWeight.Bold)
+                    if (history.isEmpty()) Text("Chưa có mốc lịch sử chi tiết.") else history.forEach { item ->
+                        Column {
+                            Text(item.toStatus.label(), fontWeight = FontWeight.SemiBold)
+                            Text("${formatTimestamp(item.timestamp)}${item.note?.let { " · $it" }.orEmpty()}", color = TextSecondary, fontSize = 12.sp)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = orderViewModel::clearSelectedOrder) { Text("Đóng") } }
+        )
+    }
 }
+
+@Composable
+private fun OrderCard(order: DeliveryRequestEntity, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("#GD-${order.id}", color = PrimaryBlue, fontWeight = FontWeight.Bold)
+                Text(order.status.label(), color = order.status.statusColor(), fontSize = 12.sp)
+            }
+            Spacer(Modifier.height(8.dp))
+            Text("Người nhận: ${order.recipientName}", color = TextPrimary)
+            Text("Địa chỉ: ${order.deliveryAddress}", color = TextSecondary, fontSize = 13.sp)
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("${order.distanceKm} km", color = TextSecondary, fontSize = 12.sp)
+                Text("${formatMoney(order.totalCost.toLong())} đ", color = TextPrimary, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.height(8.dp))
+            Text("Chạm để xem lịch sử trạng thái", color = PrimaryBlue, fontSize = 12.sp)
+        }
+    }
+}
+
+private fun DeliveryStatus.label(): String = when (this) {
+    DeliveryStatus.CHO_TIEP_NHAN -> "Chờ tiếp nhận"
+    DeliveryStatus.DA_CHAP_NHAN -> "Đã chấp nhận"
+    DeliveryStatus.DA_DEN_NHA_HANG -> "Đã đến điểm lấy"
+    DeliveryStatus.DA_LAY_HANG -> "Đã lấy hàng"
+    DeliveryStatus.DA_DEN_KHACH_HANG -> "Đã đến điểm giao"
+    DeliveryStatus.DA_GIAO -> "Đã giao"
+    DeliveryStatus.DA_HUY -> "Đã hủy"
+}
+
+@Composable
+private fun DeliveryStatus.statusColor(): Color = when (this) {
+    DeliveryStatus.DA_GIAO -> Color(0xFF16A34A)
+    DeliveryStatus.DA_HUY -> MaterialTheme.colorScheme.error
+    else -> Color(0xFFF59E0B)
+}
+
+private fun formatTimestamp(timestamp: Long): String = SimpleDateFormat("HH:mm · dd/MM/yyyy", Locale.forLanguageTag("vi-VN")).format(Date(timestamp))

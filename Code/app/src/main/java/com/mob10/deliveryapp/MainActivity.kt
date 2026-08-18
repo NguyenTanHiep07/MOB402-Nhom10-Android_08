@@ -23,8 +23,6 @@ class MainActivity : ComponentActivity() {
             )
         )[AuthViewModel::class.java]
 
-        setContent {
-            DeliveryApp(authViewModel = authViewModel)
-        }
+        setContent { DeliveryApp(authViewModel) }
     }
 }
