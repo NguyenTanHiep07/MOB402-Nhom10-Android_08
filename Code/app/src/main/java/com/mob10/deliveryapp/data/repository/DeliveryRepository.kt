@@ -112,11 +112,12 @@ class DeliveryRepository(
         val hasFragile = packages.any { it.isFragile }
         val hasExpress = packages.any { it.isExpress }
 
-        val baseFee = 10_000.0
-        val distanceFee = distanceKm * 5_000.0
-        val weightFee = totalWeight * 3_000.0
+        val activeRule = feeRuleDao.getActiveFeeRuleSync()
+        val baseFee = activeRule?.baseFee ?: 10_000.0
+        val distanceFee = distanceKm * (activeRule?.pricePerKm ?: 5_000.0)
+        val weightFee = totalWeight * (activeRule?.pricePerKg ?: 3_000.0)
         // This existing field stores the combined optional-service charge.
-        val fragileCharge = (if (hasFragile) 5_000.0 else 0.0) + (if (hasExpress) 10_000.0 else 0.0)
+        val fragileCharge = (if (hasFragile) (activeRule?.fragileFee ?: 5_000.0) else 0.0) + (if (hasExpress) 10_000.0 else 0.0)
         val totalCost = baseFee + distanceFee + weightFee + fragileCharge
 
         val request = DeliveryRequestEntity(
