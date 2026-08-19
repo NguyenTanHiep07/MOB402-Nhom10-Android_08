@@ -3,9 +3,11 @@ package com.mob10.deliveryapp.data.repository
 import androidx.room.withTransaction
 import com.mob10.deliveryapp.data.local.AppDatabase
 import com.mob10.deliveryapp.data.local.dao.DeliveryRequestDao
+import com.mob10.deliveryapp.data.local.dao.FeeRuleDao
 import com.mob10.deliveryapp.data.local.dao.PackageDao
 import com.mob10.deliveryapp.data.local.dao.StatusHistoryDao
 import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
+import com.mob10.deliveryapp.data.local.entity.FeeRuleEntity
 import com.mob10.deliveryapp.data.local.entity.PackageEntity
 import com.mob10.deliveryapp.data.local.entity.StatusHistoryEntity
 import com.mob10.deliveryapp.data.model.DeliveryStatus
@@ -21,11 +23,21 @@ data class NewPackageInfo(
     val isExpress: Boolean = false
 )
 
+data class CalculatedFeeResult(
+    val baseFee: Double,
+    val distanceFee: Double,
+    val weightFee: Double,
+    val fragileCharge: Double,
+    val totalCost: Double,
+    val appliedRuleId: Int? = null
+)
+
 class DeliveryRepository(
     private val db: AppDatabase,
     private val requestDao: DeliveryRequestDao,
     private val packageDao: PackageDao,
-    private val historyDao: StatusHistoryDao
+    private val historyDao: StatusHistoryDao,
+    private val feeRuleDao: FeeRuleDao = db.feeRuleDao()
 ) {
     val allRequests: Flow<List<DeliveryRequestEntity>> = requestDao.getAllRequests()
     val pendingRequests: Flow<List<DeliveryRequestEntity>> = requestDao.getPendingRequests()
@@ -39,10 +51,48 @@ class DeliveryRepository(
     fun getDeliveredTodayCountForDriver(deliveryId: Int, startOfDay: Long) =
         requestDao.getDeliveredTodayCountForDriver(deliveryId, startOfDay)
 
+    // Fee Rule Queries
+    fun getActiveFeeRule(): Flow<FeeRuleEntity?> = feeRuleDao.getActiveFeeRule()
+    suspend fun getActiveFeeRuleSync(): FeeRuleEntity? = feeRuleDao.getActiveFeeRuleSync()
+    fun getAllFeeRules(): Flow<List<FeeRuleEntity>> = feeRuleDao.getAllFeeRules()
+
     /**
-     * Tạo đơn hàng mới – toàn bộ 3 thao tác (tạo đơn, tạo kiện hàng, tạo lịch sử ban đầu)
-     * được bọc trong cùng một transaction.
-     * Nếu bất kỳ bước nào thất bại, tất cả sẽ bị rollback.
+     * Tính toán phí giao hàng dự kiến dựa trên FeeRule đang kích hoạt hoặc bảng giá mặc định
+     */
+    suspend fun calculateEstimatedFee(
+        distanceKm: Double,
+        weightKg: Double,
+        isFragile: Boolean = false,
+        customFeeRule: FeeRuleEntity? = null
+    ): CalculatedFeeResult {
+        val rule = customFeeRule ?: feeRuleDao.getActiveFeeRuleSync()
+        val baseFee = rule?.baseFee ?: 15_000.0
+        val pricePerKm = rule?.pricePerKm ?: 5_000.0
+        val pricePerKg = rule?.pricePerKg ?: 3_000.0
+        val fragileFee = rule?.fragileFee ?: 5_000.0
+
+        val distanceFee = distanceKm * pricePerKm
+        val weightFee = weightKg * pricePerKg
+        val fragileCharge = if (isFragile) fragileFee else 0.0
+        val totalCost = baseFee + distanceFee + weightFee + fragileCharge
+
+        return CalculatedFeeResult(
+            baseFee = baseFee,
+            distanceFee = distanceFee,
+            weightFee = weightFee,
+            fragileCharge = fragileCharge,
+            totalCost = totalCost,
+            appliedRuleId = rule?.id
+        )
+    }
+
+    /**
+     * Tạo đơn hàng mới – toàn bộ 3 thao tác:
+     * 1. Tạo DeliveryRequestEntity với trạng thái ban đầu CHO_TIEP_NHAN
+     * 2. Tạo các PackageEntity thuộc về đơn
+     * 3. Tạo StatusHistoryEntity ban đầu (fromStatus = null, toStatus = CHO_TIEP_NHAN)
+     * được thực thi nguyên tử trong một Room Database Transaction (withTransaction).
+     * Nếu có bất kỳ lỗi nào, toàn bộ dữ liệu sẽ tự động rollback.
      */
     suspend fun createRequest(
         clientId: Int,
@@ -62,11 +112,12 @@ class DeliveryRepository(
         val hasFragile = packages.any { it.isFragile }
         val hasExpress = packages.any { it.isExpress }
 
-        val baseFee = 10_000.0
-        val distanceFee = distanceKm * 5_000.0
-        val weightFee = totalWeight * 3_000.0
+        val activeRule = feeRuleDao.getActiveFeeRuleSync()
+        val baseFee = activeRule?.baseFee ?: 10_000.0
+        val distanceFee = distanceKm * (activeRule?.pricePerKm ?: 5_000.0)
+        val weightFee = totalWeight * (activeRule?.pricePerKg ?: 3_000.0)
         // This existing field stores the combined optional-service charge.
-        val fragileCharge = (if (hasFragile) 5_000.0 else 0.0) + (if (hasExpress) 10_000.0 else 0.0)
+        val fragileCharge = (if (hasFragile) (activeRule?.fragileFee ?: 5_000.0) else 0.0) + (if (hasExpress) 10_000.0 else 0.0)
         val totalCost = baseFee + distanceFee + weightFee + fragileCharge
 
         val request = DeliveryRequestEntity(
@@ -83,7 +134,7 @@ class DeliveryRepository(
             weightFee = weightFee,
             fragileCharge = fragileCharge,
             totalCost = totalCost,
-            pricingRuleId = pricingRuleId,
+            pricingRuleId = pricingRuleId ?: activeRule?.id,
             scheduledPickupTime = scheduledPickupTime,
             note = note,
             status = DeliveryStatus.CHO_TIEP_NHAN
@@ -186,4 +237,5 @@ class DeliveryRepository(
 
     suspend fun getRequestHistory(requestId: Int) = historyDao.getHistoryForRequest(requestId)
     suspend fun getRequestPackages(requestId: Int) = packageDao.getPackagesForRequest(requestId)
+    suspend fun getRequestById(requestId: Int) = requestDao.getRequestById(requestId)
 }
