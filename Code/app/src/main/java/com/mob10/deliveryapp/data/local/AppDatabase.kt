@@ -17,7 +17,7 @@ import com.mob10.deliveryapp.data.local.entity.*
         StatusHistoryEntity::class,
         FeeRuleEntity::class
     ],
-    version = 3,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

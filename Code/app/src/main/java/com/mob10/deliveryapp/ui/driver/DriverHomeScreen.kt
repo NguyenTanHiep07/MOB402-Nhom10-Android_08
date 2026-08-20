@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,6 +28,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -44,6 +48,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -54,7 +59,9 @@ import com.mob10.deliveryapp.data.local.entity.UserEntity
 import com.mob10.deliveryapp.data.model.DeliveryStatus
 import com.mob10.deliveryapp.ui.components.DashboardNavItem
 import com.mob10.deliveryapp.ui.components.DashboardScaffold
+import com.mob10.deliveryapp.R
 import com.mob10.deliveryapp.ui.components.GoDropHeader
+import com.mob10.deliveryapp.ui.components.LottieOverlay
 import com.mob10.deliveryapp.ui.components.MetricCard
 import com.mob10.deliveryapp.ui.components.QuickActionCard
 import com.mob10.deliveryapp.ui.components.SectionTitle
@@ -70,15 +77,29 @@ import com.mob10.deliveryapp.ui.theme.UthWarningContainer
 
 
 @Composable
-fun DriverHomeScreen(currentUser: UserEntity? = null, onLogout: () -> Unit = {}) {
+fun DriverHomeScreen(
+    currentUser: UserEntity? = null,
+    onLogout: () -> Unit = {},
+    onUpdateProfile: (String, String, String, String) -> Unit = { _, _, _, _ -> }
+) {
     var selectedTab by remember { mutableStateOf(0) }
     var isAvailable by remember { mutableStateOf(true) }
+    var showLoginAnimation by remember { mutableStateOf(true) }
     
     val context = LocalContext.current
     val viewModel: DriverViewModel = viewModel(
         factory = DriverViewModelFactory(context)
     )
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Hiển thị Snackbar khi có thông báo Accept
+    LaunchedEffect(uiState.acceptMessage) {
+        uiState.acceptMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearAcceptMessage()
+        }
+    }
 
     LaunchedEffect(currentUser?.id) {
         if (currentUser != null) {
@@ -86,6 +107,7 @@ fun DriverHomeScreen(currentUser: UserEntity? = null, onLogout: () -> Unit = {})
         }
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     DashboardScaffold(
         selectedTab = selectedTab,
         onTabSelected = { selectedTab = it },
@@ -106,6 +128,12 @@ fun DriverHomeScreen(currentUser: UserEntity? = null, onLogout: () -> Unit = {})
             )
         }
     ) {
+        // Snackbar overlay cho feedback Accept
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
         if (selectedTab == 0) {
             SectionTitle(
                 title = "Hiệu suất hôm nay",
@@ -214,7 +242,8 @@ fun DriverHomeScreen(currentUser: UserEntity? = null, onLogout: () -> Unit = {})
                 currentUser = currentUser,
                 isAvailable = isAvailable,
                 onAvailabilityChanged = { isAvailable = it },
-                onLogout = onLogout
+                onLogout = onLogout,
+                onUpdateProfile = onUpdateProfile
             )
         } else if (selectedTab == 4) {
             DeliveryHistoryTab(
@@ -236,6 +265,16 @@ fun DriverHomeScreen(currentUser: UserEntity? = null, onLogout: () -> Unit = {})
             }
         }
     }
+
+    // Overlay animation chào mừng khi login thành công
+    LottieOverlay(
+        visible = showLoginAnimation,
+        animationResId = R.raw.online_delivery_service,
+        title = "Chào mừng, ${currentUser?.fullName ?: "Tài xế"}!",
+        subtitle = "Chúc bạn có một ngày giao hàng hiệu quả \uD83D\uDE80",
+        onDismiss = { showLoginAnimation = false }
+    )
+    } // end Box
 }
 
 @Composable
