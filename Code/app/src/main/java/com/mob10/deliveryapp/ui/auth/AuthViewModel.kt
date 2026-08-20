@@ -55,6 +55,24 @@ class AuthViewModel(
         }
     }
 
+    fun updateProfile(fullName: String, phoneNumber: String, username: String, licensePlate: String) {
+        val currentUser = _uiState.value.currentUser ?: return
+        val updatedUser = currentUser.copy(
+            fullName = fullName,
+            phoneNumber = phoneNumber,
+            username = username,
+            licensePlate = licensePlate
+        )
+        viewModelScope.launch {
+            try {
+                userRepository.updateUser(updatedUser)
+                _uiState.value = _uiState.value.copy(currentUser = updatedUser, errorMessage = null)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(errorMessage = "Không thể cập nhật hồ sơ. Tên đăng nhập hoặc SĐT có thể đã tồn tại.")
+            }
+        }
+    }
+
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
     }
