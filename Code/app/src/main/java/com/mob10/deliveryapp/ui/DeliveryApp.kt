@@ -11,15 +11,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mob10.deliveryapp.ui.admin.AdminHomeScreen
 import com.mob10.deliveryapp.ui.admin.AdminViewModel
 import com.mob10.deliveryapp.ui.admin.AdminViewModelFactory
-import com.mob10.deliveryapp.ui.customer.CustomerHomeScreen
-import com.mob10.deliveryapp.ui.driver.DriverHomeScreen
 import com.mob10.deliveryapp.ui.auth.AuthViewModel
 import com.mob10.deliveryapp.ui.auth.LoginScreen
 import com.mob10.deliveryapp.ui.auth.XmlLoginScreen
+import com.mob10.deliveryapp.ui.customer.CustomerHomeScreen
+import com.mob10.deliveryapp.ui.customer.CustomerViewModel
+import com.mob10.deliveryapp.ui.driver.DriverHomeScreen
 import com.mob10.deliveryapp.ui.navigation.AppDestination
 import com.mob10.deliveryapp.ui.navigation.destinationFor
 import com.mob10.deliveryapp.ui.theme.Android08Theme
-
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import com.mob10.deliveryapp.ui.customer.CustomerOrderListScreen
+import androidx.compose.runtime.setValue
+import com.mob10.deliveryapp.ui.customer.CustomerOrderDetailScreen
 @Composable
 fun DeliveryApp(authViewModel: AuthViewModel) {
     val authState by authViewModel.uiState.collectAsState()
@@ -49,10 +54,41 @@ fun DeliveryApp(authViewModel: AuthViewModel) {
                 currentUser = currentUser,
                 onLogout = authViewModel::logout
             )
-            AppDestination.CLIENT_HOME -> CustomerHomeScreen(
-                customerName = currentUser?.fullName.orEmpty(),
-                onLogout = authViewModel::logout
-            )
+            AppDestination.CLIENT_HOME -> {
+                val customerViewModel: CustomerViewModel = viewModel(
+                    factory = CustomerViewModel.CustomerViewModelFactory(
+                        context = context.applicationContext,
+                        clientId = currentUser?.id ?: -1
+                    )
+                )
+                var showOrderList by remember { mutableStateOf(false) }
+                var selectedOrderId by remember { mutableStateOf<Int?>(null) }
+
+                when {
+                    selectedOrderId != null -> {
+                        CustomerOrderDetailScreen(
+                            orderId = selectedOrderId!!,
+                            viewModel = customerViewModel,
+                            onBack = { selectedOrderId = null }
+                        )
+                    }
+                    showOrderList -> {
+                        CustomerOrderListScreen(
+                            viewModel = customerViewModel,
+                            onOrderClick = { orderId -> selectedOrderId = orderId },
+                            onBack = { showOrderList = false }
+                        )
+                    }
+                    else -> {
+                        CustomerHomeScreen(
+                            customerName = currentUser?.fullName.orEmpty(),
+                            viewModel = customerViewModel,
+                            onLogout = authViewModel::logout,
+                            onOrderListClick = { showOrderList = true }
+                        )
+                    }
+                }
+            }
             AppDestination.LOGIN -> {
                 XmlLoginScreen(
                     onLogin = authViewModel::login,
