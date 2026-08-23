@@ -54,7 +54,8 @@ fun DeliveryApp(authViewModel: AuthViewModel) {
             }
             AppDestination.DELIVERY_HOME -> DriverHomeScreen(
                 currentUser = currentUser,
-                onLogout = authViewModel::logout
+                onLogout = authViewModel::logout,
+                onUpdateProfile = authViewModel::updateProfile
             )
             AppDestination.CLIENT_HOME -> currentUser?.let { user ->
                 ClientFeatureFlow(
@@ -65,7 +66,7 @@ fun DeliveryApp(authViewModel: AuthViewModel) {
             AppDestination.LOGIN -> {
                 XmlLoginScreen(
                     onLogin = authViewModel::login,
-                    isLoading = authState.isInitializing
+                    isLoading = authState.isInitializing || authState.isAuthenticating
                 )
             }
         }

@@ -13,6 +13,16 @@ import com.mob10.deliveryapp.data.local.entity.StatusHistoryEntity
 import com.mob10.deliveryapp.data.model.DeliveryStatus
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * Kết quả Accept đơn hàng – giúp UI phân biệt lý do thất bại.
+ */
+sealed class AcceptResult {
+    object Success : AcceptResult()
+    object AlreadyTaken : AcceptResult()
+    object NotFound : AcceptResult()
+    object InvalidStatus : AcceptResult()
+}
+
 data class NewPackageInfo(
     val name: String,
     val packageType: String? = null,
@@ -188,6 +198,12 @@ class DeliveryRepository(
 
         if (!isValidTransition(currentStatus, newStatus)) return@withTransaction false
 
+        // Owner check: sau khi đơn đã được nhận (deliveryPersonId != null),
+        // chỉ driver sở hữu đơn mới được phép cập nhật trạng thái.
+        if (currentRequest.deliveryPersonId != null && updatedBy != null) {
+            if (currentRequest.deliveryPersonId != updatedBy) return@withTransaction false
+        }
+
         if (newStatus == DeliveryStatus.DA_GIAO) {
             requestDao.updateStatusWithTime(requestId, newStatus, System.currentTimeMillis())
         } else {
@@ -206,13 +222,24 @@ class DeliveryRepository(
     }
 
     /**
-     * Tài xế nhận đơn – phân công tài xế và chuyển CHO_TIEP_NHAN → DA_CHAP_NHAN trong transaction.
+     * Tài xế nhận đơn – atomically kiểm tra đơn chưa được nhận + gán tài xế + ghi history.
+     * Nếu 2 tài xế accept cùng lúc, chỉ 1 thành công nhờ WHERE clause trong DAO.
      */
-    suspend fun acceptRequest(requestId: Int, deliveryPersonId: Int): Boolean = db.withTransaction {
-        val currentRequest = requestDao.getRequestById(requestId) ?: return@withTransaction false
-        if (currentRequest.status != DeliveryStatus.CHO_TIEP_NHAN) return@withTransaction false
+    suspend fun acceptRequest(requestId: Int, deliveryPersonId: Int): AcceptResult = db.withTransaction {
+        val currentRequest = requestDao.getRequestById(requestId)
+            ?: return@withTransaction AcceptResult.NotFound
 
-        requestDao.assignToDelivery(requestId, deliveryPersonId, DeliveryStatus.DA_CHAP_NHAN)
+        if (currentRequest.status != DeliveryStatus.CHO_TIEP_NHAN) {
+            return@withTransaction AcceptResult.InvalidStatus
+        }
+
+        // Atomic update: WHERE ... AND deliveryPersonId IS NULL AND status = 'CHO_TIEP_NHAN'
+        // Nếu rowsAffected == 0 → đơn đã bị driver khác nhận trước.
+        val rowsAffected = requestDao.assignToDelivery(requestId, deliveryPersonId, DeliveryStatus.DA_CHAP_NHAN)
+        if (rowsAffected == 0) {
+            return@withTransaction AcceptResult.AlreadyTaken
+        }
+
         historyDao.insert(
             StatusHistoryEntity(
                 deliveryRequestId = requestId,
@@ -222,7 +249,7 @@ class DeliveryRepository(
                 note = "Tài xế đã nhận đơn"
             )
         )
-        true
+        AcceptResult.Success
     }
     /**
      * Client hủy đơn hàng của chính mình.

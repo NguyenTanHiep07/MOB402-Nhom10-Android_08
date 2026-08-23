@@ -40,14 +40,16 @@ class DatabaseInitializer(private val db: AppDatabase) {
                 password = "123456",
                 fullName = "Lê Văn C",
                 phoneNumber = "0111222333",
-                role = Role.DELIVERY
+                role = Role.DELIVERY,
+                licensePlate = "29A-123.45"
             ),
             UserEntity(
                 username = "shipper2",
                 password = "123456",
                 fullName = "Phạm Văn D",
                 phoneNumber = "0444555666",
-                role = Role.DELIVERY
+                role = Role.DELIVERY,
+                licensePlate = "29B-678.90"
             ),
             // Sample Admin
             UserEntity(
