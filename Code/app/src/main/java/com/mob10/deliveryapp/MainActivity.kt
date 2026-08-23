@@ -12,7 +12,6 @@ import com.mob10.deliveryapp.ui.auth.AuthViewModel
 import com.mob10.deliveryapp.ui.auth.AuthViewModelFactory
 
 class MainActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val database = AppDatabase.getDatabase(applicationContext)
@@ -24,8 +23,6 @@ class MainActivity : ComponentActivity() {
             )
         )[AuthViewModel::class.java]
 
-        setContent {
-            DeliveryApp(authViewModel = authViewModel)
-        }
+        setContent { DeliveryApp(authViewModel) }
     }
 }

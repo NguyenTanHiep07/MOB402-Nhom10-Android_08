@@ -11,6 +11,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mob10.deliveryapp.ui.admin.AdminHomeScreen
 import com.mob10.deliveryapp.ui.admin.AdminViewModel
 import com.mob10.deliveryapp.ui.admin.AdminViewModelFactory
+import com.mob10.deliveryapp.ui.customer.ClientFeatureFlow
+import com.mob10.deliveryapp.ui.driver.DriverHomeScreen
 import com.mob10.deliveryapp.ui.auth.AuthViewModel
 import com.mob10.deliveryapp.ui.auth.LoginScreen
 import com.mob10.deliveryapp.ui.auth.XmlLoginScreen
@@ -54,40 +56,11 @@ fun DeliveryApp(authViewModel: AuthViewModel) {
                 currentUser = currentUser,
                 onLogout = authViewModel::logout
             )
-            AppDestination.CLIENT_HOME -> {
-                val customerViewModel: CustomerViewModel = viewModel(
-                    factory = CustomerViewModel.CustomerViewModelFactory(
-                        context = context.applicationContext,
-                        clientId = currentUser?.id ?: -1
-                    )
+            AppDestination.CLIENT_HOME -> currentUser?.let { user ->
+                ClientFeatureFlow(
+                    currentUser = user,
+                    onLogout = authViewModel::logout
                 )
-                var showOrderList by remember { mutableStateOf(false) }
-                var selectedOrderId by remember { mutableStateOf<Int?>(null) }
-
-                when {
-                    selectedOrderId != null -> {
-                        CustomerOrderDetailScreen(
-                            orderId = selectedOrderId!!,
-                            viewModel = customerViewModel,
-                            onBack = { selectedOrderId = null }
-                        )
-                    }
-                    showOrderList -> {
-                        CustomerOrderListScreen(
-                            viewModel = customerViewModel,
-                            onOrderClick = { orderId -> selectedOrderId = orderId },
-                            onBack = { showOrderList = false }
-                        )
-                    }
-                    else -> {
-                        CustomerHomeScreen(
-                            customerName = currentUser?.fullName.orEmpty(),
-                            viewModel = customerViewModel,
-                            onLogout = authViewModel::logout,
-                            onOrderListClick = { showOrderList = true }
-                        )
-                    }
-                }
             }
             AppDestination.LOGIN -> {
                 XmlLoginScreen(

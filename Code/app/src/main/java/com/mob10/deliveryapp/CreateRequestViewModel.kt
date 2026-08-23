@@ -14,91 +14,54 @@ data class CreateRequestUiState(
     val receiverPhone: String = "",
     val deliveryAddress: String = "",
     val weight: String = "",
-    val selectedService: String = "Tiêu chuẩn",
-    val calculatedFee: Double = 0.0,
-    val isFormValid: Boolean = false
+    val distanceKm: String = "",
+    val selectedService: String = PackageType.STANDARD.displayName,
+    val feeQuote: FeeQuote = FeeQuote(),
+    val isFormValid: Boolean = false,
+    val formError: String? = null
 )
 
 class CreateRequestViewModel : ViewModel() {
-
     private val _uiState = MutableStateFlow(CreateRequestUiState())
     val uiState: StateFlow<CreateRequestUiState> = _uiState.asStateFlow()
 
-    fun onSenderNameChanged(value: String) {
-        _uiState.update { it.copy(senderName = value) }
-        validateForm()
-    }
+    fun onSenderNameChanged(value: String) = update { copy(senderName = value) }
+    fun onSenderPhoneChanged(value: String) = update { copy(senderPhone = value) }
+    fun onPickupAddressChanged(value: String) = update { copy(pickupAddress = value) }
+    fun onReceiverNameChanged(value: String) = update { copy(receiverName = value) }
+    fun onReceiverPhoneChanged(value: String) = update { copy(receiverPhone = value) }
+    fun onDeliveryAddressChanged(value: String) = update { copy(deliveryAddress = value) }
+    fun onWeightChanged(value: String) = update { copy(weight = value) }
+    fun onDistanceChanged(value: String) = update { copy(distanceKm = value) }
+    fun onServiceSelected(value: String) = update { copy(selectedService = value) }
 
-    fun onSenderPhoneChanged(value: String) {
-        _uiState.update { it.copy(senderPhone = value) }
-        validateForm()
-    }
-
-    fun onPickupAddressChanged(value: String) {
-        _uiState.update { it.copy(pickupAddress = value) }
-        validateForm()
-    }
-
-    fun onReceiverNameChanged(value: String) {
-        _uiState.update { it.copy(receiverName = value) }
-        validateForm()
-    }
-
-    fun onReceiverPhoneChanged(value: String) {
-        _uiState.update { it.copy(receiverPhone = value) }
-        validateForm()
-    }
-
-    fun onDeliveryAddressChanged(value: String) {
-        _uiState.update { it.copy(deliveryAddress = value) }
-        validateForm()
-    }
-
-    fun onWeightChanged(value: String) {
-        _uiState.update { it.copy(weight = value) }
-        calculateFee()
-        validateForm()
-    }
-
-    fun onServiceSelected(service: String) {
-        _uiState.update { it.copy(selectedService = service) }
-        calculateFee()
-    }
-
-    private fun calculateFee() {
+    fun validateForm(): Boolean {
         val state = _uiState.value
-        val w = state.weight.toDoubleOrNull() ?: 0.0
-        if (w > 0) {
-            val pkg = when (state.selectedService) {
-                "Hàng dễ vỡ" -> PackageType.FRAGILE
-                "Hỏa tốc" -> PackageType.EXPRESS
-                else -> PackageType.STANDARD
-            }
-            val fee = FeeCalculatorEngine.calculateFee(
-                weightKg = w,
-                distanceKm = 10.0,
-                packageType = pkg
-            )
-            _uiState.update { it.copy(calculatedFee = fee) }
-        } else {
-            _uiState.update { it.copy(calculatedFee = 0.0) }
+        val error = when {
+            state.senderName.isBlank() || state.receiverName.isBlank() -> "Vui lòng nhập họ tên người gửi và người nhận."
+            !FeeCalculatorEngine.isValidPhone(state.senderPhone) || !FeeCalculatorEngine.isValidPhone(state.receiverPhone) -> "Số điện thoại chưa hợp lệ."
+            state.pickupAddress.isBlank() || state.deliveryAddress.isBlank() -> "Vui lòng nhập đủ địa chỉ lấy và giao hàng."
+            state.weight.toDoubleOrNull() == null || state.weight.toDouble() <= 0 -> "Trọng lượng phải lớn hơn 0."
+            state.distanceKm.toDoubleOrNull() == null || state.distanceKm.toDouble() <= 0 -> "Khoảng cách phải lớn hơn 0."
+            else -> null
         }
+        _uiState.update { it.copy(isFormValid = error == null, formError = error) }
+        return error == null
     }
 
-    private fun validateForm() {
-        val state = _uiState.value
-        val isValid = state.senderName.isNotBlank() &&
-                state.senderPhone.isNotBlank() &&
-                state.pickupAddress.isNotBlank() &&
-                state.receiverName.isNotBlank() &&
-                state.receiverPhone.isNotBlank() &&
-                state.deliveryAddress.isNotBlank() &&
-                (state.weight.toDoubleOrNull() ?: 0.0) > 0
+    fun reset() { _uiState.value = CreateRequestUiState() }
 
-        _uiState.update { it.copy(isFormValid = isValid) }
-    }
-
-    fun createDeliveryRequest() {
-        // ViewModel xử lý xong
+    private fun update(change: CreateRequestUiState.() -> CreateRequestUiState) {
+        _uiState.update { current ->
+            val changed = current.change()
+            val weight = changed.weight.toDoubleOrNull() ?: 0.0
+            val distance = changed.distanceKm.toDoubleOrNull() ?: 0.0
+            val packageType = PackageType.entries.firstOrNull { it.displayName == changed.selectedService }
+                ?: PackageType.STANDARD
+            changed.copy(
+                feeQuote = FeeCalculatorEngine.quote(weight, distance, packageType),
+                formError = null
+            )
+        }
     }
 }
