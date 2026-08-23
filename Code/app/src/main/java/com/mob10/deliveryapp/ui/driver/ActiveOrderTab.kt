@@ -2,6 +2,8 @@ package com.mob10.deliveryapp.ui.driver
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import com.mob10.deliveryapp.R
+import com.mob10.deliveryapp.ui.components.LottieOverlay
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -68,37 +70,20 @@ fun ActiveOrderTab(
         }
     }
 
-    // Success Dialog
+    // Success Lottie Overlay
     successOrder?.let { order ->
         val currencyFormatter = NumberFormat.getCurrencyInstance(Locale("vi", "VN"))
         val formattedAmount = currencyFormatter.format(order.totalCost)
-        AlertDialog(
-            onDismissRequest = { /* Require explicit confirmation */ },
-            title = {
-                Text(text = "Giao hàng thành công!", fontWeight = FontWeight.Bold)
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Đơn hàng #${order.id} đã được giao thành công cho khách hàng.")
-                    Text(
-                        text = "Thu nhập: $formattedAmount",
-                        fontWeight = FontWeight.Bold,
-                        color = UthSuccess,
-                        fontSize = 16.sp
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onUpdateStatus(order.id, DeliveryStatus.DA_GIAO)
-                        successOrder = null
-                    }
-                ) {
-                    Text("Hoàn tất")
-                }
-            },
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+        LottieOverlay(
+            visible = true,
+            animationResId = R.raw.online_delivery_service,
+            title = "Giao hàng thành công!",
+            subtitle = "Đơn #${order.id} đã hoàn thành\nThu nhập: $formattedAmount",
+            buttonText = "Hoàn tất",
+            onDismiss = {
+                onUpdateStatus(order.id, DeliveryStatus.DA_GIAO)
+                successOrder = null
+            }
         )
     }
 }

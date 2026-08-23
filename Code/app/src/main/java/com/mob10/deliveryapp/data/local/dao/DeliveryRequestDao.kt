@@ -16,7 +16,7 @@ interface DeliveryRequestDao {
     @Query("SELECT * FROM delivery_requests WHERE deliveryPersonId = :deliveryId ORDER BY createdAt DESC")
     fun getRequestsByDelivery(deliveryId: Int): Flow<List<DeliveryRequestEntity>>
 
-    @Query("SELECT * FROM delivery_requests WHERE status = 'CHO_TIEP_NHAN' ORDER BY createdAt DESC")
+    @Query("SELECT * FROM delivery_requests WHERE deliveryPersonId IS NULL AND status = 'CHO_TIEP_NHAN' ORDER BY createdAt DESC")
     fun getPendingRequests(): Flow<List<DeliveryRequestEntity>>
 
     @Query("SELECT * FROM delivery_requests WHERE id = :id")
@@ -25,7 +25,7 @@ interface DeliveryRequestDao {
     @Query("SELECT COUNT(*) FROM delivery_requests")
     fun getTotalCount(): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM delivery_requests WHERE status = 'CHO_TIEP_NHAN'")
+    @Query("SELECT COUNT(*) FROM delivery_requests WHERE deliveryPersonId IS NULL AND status = 'CHO_TIEP_NHAN'")
     fun getPendingCount(): Flow<Int>
 
     @Query("SELECT COUNT(*) FROM delivery_requests WHERE clientId = :clientId AND status NOT IN ('CHO_TIEP_NHAN','DA_HUY')")
@@ -49,7 +49,7 @@ interface DeliveryRequestDao {
     @Query("UPDATE delivery_requests SET status = :status, actualDeliveryTime = :deliveryTime WHERE id = :requestId")
     suspend fun updateStatusWithTime(requestId: Int, status: DeliveryStatus, deliveryTime: Long)
 
-    @Query("UPDATE delivery_requests SET deliveryPersonId = :deliveryId, status = :status WHERE id = :requestId")
-    suspend fun assignToDelivery(requestId: Int, deliveryId: Int, status: DeliveryStatus)
+    @Query("UPDATE delivery_requests SET deliveryPersonId = :deliveryId, status = :status WHERE id = :requestId AND deliveryPersonId IS NULL AND status = 'CHO_TIEP_NHAN'")
+    suspend fun assignToDelivery(requestId: Int, deliveryId: Int, status: DeliveryStatus): Int
 }
 
