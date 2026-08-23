@@ -58,7 +58,7 @@ fun DeliveryApp(authViewModel: AuthViewModel) {
             AppDestination.LOGIN -> {
                 XmlLoginScreen(
                     onLogin = authViewModel::login,
-                    isLoading = authState.isInitializing
+                    isLoading = authState.isInitializing || authState.isAuthenticating
                 )
             }
         }
