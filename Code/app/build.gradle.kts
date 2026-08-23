@@ -57,7 +57,6 @@ dependencies {
 
     // Persist the authenticated Room user id across application restarts.
     implementation("androidx.datastore:datastore-preferences:1.2.1")
-
     // Lottie Animation
     implementation("com.airbnb.android:lottie-compose:6.6.2")
 
@@ -69,7 +68,6 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.8.4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation(libs.junit)
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     testImplementation("androidx.room:room-testing:2.6.1")
     testImplementation("androidx.test:core-ktx:1.6.1")
     testImplementation("androidx.test.ext:junit-ktx:1.2.1")
