@@ -62,7 +62,8 @@ import com.mob10.deliveryapp.ui.theme.UthSecondary
 fun CustomerHomeScreen(
     customerName: String = "Khách hàng",
     viewModel: CustomerViewModel? = null,
-    onLogout: () -> Unit = {}
+    onLogout: () -> Unit = {},
+    onOrderListClick: () -> Unit = {}
 ) {
     var selectedTab by remember { mutableStateOf(0) }
 
@@ -116,7 +117,8 @@ fun CustomerHomeScreen(
         QuickActionCard(
             title = "Danh sách đơn của tôi",
             subtitle = "Xem và quản lý các yêu cầu giao hàng",
-            icon = Icons.Default.ListAlt
+            icon = Icons.Default.ListAlt,
+            onClick = onOrderListClick
         )
         QuickActionCard(
             title = "Theo dõi trạng thái",

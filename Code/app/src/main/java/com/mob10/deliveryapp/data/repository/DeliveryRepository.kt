@@ -51,8 +51,9 @@ class DeliveryRepository(
 ) {
     val allRequests: Flow<List<DeliveryRequestEntity>> = requestDao.getAllRequests()
     val pendingRequests: Flow<List<DeliveryRequestEntity>> = requestDao.getPendingRequests()
-
     fun getRequestsForClient(clientId: Int) = requestDao.getRequestsByClient(clientId)
+    suspend fun getRequestByIdForClient(requestId: Int, clientId: Int) =
+        requestDao.getRequestByIdForClient(requestId, clientId)
     fun getRequestsForDelivery(deliveryId: Int) = requestDao.getRequestsByDelivery(deliveryId)
     fun getTotalCount() = requestDao.getTotalCount()
     fun getPendingCount() = requestDao.getPendingCount()
@@ -250,7 +251,36 @@ class DeliveryRepository(
         )
         AcceptResult.Success
     }
+    /**
+     * Client hủy đơn hàng của chính mình.
+     * - Kiểm tra đúng chủ đơn (ownership check)
+     * - Update có điều kiện để tránh race với Accept của Delivery
+     */
+    suspend fun cancelRequestByClient(requestId: Int, clientId: Int): CancelResult = db.withTransaction {
+        val request = requestDao.getRequestByIdForClient(requestId, clientId)
+            ?: return@withTransaction CancelResult.NotOwnerOrNotFound
 
+        val affectedRows = requestDao.cancelRequestConditional(
+            requestId = requestId,
+            clientId = clientId,
+            newStatus = DeliveryStatus.DA_HUY
+        )
+
+        if (affectedRows == 0) {
+            return@withTransaction CancelResult.StatusChanged
+        }
+
+        historyDao.insert(
+            StatusHistoryEntity(
+                deliveryRequestId = requestId,
+                fromStatus = request.status,
+                toStatus = DeliveryStatus.DA_HUY,
+                updatedBy = clientId,
+                note = "Khách hàng hủy đơn"
+            )
+        )
+        CancelResult.Success
+    }
     private fun isValidTransition(from: DeliveryStatus, to: DeliveryStatus): Boolean {
         return when (from) {
             DeliveryStatus.CHO_TIEP_NHAN -> to == DeliveryStatus.DA_CHAP_NHAN || to == DeliveryStatus.DA_HUY
@@ -266,3 +296,9 @@ class DeliveryRepository(
     suspend fun getRequestPackages(requestId: Int) = packageDao.getPackagesForRequest(requestId)
     suspend fun getRequestById(requestId: Int) = requestDao.getRequestById(requestId)
 }
+sealed class CancelResult {
+    data object Success : CancelResult()
+    data object NotOwnerOrNotFound : CancelResult()
+    data object StatusChanged : CancelResult()
+}
+

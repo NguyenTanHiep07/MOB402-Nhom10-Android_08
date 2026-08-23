@@ -51,5 +51,21 @@ interface DeliveryRequestDao {
 
     @Query("UPDATE delivery_requests SET deliveryPersonId = :deliveryId, status = :status WHERE id = :requestId AND deliveryPersonId IS NULL AND status = 'CHO_TIEP_NHAN'")
     suspend fun assignToDelivery(requestId: Int, deliveryId: Int, status: DeliveryStatus): Int
+
+    @Query("SELECT * FROM delivery_requests WHERE id = :requestId AND clientId = :clientId")
+    suspend fun getRequestByIdForClient(requestId: Int, clientId: Int): DeliveryRequestEntity?
+
+    @Query("""
+        UPDATE delivery_requests
+        SET status = :newStatus
+        WHERE id = :requestId
+          AND clientId = :clientId
+          AND status IN ('CHO_TIEP_NHAN','DA_CHAP_NHAN')
+    """)
+    suspend fun cancelRequestConditional(
+        requestId: Int,
+        clientId: Int,
+        newStatus: DeliveryStatus
+    ): Int
 }
 
