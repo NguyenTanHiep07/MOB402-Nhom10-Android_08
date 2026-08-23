@@ -13,27 +13,47 @@ import kotlinx.coroutines.launch
 
 data class AuthUiState(
     val isInitializing: Boolean = true,
+    val isAuthenticating: Boolean = false,
     val currentUser: UserEntity? = null,
     val errorMessage: String? = null
 )
 
 class AuthViewModel(
     private val userRepository: UserRepository,
-    private val databaseInitializer: DatabaseInitializer
+    private val initializeDatabase: suspend () -> Unit
 ) : ViewModel() {
+    constructor(
+        userRepository: UserRepository,
+        databaseInitializer: DatabaseInitializer
+    ) : this(userRepository, databaseInitializer::initialize)
+
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            runCatching { databaseInitializer.initialize() }
-                .onSuccess {
-                    _uiState.value = _uiState.value.copy(isInitializing = false)
+            val databaseResult = runCatching { initializeDatabase() }
+            if (databaseResult.isFailure) {
+                _uiState.value = _uiState.value.copy(
+                    isInitializing = false,
+                    errorMessage = "Không thể khởi tạo dữ liệu tài khoản."
+                )
+                return@launch
+            }
+
+            runCatching { userRepository.restoreSession() }
+                .onSuccess { restoredUser ->
+                    _uiState.value = _uiState.value.copy(
+                        isInitializing = false,
+                        currentUser = restoredUser,
+                        errorMessage = null
+                    )
                 }
                 .onFailure {
                     _uiState.value = _uiState.value.copy(
                         isInitializing = false,
-                        errorMessage = "Không thể khởi tạo dữ liệu tài khoản."
+                        currentUser = null,
+                        errorMessage = "Không thể khôi phục phiên đăng nhập."
                     )
                 }
         }
@@ -44,14 +64,34 @@ class AuthViewModel(
             _uiState.value = _uiState.value.copy(errorMessage = "Dữ liệu đang được khởi tạo, vui lòng thử lại.")
             return
         }
+        if (_uiState.value.isAuthenticating) return
 
         viewModelScope.launch {
-            val user = userRepository.login(phoneNumber, password)
-            _uiState.value = if (user == null) {
-                _uiState.value.copy(errorMessage = "Số điện thoại hoặc mật khẩu không đúng.")
-            } else {
-                _uiState.value.copy(currentUser = user, errorMessage = null)
-            }
+            _uiState.value = _uiState.value.copy(
+                isAuthenticating = true,
+                errorMessage = null
+            )
+            runCatching { userRepository.login(phoneNumber.trim(), password) }
+                .onSuccess { user ->
+                    _uiState.value = if (user == null) {
+                        _uiState.value.copy(
+                            isAuthenticating = false,
+                            errorMessage = "Số điện thoại hoặc mật khẩu không đúng."
+                        )
+                    } else {
+                        _uiState.value.copy(
+                            isAuthenticating = false,
+                            currentUser = user,
+                            errorMessage = null
+                        )
+                    }
+                }
+                .onFailure {
+                    _uiState.value = _uiState.value.copy(
+                        isAuthenticating = false,
+                        errorMessage = "Không thể đăng nhập, vui lòng thử lại."
+                    )
+                }
         }
     }
 
@@ -78,7 +118,28 @@ class AuthViewModel(
     }
 
     fun logout() {
-        _uiState.value = _uiState.value.copy(currentUser = null, errorMessage = null)
+        if (_uiState.value.isInitializing || _uiState.value.isAuthenticating) return
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isAuthenticating = true,
+                errorMessage = null
+            )
+            runCatching { userRepository.logout() }
+                .onSuccess {
+                    _uiState.value = _uiState.value.copy(
+                        isAuthenticating = false,
+                        currentUser = null,
+                        errorMessage = null
+                    )
+                }
+                .onFailure {
+                    _uiState.value = _uiState.value.copy(
+                        isAuthenticating = false,
+                        errorMessage = "Không thể đăng xuất, vui lòng thử lại."
+                    )
+                }
+        }
     }
 }
 

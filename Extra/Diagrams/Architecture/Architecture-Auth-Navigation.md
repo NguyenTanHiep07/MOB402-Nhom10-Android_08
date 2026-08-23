@@ -7,7 +7,7 @@ flowchart TB
         APP[DeliveryApp]
         LOGIN[XML Login via AndroidView]
         NAV[destinationFor Role]
-        CLIENT[ClientHomeScreen]
+        CLIENT[ClientFeatureFlow]
         DRIVER[DriverHomeScreen]
         ADMIN[AdminHomeScreen]
         DESIGN[GoDrop Theme + Components]
@@ -22,10 +22,12 @@ flowchart TB
     subgraph Data[Data layer integrated from feature/database]
         INIT[DatabaseInitializer]
         USERREPO[UserRepository]
+        SESSION[DataStoreSessionStorage]
         DELIVERYREPO[DeliveryRepository]
         USERDAO[UserDao]
         OTHERDAO[Delivery / Package / History DAO]
         ROOM[(AppDatabase / Room)]
+        DATASTORE[(Preferences DataStore)]
     end
 
     MAIN --> AUTHVM
@@ -48,15 +50,18 @@ flowchart TB
     ADMINVM --> DELIVERYREPO
     DRIVERVM --> DELIVERYREPO
     USERREPO --> USERDAO
+    USERREPO --> SESSION
     DELIVERYREPO --> OTHERDAO
     USERDAO --> ROOM
+    SESSION --> DATASTORE
     OTHERDAO --> ROOM
     INIT --> ROOM
 ```
 
 ## Ranh giới trách nhiệm
 
-- `feature/auth-navigation` sở hữu theme, shared component, Login, auth state và role routing.
+- `feature/core-integration-v3` sở hữu Login, auth state, session và role routing.
 - Các feature role sở hữu nội dung bên trong Home tương ứng.
 - Data layer cung cấp repository/DAO; auth-navigation chỉ tích hợp qua interface hiện có,
   không định nghĩa lại Entity hoặc nghiệp vụ giao hàng.
+- DataStore chỉ lưu `userId`; role và hồ sơ luôn được truy vấn lại từ Room khi restore.

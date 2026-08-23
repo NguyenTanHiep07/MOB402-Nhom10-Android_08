@@ -54,6 +54,7 @@ Luồng hủy:
 - XML Login được nhúng qua AndroidView.
 - MVVM.
 - Room Database.
+- Preferences DataStore cho phiên đăng nhập.
 - Kotlin Flow/StateFlow.
 - KSP.
 - Repository pattern.
@@ -100,7 +101,9 @@ Sơ đồ đã đồng bộ với code: [Architecture — Auth & Navigation](./E
 | DELIVERY | `0111222333` hoặc `0444555666` |
 | ADMIN | `0000000000` |
 
-5. Hoặc chạy lệnh kiểm tra bằng terminal:
+5. Sau khi đăng nhập, ứng dụng lưu `userId` và khôi phục đúng tài khoản/role khi mở lại.
+   Dùng nút **Đăng xuất** để xóa phiên và quay về Login.
+6. Hoặc chạy lệnh kiểm tra bằng terminal:
 ```bash
 cd Code
 ./gradlew :app:assembleDebug

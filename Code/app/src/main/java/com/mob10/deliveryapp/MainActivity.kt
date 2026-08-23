@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.mob10.deliveryapp.data.local.AppDatabase
 import com.mob10.deliveryapp.data.local.DatabaseInitializer
 import com.mob10.deliveryapp.data.repository.UserRepository
+import com.mob10.deliveryapp.data.session.DataStoreSessionStorage
 import com.mob10.deliveryapp.ui.DeliveryApp
 import com.mob10.deliveryapp.ui.auth.AuthViewModel
 import com.mob10.deliveryapp.ui.auth.AuthViewModelFactory
@@ -18,7 +19,10 @@ class MainActivity : ComponentActivity() {
         val authViewModel = ViewModelProvider(
             this,
             AuthViewModelFactory(
-                userRepository = UserRepository(database.userDao()),
+                userRepository = UserRepository(
+                    userDao = database.userDao(),
+                    sessionStorage = DataStoreSessionStorage(applicationContext)
+                ),
                 databaseInitializer = DatabaseInitializer(database)
             )
         )[AuthViewModel::class.java]
