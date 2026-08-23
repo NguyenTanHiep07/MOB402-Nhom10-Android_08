@@ -19,5 +19,6 @@ data class UserEntity(
     val fullName: String,
     val phoneNumber: String,
     val role: Role,
+    val licensePlate: String? = null,
     val createdAt: Long = System.currentTimeMillis()
 )

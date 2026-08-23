@@ -9,6 +9,7 @@ import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
 import com.mob10.deliveryapp.data.local.entity.PackageEntity
 import com.mob10.deliveryapp.data.local.entity.StatusHistoryEntity
 import com.mob10.deliveryapp.data.model.DeliveryStatus
+import com.mob10.deliveryapp.data.repository.AcceptResult
 import com.mob10.deliveryapp.data.repository.DeliveryRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,7 +30,8 @@ data class DriverUiState(
     val todayEarnings: Double = 0.0,
     val completedCount: Int = 0,
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val acceptMessage: String? = null
 )
 
 class DriverViewModel(private val repository: DeliveryRepository) : ViewModel() {
@@ -57,7 +59,9 @@ class DriverViewModel(private val repository: DeliveryRepository) : ViewModel() 
             ) { allRequests, pendingCount, deliveredTodayCount ->
                 Triple(allRequests, pendingCount, deliveredTodayCount)
             }.collect { (allRequests, pendingCount, deliveredTodayCount) ->
-                val newOrders = allRequests.filter { it.status == DeliveryStatus.CHO_TIEP_NHAN }
+                val newOrders = allRequests.filter {
+                    it.status == DeliveryStatus.CHO_TIEP_NHAN && it.deliveryPersonId == null
+                }
                 val activeOrders = allRequests.filter {
                     it.deliveryPersonId == driverId && it.status in listOf(
                         DeliveryStatus.DA_CHAP_NHAN,
@@ -111,8 +115,19 @@ class DriverViewModel(private val repository: DeliveryRepository) : ViewModel() 
 
     fun acceptOrder(orderId: Int, driverId: Int) {
         viewModelScope.launch {
-            repository.acceptRequest(orderId, driverId)
+            val result = repository.acceptRequest(orderId, driverId)
+            val message = when (result) {
+                is AcceptResult.Success -> "Nhận đơn #$orderId thành công!"
+                is AcceptResult.AlreadyTaken -> "Đơn #$orderId đã được tài xế khác nhận trước."
+                is AcceptResult.NotFound -> "Không tìm thấy đơn #$orderId."
+                is AcceptResult.InvalidStatus -> "Đơn #$orderId không ở trạng thái chờ tiếp nhận."
+            }
+            _uiState.value = _uiState.value.copy(acceptMessage = message)
         }
+    }
+
+    fun clearAcceptMessage() {
+        _uiState.value = _uiState.value.copy(acceptMessage = null)
     }
 
     fun rejectOrder(orderId: Int) {

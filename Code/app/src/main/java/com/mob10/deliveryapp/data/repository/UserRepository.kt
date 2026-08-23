@@ -32,6 +32,10 @@ class UserRepository(
         sessionStorage?.clear()
     }
 
+    suspend fun updateUser(user: UserEntity) {
+        userDao.update(user)
+    }
+
     fun getTotalUserCount() = userDao.getTotalUserCount()
     
     fun getCountByRole(role: com.mob10.deliveryapp.data.model.Role) = userDao.getCountByRole(role)

@@ -14,9 +14,10 @@ import com.mob10.deliveryapp.data.local.entity.*
         UserEntity::class,
         DeliveryRequestEntity::class,
         PackageEntity::class,
-        StatusHistoryEntity::class
+        StatusHistoryEntity::class,
+        FeeRuleEntity::class
     ],
-    version = 3,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -25,6 +26,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun deliveryRequestDao(): DeliveryRequestDao
     abstract fun packageDao(): PackageDao
     abstract fun statusHistoryDao(): StatusHistoryDao
+    abstract fun feeRuleDao(): FeeRuleDao
 
     companion object {
         @Volatile
