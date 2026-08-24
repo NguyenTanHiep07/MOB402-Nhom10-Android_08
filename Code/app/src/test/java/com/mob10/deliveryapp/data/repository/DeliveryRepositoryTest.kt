@@ -307,6 +307,38 @@ class DeliveryRepositoryTest {
         }
     }
 
+    @Test
+    fun testUpdateStatus_WithoutUpdatedBy_CannotBypassOwnerCheck() {
+        runBlocking {
+            val requestId = createTestRequest()
+            repository.acceptRequest(requestId, testDriverId)
+
+            val result = repository.updateRequestStatus(
+                requestId,
+                DeliveryStatus.DA_DEN_NHA_HANG,
+                updatedBy = null
+            )
+
+            assertFalse(result)
+            assertEquals(DeliveryStatus.DA_CHAP_NHAN, repository.getRequestById(requestId)!!.status)
+        }
+    }
+
+    @Test
+    fun testActiveClientCount_IncludesPendingAndExcludesDelivered() {
+        runBlocking {
+            createTestRequest()
+            val deliveredId = createTestRequest()
+            repository.acceptRequest(deliveredId, testDriverId)
+            repository.updateRequestStatus(deliveredId, DeliveryStatus.DA_DEN_NHA_HANG, testDriverId)
+            repository.updateRequestStatus(deliveredId, DeliveryStatus.DA_LAY_HANG, testDriverId)
+            repository.updateRequestStatus(deliveredId, DeliveryStatus.DA_DEN_KHACH_HANG, testDriverId)
+            repository.updateRequestStatus(deliveredId, DeliveryStatus.DA_GIAO, testDriverId)
+
+            assertEquals(1, repository.getActiveCountForClient(testClientId).first())
+        }
+    }
+
     /**
      * TC-POOL-04: Full status flow với StatusHistory đầy đủ updatedBy + timestamp.
      * CHO_TIEP_NHAN → DA_CHAP_NHAN → DA_DEN_NHA_HANG → DA_LAY_HANG → DA_DEN_KHACH_HANG → DA_GIAO

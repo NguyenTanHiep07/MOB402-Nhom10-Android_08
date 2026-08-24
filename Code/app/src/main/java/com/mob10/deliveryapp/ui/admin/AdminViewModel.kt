@@ -32,6 +32,11 @@ class AdminViewModel(
         .getTotalUserCount()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
+    /** Chỉ đếm khách hàng, không gộp tài xế và admin. */
+    val clientCount: StateFlow<Int> = userRepository
+        .getCountByRole(Role.CLIENT)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
     /** Số tài xế hiện có */
     val driverCount: StateFlow<Int> = userRepository
         .getCountByRole(Role.DELIVERY)

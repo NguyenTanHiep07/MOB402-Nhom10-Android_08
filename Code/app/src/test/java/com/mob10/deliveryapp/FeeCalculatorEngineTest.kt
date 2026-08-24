@@ -10,11 +10,11 @@ class FeeCalculatorEngineTest {
     fun `quote includes fragile service fee`() {
         val quote = FeeCalculatorEngine.quote(weightKg = 2.0, distanceKm = 4.0, packageType = PackageType.FRAGILE)
 
-        assertEquals(10_000, quote.baseFee)
+        assertEquals(15_000, quote.baseFee)
         assertEquals(20_000, quote.distanceFee)
         assertEquals(6_000, quote.weightFee)
         assertEquals(5_000, quote.serviceFee)
-        assertEquals(41_000, quote.totalFee)
+        assertEquals(46_000, quote.totalFee)
     }
 
     @Test

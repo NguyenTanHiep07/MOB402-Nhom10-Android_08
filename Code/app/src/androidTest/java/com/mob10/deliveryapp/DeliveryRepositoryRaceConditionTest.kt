@@ -8,6 +8,7 @@ import com.mob10.deliveryapp.data.local.entity.UserEntity
 import com.mob10.deliveryapp.data.model.DeliveryStatus
 import com.mob10.deliveryapp.data.model.Role
 import com.mob10.deliveryapp.data.repository.CancelResult
+import com.mob10.deliveryapp.data.repository.AcceptResult
 import com.mob10.deliveryapp.data.repository.DeliveryRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
@@ -86,7 +87,7 @@ class DeliveryRepositoryRaceConditionTest {
         val acceptDeferred = async { repository.acceptRequest(requestId, deliveryPersonId) }
 
         val cancelResult = cancelDeferred.await()
-        val acceptSuccess = acceptDeferred.await()
+        val acceptResult = acceptDeferred.await()
 
         // 3. Kiểm tra trạng thái cuối cùng hợp lệ
         val finalRequest = db.deliveryRequestDao().getRequestById(requestId)!!
@@ -97,14 +98,17 @@ class DeliveryRepositoryRaceConditionTest {
             finalStatus == DeliveryStatus.DA_HUY || finalStatus == DeliveryStatus.DA_CHAP_NHAN
         )
 
-        // 4. Đúng MỘT trong hai thao tác thắng, không phải cả hai
+        // Client được phép hủy cả DA_CHAP_NHAN, nên nếu Accept hoàn tất trước
+        // thì chuỗi Accept -> Cancel và trạng thái cuối DA_HUY vẫn hợp lệ.
         val cancelWon = cancelResult is CancelResult.Success
-        val acceptWon = acceptSuccess
+        val acceptWon = acceptResult is AcceptResult.Success
 
         assertTrue("Phải có ít nhất một thao tác thắng", cancelWon || acceptWon)
-        assertTrue("Không được để cả Cancel và Accept cùng thành công", !(cancelWon && acceptWon))
 
-        if (cancelWon) assertEquals(DeliveryStatus.DA_HUY, finalStatus)
-        if (acceptWon) assertEquals(DeliveryStatus.DA_CHAP_NHAN, finalStatus)
+        if (cancelWon) {
+            assertEquals(DeliveryStatus.DA_HUY, finalStatus)
+        } else if (acceptWon) {
+            assertEquals(DeliveryStatus.DA_CHAP_NHAN, finalStatus)
+        }
     }
 }

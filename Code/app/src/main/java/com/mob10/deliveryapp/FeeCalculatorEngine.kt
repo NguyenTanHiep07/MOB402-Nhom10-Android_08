@@ -16,12 +16,15 @@ data class FeeQuote(
 }
 
 object FeeCalculatorEngine {
-    private const val BASE_FEE = 10_000L
+    // Đồng bộ với FeeRule mặc định được seed trong Room.
+    private const val BASE_FEE = 15_000L
     private const val PRICE_PER_KM = 5_000L
     private const val PRICE_PER_KG = 3_000L
 
     fun quote(weightKg: Double, distanceKm: Double, packageType: PackageType): FeeQuote {
-        if (weightKg <= 0 || distanceKm <= 0) return FeeQuote()
+        if (!weightKg.isFinite() || !distanceKm.isFinite() || weightKg <= 0 || distanceKm <= 0) {
+            return FeeQuote()
+        }
         return FeeQuote(
             baseFee = BASE_FEE,
             distanceFee = (distanceKm * PRICE_PER_KM).toLong(),

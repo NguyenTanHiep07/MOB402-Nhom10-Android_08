@@ -62,13 +62,11 @@ class DatabaseInitializer(private val db: AppDatabase) {
         )
 
         sampleUsers.forEach { sampleUser ->
-            val existingUser = existingUsers[sampleUser.username]
-            if (existingUser == null ||
-                existingUser.password != sampleUser.password ||
-                existingUser.fullName != sampleUser.fullName ||
-                existingUser.phoneNumber != sampleUser.phoneNumber ||
-                existingUser.role != sampleUser.role
-            ) {
+            // Không ghi đè hồ sơ/mật khẩu mà người dùng đã chỉnh sửa.
+            val existingUser = existingUsers.values.firstOrNull {
+                it.username == sampleUser.username || it.phoneNumber == sampleUser.phoneNumber
+            }
+            if (existingUser == null) {
                 userDao.insert(sampleUser)
             }
         }
@@ -102,12 +100,12 @@ class DatabaseInitializer(private val db: AppDatabase) {
         // Add Dummy Delivery Requests if missing
         val deliveryDao = db.deliveryRequestDao()
         val allRequests = deliveryDao.getAllRequests().first()
-        val hasNewOrders = allRequests.any { it.status == DeliveryStatus.CHO_TIEP_NHAN }
-        val hasActiveOrders = allRequests.any { it.status == DeliveryStatus.DA_CHAP_NHAN }
         val packageDao = db.packageDao()
         val historyDao = db.statusHistoryDao()
 
-        if (!hasNewOrders) {
+        // Chỉ seed đơn demo cho database mới; không tự sinh lại đơn sau khi
+        // người dùng đã xử lý hết các đơn cũ.
+        if (allRequests.isEmpty()) {
             // Dummy Order 1 (New Order - Chờ tiếp nhận)
             val request1 = DeliveryRequestEntity(
                 clientId = client1Id,
@@ -136,9 +134,6 @@ class DatabaseInitializer(private val db: AppDatabase) {
                     note = "Đơn hàng được tạo"
                 )
             )
-        }
-
-        if (!hasActiveOrders) {
             // Dummy Order 2 (Active Order - Đã nhận đơn - assigned to shipper1)
             val request2 = DeliveryRequestEntity(
                 clientId = client2Id,

@@ -52,6 +52,8 @@ fun ClientHomeScreen(
     orderViewModel: OrderViewModel,
     onCreateRequestClick: () -> Unit,
     onOrderListClick: () -> Unit,
+    onTrackingClick: () -> Unit,
+    onProfileClick: () -> Unit,
     onLogout: () -> Unit
 ) {
     val orderList by orderViewModel.orderHistory.collectAsState()
@@ -60,7 +62,13 @@ fun ClientHomeScreen(
 
     DashboardScaffold(
         selectedTab = 0,
-        onTabSelected = { if (it != 0) onOrderListClick() },
+        onTabSelected = { tab ->
+            when (tab) {
+                1 -> onOrderListClick()
+                2 -> onTrackingClick()
+                3 -> onProfileClick()
+            }
+        },
         navItems = listOf(
             DashboardNavItem("Trang chủ", Icons.Default.Home),
             DashboardNavItem("Đơn hàng", Icons.Default.ListAlt),
@@ -72,6 +80,7 @@ fun ClientHomeScreen(
                 roleLabel = "Khu vực khách hàng",
                 name = customerName,
                 subtitle = "Quản lý giao hàng của bạn hôm nay",
+                onProfileClick = onProfileClick,
                 onLogout = onLogout
             )
         }
@@ -97,7 +106,7 @@ fun ClientHomeScreen(
         ClientCreateDeliveryCard(onCreateRequestClick)
         SectionTitle(title = "Thao tác nhanh")
         QuickActionCard("Danh sách đơn của tôi", "Xem tất cả yêu cầu giao hàng", Icons.Default.ListAlt, onOrderListClick)
-        QuickActionCard("Theo dõi trạng thái", "Kiểm tra tiến độ đơn hàng", Icons.Default.LocalShipping, onOrderListClick)
+        QuickActionCard("Theo dõi trạng thái", "Kiểm tra tiến độ đơn hàng", Icons.Default.LocalShipping, onTrackingClick)
         QuickActionCard("Lịch sử hoạt động", "Xem lại các cập nhật trạng thái", Icons.Default.History, onOrderListClick)
     }
 }

@@ -40,37 +40,63 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
 import com.mob10.deliveryapp.data.model.DeliveryStatus
+import com.mob10.deliveryapp.ui.customer.ClientBottomNavigation
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OrderTrackingScreen(orderViewModel: OrderViewModel, onCreateNewOrder: () -> Unit, onBackToHome: () -> Unit) {
+fun OrderTrackingScreen(
+    orderViewModel: OrderViewModel,
+    onCreateNewOrder: () -> Unit,
+    onBackToHome: () -> Unit,
+    title: String = "Đơn hàng của tôi",
+    activeOnly: Boolean = false,
+    showCreateButton: Boolean = true,
+    selectedTab: Int? = null,
+    onTabSelected: ((Int) -> Unit)? = null
+) {
     val orders by orderViewModel.orderHistory.collectAsState()
+    val visibleOrders = if (activeOnly) {
+        orders.filter { it.status !in listOf(DeliveryStatus.DA_GIAO, DeliveryStatus.DA_HUY) }
+    } else {
+        orders
+    }
     val selectedOrder by orderViewModel.selectedOrder.collectAsState()
     val history by orderViewModel.selectedHistory.collectAsState()
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Đơn hàng của tôi", color = TextPrimary, fontWeight = FontWeight.Bold) },
+                title = { Text(title, color = TextPrimary, fontWeight = FontWeight.Bold) },
                 navigationIcon = { IconButton(onClick = onBackToHome) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Trở về trang chủ", tint = TextPrimary) } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
             )
         },
         containerColor = DarkBackground,
-        floatingActionButton = { FloatingActionButton(onClick = onCreateNewOrder, containerColor = PrimaryBlue) { Text("+ Tạo đơn", color = Color.White, modifier = Modifier.padding(horizontal = 12.dp)) } }
+        bottomBar = {
+            if (selectedTab != null && onTabSelected != null) {
+                ClientBottomNavigation(selectedTab, onTabSelected)
+            }
+        },
+        floatingActionButton = {
+            if (showCreateButton) {
+                FloatingActionButton(onClick = onCreateNewOrder, containerColor = PrimaryBlue) {
+                    Text("+ Tạo đơn", color = Color.White, modifier = Modifier.padding(horizontal = 12.dp))
+                }
+            }
+        }
     ) { paddingValues ->
         Box(Modifier.fillMaxSize().padding(paddingValues).padding(16.dp)) {
-            if (orders.isEmpty()) {
+            if (visibleOrders.isEmpty()) {
                 Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Chưa có đơn hàng nào", color = TextSecondary, fontSize = 16.sp)
+                    Text(if (activeOnly) "Không có đơn đang theo dõi" else "Chưa có đơn hàng nào", color = TextSecondary, fontSize = 16.sp)
                     Spacer(Modifier.height(8.dp))
-                    Text("Hãy tạo đơn hàng đầu tiên của bạn!", color = TextSecondary, fontSize = 13.sp)
+                    Text(if (activeOnly) "Các đơn đang xử lý sẽ xuất hiện tại đây." else "Hãy tạo đơn hàng đầu tiên của bạn!", color = TextSecondary, fontSize = 13.sp)
                 }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(orders, key = { it.id }) { order -> OrderCard(order) { orderViewModel.selectOrder(order) } }
+                    items(visibleOrders, key = { it.id }) { order -> OrderCard(order) { orderViewModel.selectOrder(order) } }
                 }
             }
         }

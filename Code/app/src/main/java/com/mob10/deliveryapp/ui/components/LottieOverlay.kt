@@ -87,7 +87,7 @@ fun LottieOverlay(
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() }
-                ) { /* Chặn click xuyên qua */ },
+                ) { onDismiss() },
             contentAlignment = Alignment.Center
         ) {
             Column(

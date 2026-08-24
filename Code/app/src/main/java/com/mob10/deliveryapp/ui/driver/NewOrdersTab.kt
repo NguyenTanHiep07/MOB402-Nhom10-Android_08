@@ -117,9 +117,9 @@ fun NewOrderCard(
                     text = "- ${pkg.quantity}x ${pkg.name}",
                     style = MaterialTheme.typography.bodyMedium
                 )
-                if (!pkg.note.isNullOrBlank()) {
+                if (!pkg.notes.isNullOrBlank()) {
                     Text(
-                        text = "  Ghi chú: ${pkg.note}",
+                        text = "  Ghi chú: ${pkg.notes}",
                         style = MaterialTheme.typography.bodySmall,
                         color = UthOnSurfaceVariant
                     )

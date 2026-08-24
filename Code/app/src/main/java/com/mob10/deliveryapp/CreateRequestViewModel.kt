@@ -37,12 +37,14 @@ class CreateRequestViewModel : ViewModel() {
 
     fun validateForm(): Boolean {
         val state = _uiState.value
+        val weight = state.weight.toDoubleOrNull()
+        val distance = state.distanceKm.toDoubleOrNull()
         val error = when {
             state.senderName.isBlank() || state.receiverName.isBlank() -> "Vui lòng nhập họ tên người gửi và người nhận."
             !FeeCalculatorEngine.isValidPhone(state.senderPhone) || !FeeCalculatorEngine.isValidPhone(state.receiverPhone) -> "Số điện thoại chưa hợp lệ."
             state.pickupAddress.isBlank() || state.deliveryAddress.isBlank() -> "Vui lòng nhập đủ địa chỉ lấy và giao hàng."
-            state.weight.toDoubleOrNull() == null || state.weight.toDouble() <= 0 -> "Trọng lượng phải lớn hơn 0."
-            state.distanceKm.toDoubleOrNull() == null || state.distanceKm.toDouble() <= 0 -> "Khoảng cách phải lớn hơn 0."
+            weight == null || !weight.isFinite() || weight <= 0 -> "Trọng lượng phải lớn hơn 0."
+            distance == null || !distance.isFinite() || distance <= 0 -> "Khoảng cách phải lớn hơn 0."
             else -> null
         }
         _uiState.update { it.copy(isFormValid = error == null, formError = error) }
@@ -60,6 +62,7 @@ class CreateRequestViewModel : ViewModel() {
                 ?: PackageType.STANDARD
             changed.copy(
                 feeQuote = FeeCalculatorEngine.quote(weight, distance, packageType),
+                isFormValid = false,
                 formError = null
             )
         }

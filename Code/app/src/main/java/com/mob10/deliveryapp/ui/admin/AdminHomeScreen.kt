@@ -66,7 +66,7 @@ fun AdminHomeScreen(
     // Collect state từ ViewModel (nếu có), fallback về 0
     val totalRequests by (viewModel?.totalRequestCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsState()
     val pendingCount by (viewModel?.pendingRequestCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsState()
-    val totalUsers by (viewModel?.totalUserCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsState()
+    val clientCount by (viewModel?.clientCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsState()
     val driverCount by (viewModel?.driverCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsState()
 
     DashboardScaffold(
@@ -102,7 +102,7 @@ fun AdminHomeScreen(
             MetricCard(
                 modifier = Modifier.weight(1f),
                 label = "Khách hàng",
-                value = totalUsers.toString(),
+                value = clientCount.toString(),
                 helper = "Đã đăng ký",
                 icon = Icons.Default.Person
             )

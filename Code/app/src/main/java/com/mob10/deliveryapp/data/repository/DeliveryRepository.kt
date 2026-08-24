@@ -124,7 +124,7 @@ class DeliveryRepository(
         val hasExpress = packages.any { it.isExpress }
 
         val activeRule = feeRuleDao.getActiveFeeRuleSync()
-        val baseFee = activeRule?.baseFee ?: 10_000.0
+        val baseFee = activeRule?.baseFee ?: 15_000.0
         val distanceFee = distanceKm * (activeRule?.pricePerKm ?: 5_000.0)
         val weightFee = totalWeight * (activeRule?.pricePerKg ?: 3_000.0)
         // This existing field stores the combined optional-service charge.
@@ -198,11 +198,9 @@ class DeliveryRepository(
 
         if (!isValidTransition(currentStatus, newStatus)) return@withTransaction false
 
-        // Owner check: sau khi đơn đã được nhận (deliveryPersonId != null),
-        // chỉ driver sở hữu đơn mới được phép cập nhật trạng thái.
-        if (currentRequest.deliveryPersonId != null && updatedBy != null) {
-            if (currentRequest.deliveryPersonId != updatedBy) return@withTransaction false
-        }
+        // Luồng cập nhật trạng thái của tài xế phải luôn có danh tính và đúng owner.
+        val ownerId = currentRequest.deliveryPersonId ?: return@withTransaction false
+        if (updatedBy == null || ownerId != updatedBy) return@withTransaction false
 
         if (newStatus == DeliveryStatus.DA_GIAO) {
             requestDao.updateStatusWithTime(requestId, newStatus, System.currentTimeMillis())
@@ -301,4 +299,3 @@ sealed class CancelResult {
     data object NotOwnerOrNotFound : CancelResult()
     data object StatusChanged : CancelResult()
 }
-

@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import java.util.Calendar
 
 data class DriverUiState(
@@ -40,6 +41,7 @@ class DriverViewModel(private val repository: DeliveryRepository) : ViewModel() 
 
     // Lưu driverId để dùng cho updateOrderStatus
     private var currentDriverId: Int? = null
+    private var loadJob: Job? = null
 
     fun loadDriverData(driverId: Int) {
         currentDriverId = driverId
@@ -51,7 +53,10 @@ class DriverViewModel(private val repository: DeliveryRepository) : ViewModel() 
             set(Calendar.MILLISECOND, 0)
         }.timeInMillis
 
-        viewModelScope.launch {
+        // ViewModel có thể được tái sử dụng sau logout/login bằng tài xế khác.
+        // Hủy collector cũ để dữ liệu hai tài xế không ghi đè lẫn nhau.
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             combine(
                 repository.allRequests,
                 repository.getPendingCount(),
@@ -169,4 +174,3 @@ class DriverViewModelFactory(private val context: Context) : ViewModelProvider.F
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
-

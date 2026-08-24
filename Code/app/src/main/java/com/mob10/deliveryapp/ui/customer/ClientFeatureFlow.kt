@@ -17,7 +17,7 @@ import com.mob10.deliveryapp.OrderViewModel
 import com.mob10.deliveryapp.OrderViewModelFactory
 import com.mob10.deliveryapp.data.local.entity.UserEntity
 
-private enum class ClientScreen { HOME, CREATE_REQUEST, CONFIRMATION, ORDERS }
+private enum class ClientScreen { HOME, CREATE_REQUEST, CONFIRMATION, ORDERS, TRACKING, PROFILE }
 
 @Composable
 fun ClientFeatureFlow(currentUser: UserEntity, onLogout: () -> Unit) {
@@ -41,6 +41,8 @@ fun ClientFeatureFlow(currentUser: UserEntity, onLogout: () -> Unit) {
             orderViewModel = orderViewModel,
             onCreateRequestClick = { destinationName = ClientScreen.CREATE_REQUEST.name },
             onOrderListClick = { destinationName = ClientScreen.ORDERS.name },
+            onTrackingClick = { destinationName = ClientScreen.TRACKING.name },
+            onProfileClick = { destinationName = ClientScreen.PROFILE.name },
             onLogout = onLogout
         )
         ClientScreen.CREATE_REQUEST -> CreateRequestScreen(
@@ -62,7 +64,32 @@ fun ClientFeatureFlow(currentUser: UserEntity, onLogout: () -> Unit) {
         ClientScreen.ORDERS -> OrderTrackingScreen(
             orderViewModel = orderViewModel,
             onCreateNewOrder = { destinationName = ClientScreen.CREATE_REQUEST.name },
-            onBackToHome = { destinationName = ClientScreen.HOME.name }
+            onBackToHome = { destinationName = ClientScreen.HOME.name },
+            selectedTab = 1,
+            onTabSelected = { tab -> destinationName = clientScreenForTab(tab).name }
+        )
+        ClientScreen.TRACKING -> OrderTrackingScreen(
+            orderViewModel = orderViewModel,
+            onCreateNewOrder = { destinationName = ClientScreen.CREATE_REQUEST.name },
+            onBackToHome = { destinationName = ClientScreen.HOME.name },
+            title = "Theo dõi đơn hàng",
+            activeOnly = true,
+            showCreateButton = false,
+            selectedTab = 2,
+            onTabSelected = { tab -> destinationName = clientScreenForTab(tab).name }
+        )
+        ClientScreen.PROFILE -> ClientProfileScreen(
+            currentUser = currentUser,
+            onBack = { destinationName = ClientScreen.HOME.name },
+            onLogout = onLogout,
+            onTabSelected = { tab -> destinationName = clientScreenForTab(tab).name }
         )
     }
+}
+
+private fun clientScreenForTab(tab: Int): ClientScreen = when (tab) {
+    1 -> ClientScreen.ORDERS
+    2 -> ClientScreen.TRACKING
+    3 -> ClientScreen.PROFILE
+    else -> ClientScreen.HOME
 }

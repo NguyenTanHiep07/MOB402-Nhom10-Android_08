@@ -70,6 +70,7 @@ import com.mob10.deliveryapp.ui.theme.Android08Theme
 import com.mob10.deliveryapp.ui.theme.UthOnSurface
 import com.mob10.deliveryapp.ui.theme.UthOnSurfaceVariant
 import com.mob10.deliveryapp.ui.theme.UthPrimary
+import com.mob10.deliveryapp.ui.theme.UthPrimaryContainer
 import com.mob10.deliveryapp.ui.theme.UthSuccess
 import com.mob10.deliveryapp.ui.theme.UthSuccessContainer
 import com.mob10.deliveryapp.ui.theme.UthWarning
@@ -358,9 +359,9 @@ private fun ActiveDeliveryCard(
         else -> UthOnSurfaceVariant
     }
     val statusContainerColor = when (order.status) {
-        DeliveryStatus.DA_CHAP_NHAN -> UthPrimary
+        DeliveryStatus.DA_CHAP_NHAN -> UthPrimaryContainer
         DeliveryStatus.DA_DEN_NHA_HANG -> UthWarningContainer
-        DeliveryStatus.DA_LAY_HANG -> UthPrimary
+        DeliveryStatus.DA_LAY_HANG -> UthPrimaryContainer
         DeliveryStatus.DA_DEN_KHACH_HANG -> UthWarningContainer
         else -> UthOnSurfaceVariant
     }

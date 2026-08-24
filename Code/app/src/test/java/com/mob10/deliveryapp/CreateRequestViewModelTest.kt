@@ -19,6 +19,9 @@ class CreateRequestViewModelTest {
         viewModel.onServiceSelected(PackageType.EXPRESS.displayName)
 
         assertTrue(viewModel.validateForm())
-        assertEquals(46_000, viewModel.uiState.value.feeQuote.totalFee)
+        assertEquals(51_000, viewModel.uiState.value.feeQuote.totalFee)
+
+        viewModel.onWeightChanged("")
+        assertEquals(false, viewModel.uiState.value.isFormValid)
     }
 }
