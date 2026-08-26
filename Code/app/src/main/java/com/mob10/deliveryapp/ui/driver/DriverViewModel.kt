@@ -19,6 +19,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import java.util.Calendar
 
+enum class DriverWorkingStatus(val label: String) {
+    AVAILABLE("Sẵn sàng nhận đơn"),
+    BUSY("Đang bận giao"),
+    OFFLINE("Ngoại tuyến")
+}
+
 data class DriverUiState(
     val newOrders: List<DeliveryRequestEntity> = emptyList(),
     val activeOrders: List<DeliveryRequestEntity> = emptyList(),
@@ -30,9 +36,14 @@ data class DriverUiState(
     val totalEarnings: Double = 0.0,
     val todayEarnings: Double = 0.0,
     val completedCount: Int = 0,
+    val rejectedOrderIds: Set<Int> = emptySet(),
+    val rejectedCount: Int = 0,
+    val reliabilityScore: Int = 100,
+    val driverStatus: DriverWorkingStatus = DriverWorkingStatus.AVAILABLE,
     val isLoading: Boolean = false,
     val error: String? = null,
-    val acceptMessage: String? = null
+    val acceptMessage: String? = null,
+    val userMessage: String? = null
 )
 
 class DriverViewModel(private val repository: DeliveryRepository) : ViewModel() {
@@ -64,8 +75,11 @@ class DriverViewModel(private val repository: DeliveryRepository) : ViewModel() 
             ) { allRequests, pendingCount, deliveredTodayCount ->
                 Triple(allRequests, pendingCount, deliveredTodayCount)
             }.collect { (allRequests, pendingCount, deliveredTodayCount) ->
+                val ignoredIds = _uiState.value.rejectedOrderIds
                 val newOrders = allRequests.filter {
-                    it.status == DeliveryStatus.CHO_TIEP_NHAN && it.deliveryPersonId == null
+                    it.status == DeliveryStatus.CHO_TIEP_NHAN && 
+                    it.deliveryPersonId == null && 
+                    !ignoredIds.contains(it.id)
                 }
                 val activeOrders = allRequests.filter {
                     it.deliveryPersonId == driverId && it.status in listOf(
@@ -90,6 +104,13 @@ class DriverViewModel(private val repository: DeliveryRepository) : ViewModel() 
                 val todayEarnings = todayCompletedOrders.sumOf { it.totalCost }
                 val completedCount = completedOrders.size
 
+                // Tính điểm tin cậy: max(0, min(100, 100 - (rejected * 5) + (completed * 2)))
+                val currentRejectedCount = _uiState.value.rejectedCount
+                val calculatedScore = maxOf(
+                    0, 
+                    minOf(100, 100 - (currentRejectedCount * 5) + (completedCount * 2))
+                )
+
                 // Load packages and histories for all relevant orders
                 val packagesMap = mutableMapOf<Int, List<PackageEntity>>()
                 val historiesMap = mutableMapOf<Int, List<StatusHistoryEntity>>()
@@ -112,10 +133,18 @@ class DriverViewModel(private val repository: DeliveryRepository) : ViewModel() 
                     totalEarnings = totalEarnings,
                     todayEarnings = todayEarnings,
                     completedCount = completedCount,
+                    reliabilityScore = calculatedScore,
                     isLoading = false
                 )
             }
         }
+    }
+
+    fun setWorkingStatus(status: DriverWorkingStatus) {
+        _uiState.value = _uiState.value.copy(
+            driverStatus = status,
+            userMessage = "Đã chuyển sang: ${status.label}"
+        )
     }
 
     fun acceptOrder(orderId: Int, driverId: Int) {
@@ -127,17 +156,36 @@ class DriverViewModel(private val repository: DeliveryRepository) : ViewModel() 
                 is AcceptResult.NotFound -> "Không tìm thấy đơn #$orderId."
                 is AcceptResult.InvalidStatus -> "Đơn #$orderId không ở trạng thái chờ tiếp nhận."
             }
-            _uiState.value = _uiState.value.copy(acceptMessage = message)
+            _uiState.value = _uiState.value.copy(
+                acceptMessage = message,
+                userMessage = message
+            )
         }
     }
 
     fun clearAcceptMessage() {
-        _uiState.value = _uiState.value.copy(acceptMessage = null)
+        _uiState.value = _uiState.value.copy(
+            acceptMessage = null,
+            userMessage = null
+        )
     }
 
-    fun rejectOrder(orderId: Int) {
-        // Simple implementation: for now we don't do anything because "rejecting" just means the driver ignores it
-        // and it remains in the pool for others.
+    fun rejectOrder(orderId: Int, reason: String = "Lý do khác", note: String = "") {
+        val updatedRejected = _uiState.value.rejectedOrderIds + orderId
+        val newRejectedCount = _uiState.value.rejectedCount + 1
+        val completedCount = _uiState.value.completedCount
+        val newScore = maxOf(0, minOf(100, 100 - (newRejectedCount * 5) + (completedCount * 2)))
+
+        val remainingNewOrders = _uiState.value.newOrders.filter { it.id != orderId }
+
+        val detailReason = if (note.isNotBlank()) "$reason ($note)" else reason
+        _uiState.value = _uiState.value.copy(
+            newOrders = remainingNewOrders,
+            rejectedOrderIds = updatedRejected,
+            rejectedCount = newRejectedCount,
+            reliabilityScore = newScore,
+            userMessage = "Đã từ chối đơn #$orderId: $detailReason"
+        )
     }
 
     fun updateOrderStatus(orderId: Int, newStatus: DeliveryStatus, driverId: Int? = currentDriverId, note: String = "") {
