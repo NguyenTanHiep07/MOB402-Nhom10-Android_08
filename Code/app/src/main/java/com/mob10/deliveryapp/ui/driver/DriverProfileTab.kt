@@ -25,8 +25,11 @@ import com.mob10.deliveryapp.ui.theme.*
 @Composable
 fun DriverProfileTab(
     currentUser: UserEntity?,
-    isAvailable: Boolean,
-    onAvailabilityChanged: (Boolean) -> Unit,
+    driverStatus: DriverWorkingStatus = DriverWorkingStatus.AVAILABLE,
+    onStatusChanged: (DriverWorkingStatus) -> Unit = {},
+    reliabilityScore: Int = 100,
+    completedCount: Int = 0,
+    rejectedCount: Int = 0,
     onLogout: () -> Unit,
     onUpdateProfile: (String, String, String, String) -> Unit = { _, _, _, _ -> }
 ) {
@@ -37,7 +40,7 @@ fun DriverProfileTab(
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
             title = { Text(text = "Đăng xuất", fontWeight = FontWeight.Bold) },
-            text = { Text(text = "Bạn có chắc muốn đăng xuất?") },
+            text = { Text(text = "Bạn có chắc muốn đăng xuất khỏi tài khoản?") },
             confirmButton = {
                 TextButton(onClick = {
                     showLogoutDialog = false
@@ -67,31 +70,36 @@ fun DriverProfileTab(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
         Text(text = "Thông tin cá nhân", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = UthOnSurface)
-        Spacer(modifier = Modifier.height(12.dp))
         ProfileInfoCard(currentUser = currentUser, onEditClick = { showEditDialog = true })
         
+        Text(text = "Điểm tin cậy & Hiệu suất", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = UthOnSurface)
+        ReliabilityScoreCard(
+            reliabilityScore = reliabilityScore,
+            completedCount = completedCount,
+            rejectedCount = rejectedCount
+        )
+
         Text(text = "Trạng thái làm việc", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = UthOnSurface)
-        Spacer(modifier = Modifier.height(12.dp))
-        DriverAvailabilityCard(isAvailable = isAvailable, onAvailabilityChanged = onAvailabilityChanged)
+        DriverShiftSelectorCard(
+            currentStatus = driverStatus,
+            onStatusChanged = onStatusChanged
+        )
         
-        Text(text = "Tài khoản", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = UthOnSurface)
-        Spacer(modifier = Modifier.height(12.dp))
+        Text(text = "Cài đặt & Tài khoản", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = UthOnSurface)
         ProfileMenuCard()
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Button(
             onClick = { showLogoutDialog = true },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(53.dp),
-            shape = RoundedCornerShape(15.dp),
+                .height(52.dp),
+            shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = UthSecondaryContainer,
                 contentColor = UthError
@@ -103,6 +111,233 @@ fun DriverProfileTab(
             Text(text = "Đăng xuất", fontSize = 15.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+@Composable
+fun ReliabilityScoreCard(
+    reliabilityScore: Int,
+    completedCount: Int,
+    rejectedCount: Int
+) {
+    val scoreColor = when {
+        reliabilityScore >= 80 -> UthSuccess
+        reliabilityScore >= 60 -> UthWarning
+        else -> UthError
+    }
+
+    val ratingText = when {
+        reliabilityScore >= 80 -> "Tuyệt vời (Ưu tiên nhận đơn)"
+        reliabilityScore >= 60 -> "Khá (Cần chú ý từ chối đơn)"
+        else -> "Cảnh báo (Có thể bị hạn chế nhận đơn)"
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Điểm tin cậy (Reliability)",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = UthOnSurface
+                    )
+                    Text(
+                        text = ratingText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scoreColor,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = scoreColor.copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = "$reliabilityScore/100",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = scoreColor
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Progress Bar
+            LinearProgressIndicator(
+                progress = { reliabilityScore / 100f },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+                color = scoreColor,
+                trackColor = UthOutlineVariant
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+            HorizontalDivider(color = UthOutlineVariant)
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Stats Breakdown
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceAround
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "$completedCount",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = UthSuccess
+                    )
+                    Text(
+                        text = "Đã hoàn thành",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = UthOnSurfaceVariant
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "$rejectedCount",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (rejectedCount > 3) UthError else UthOnSurface
+                    )
+                    Text(
+                        text = "Đã từ chối",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = UthOnSurfaceVariant
+                    )
+                }
+
+                val totalHandled = completedCount + rejectedCount
+                val rate = if (totalHandled > 0) (completedCount * 100 / totalHandled) else 100
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "$rate%",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = UthPrimary
+                    )
+                    Text(
+                        text = "Tỷ lệ hoàn thành",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = UthOnSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DriverShiftSelectorCard(
+    currentStatus: DriverWorkingStatus,
+    onStatusChanged: (DriverWorkingStatus) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Chọn chế độ làm việc hiện tại:",
+                style = MaterialTheme.typography.bodySmall,
+                color = UthOnSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Sẵn sàng
+                val isAvailable = currentStatus == DriverWorkingStatus.AVAILABLE
+                Surface(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onStatusChanged(DriverWorkingStatus.AVAILABLE) },
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isAvailable) UthSuccessContainer else UthBackground,
+                    border = BorderStroke(1.dp, if (isAvailable) UthSuccess else UthOutlineVariant)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "🟢 Sẵn sàng",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isAvailable) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isAvailable) UthSuccess else UthOnSurfaceVariant
+                        )
+                    }
+                }
+
+                // Đang bận
+                val isBusy = currentStatus == DriverWorkingStatus.BUSY
+                Surface(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onStatusChanged(DriverWorkingStatus.BUSY) },
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isBusy) UthWarningContainer else UthBackground,
+                    border = BorderStroke(1.dp, if (isBusy) UthWarning else UthOutlineVariant)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "🟡 Đang bận",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isBusy) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isBusy) UthWarning else UthOnSurfaceVariant
+                        )
+                    }
+                }
+
+                // Ngoại tuyến
+                val isOffline = currentStatus == DriverWorkingStatus.OFFLINE
+                Surface(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onStatusChanged(DriverWorkingStatus.OFFLINE) },
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isOffline) UthSurfaceContainerHighest else UthBackground,
+                    border = BorderStroke(1.dp, if (isOffline) UthOnSurfaceVariant else UthOutlineVariant)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "⚪ Nghỉ",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isOffline) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isOffline) UthOnSurface else UthOnSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -219,7 +454,7 @@ private fun ProfileMenuCard() {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp, modifier = Modifier.padding(horizontal = 16.dp))
             ProfileMenuItem(
                 icon = Icons.Default.HelpOutline, 
-                title = "Trợ giúp",
+                title = "Trợ giúp & Hướng dẫn",
                 onClick = { android.widget.Toast.makeText(context, notImplementedMsg, android.widget.Toast.LENGTH_SHORT).show() }
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp, modifier = Modifier.padding(horizontal = 16.dp))
