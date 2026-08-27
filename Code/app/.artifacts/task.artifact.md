@@ -1,0 +1,8 @@
+- `[ ]` Refine existing entities (`UserEntity`, `DeliveryRequestEntity`)
+- `[ ]` Create new entities (`PackageEntity`, `StatusHistoryEntity`)
+- `[ ]` Implement Room Type Converters
+- `[ ]` Create DAOs (`UserDao`, `DeliveryRequestDao`, `PackageDao`, `StatusHistoryDao`)
+- `[ ]` Implement `AppDatabase`
+- `[ ]` Implement `DeliveryRepository` with business logic (pricing, transitions)
+- `[ ]` Create `DatabaseInitializer` for sample data
+- `[ ]` Verify implementation (Unit tests or Logcat check)
