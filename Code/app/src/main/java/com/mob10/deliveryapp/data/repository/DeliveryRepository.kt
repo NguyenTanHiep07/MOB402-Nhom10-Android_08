@@ -190,7 +190,7 @@ class DeliveryRepository(
     suspend fun updateRequestStatus(
         requestId: Int,
         newStatus: DeliveryStatus,
-        updatedBy: Int? = null,
+        updatedBy: Int,              // bỏ "?" và "= null"
         note: String? = null
     ): Boolean = db.withTransaction {
         val currentRequest = requestDao.getRequestById(requestId) ?: return@withTransaction false
@@ -198,9 +198,8 @@ class DeliveryRepository(
 
         if (!isValidTransition(currentStatus, newStatus)) return@withTransaction false
 
-        // Luồng cập nhật trạng thái của tài xế phải luôn có danh tính và đúng owner.
         val ownerId = currentRequest.deliveryPersonId ?: return@withTransaction false
-        if (updatedBy == null || ownerId != updatedBy) return@withTransaction false
+        if (ownerId != updatedBy) return@withTransaction false   // bỏ check "updatedBy == null"
 
         if (newStatus == DeliveryStatus.DA_GIAO) {
             requestDao.updateStatusWithTime(requestId, newStatus, System.currentTimeMillis())
@@ -249,6 +248,7 @@ class DeliveryRepository(
         )
         AcceptResult.Success
     }
+
     /**
      * Client hủy đơn hàng của chính mình.
      * - Kiểm tra đúng chủ đơn (ownership check)
@@ -279,6 +279,7 @@ class DeliveryRepository(
         )
         CancelResult.Success
     }
+
     private fun isValidTransition(from: DeliveryStatus, to: DeliveryStatus): Boolean {
         return when (from) {
             DeliveryStatus.CHO_TIEP_NHAN -> to == DeliveryStatus.DA_CHAP_NHAN || to == DeliveryStatus.DA_HUY
@@ -290,10 +291,14 @@ class DeliveryRepository(
         }
     }
 
+    fun getCompletedCountForDriver(driverId: Int) = requestDao.getCompletedCountForDriverFlow(driverId)
+    fun getCancelledCountForDriver(driverId: Int) = requestDao.getCancelledCountForDriverFlow(driverId)
+
     suspend fun getRequestHistory(requestId: Int) = historyDao.getHistoryForRequest(requestId)
     suspend fun getRequestPackages(requestId: Int) = packageDao.getPackagesForRequest(requestId)
     suspend fun getRequestById(requestId: Int) = requestDao.getRequestById(requestId)
 }
+
 sealed class CancelResult {
     data object Success : CancelResult()
     data object NotOwnerOrNotFound : CancelResult()

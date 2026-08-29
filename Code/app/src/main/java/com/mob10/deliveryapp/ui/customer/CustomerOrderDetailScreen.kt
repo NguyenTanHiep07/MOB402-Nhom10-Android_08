@@ -6,10 +6,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
 import com.mob10.deliveryapp.data.model.DeliveryStatus
+import com.mob10.deliveryapp.ui.rating.RatingDialog
+import com.mob10.deliveryapp.ui.rating.RatingViewModel
+import com.mob10.deliveryapp.ui.rating.RatingViewModelFactory
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomerOrderDetailScreen(
     orderId: Int,
@@ -47,6 +51,27 @@ fun CustomerOrderDetailScreen(
                     snackbarHostState.showSnackbar(result.message)
                 }
             }
+        }
+    }
+
+    // --- Rating: ViewModel riêng cho luồng đánh giá ---
+    val ratingViewModel: RatingViewModel = viewModel(factory = RatingViewModelFactory())
+    val ratingUiState by ratingViewModel.uiState.collectAsState()
+    var showRatingDialog by remember { mutableStateOf(false) }
+
+    // Khi đơn đã tải xong và đã DA_GIAO, kiểm tra xem đã đánh giá chưa
+    LaunchedEffect(order?.id, order?.status) {
+        val currentOrder = order
+        if (currentOrder != null && currentOrder.status == DeliveryStatus.DA_GIAO) {
+            ratingViewModel.checkExistingRating(currentOrder.id)
+        }
+    }
+
+    // Khi gửi đánh giá thành công, đóng dialog + báo snackbar
+    LaunchedEffect(ratingUiState.submitSuccess) {
+        if (ratingUiState.submitSuccess) {
+            showRatingDialog = false
+            snackbarHostState.showSnackbar("Cảm ơn bạn đã đánh giá!")
         }
     }
 
@@ -103,8 +128,50 @@ fun CustomerOrderDetailScreen(
                                 Text("Hủy đơn hàng")
                             }
                         }
+
+                        // --- Nút Đánh giá: chỉ hiện khi đơn đã giao xong và có tài xế ---
+                        val driverId = currentOrder.deliveryPersonId
+                        if (currentOrder.status == DeliveryStatus.DA_GIAO && driverId != null) {
+                            if (ratingUiState.alreadyRated) {
+                                Text(
+                                    "Bạn đã đánh giá đơn này. Cảm ơn bạn!",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            } else {
+                                Button(
+                                    onClick = { showRatingDialog = true },
+                                    enabled = !ratingUiState.isLoading
+                                ) {
+                                    Text("Đánh giá tài xế")
+                                }
+                            }
+                        }
                     }
                 }
+            }
+
+            // --- Dialog đánh giá ---
+            if (showRatingDialog && order != null && order!!.deliveryPersonId != null) {
+                RatingDialog(
+                    deliveryRequestId = order!!.id,
+                    clientId = viewModel.clientId,
+                    driverId = order!!.deliveryPersonId!!,
+                    onDismiss = {
+                        showRatingDialog = false
+                        ratingViewModel.clearError()
+                    },
+                    onSubmit = { stars, comment ->
+                        ratingViewModel.submitRating(
+                            deliveryRequestId = order!!.id,
+                            clientId = viewModel.clientId,
+                            driverId = order!!.deliveryPersonId!!,
+                            stars = stars,
+                            comment = comment.ifBlank { null }
+                        )
+                    },
+                    isSubmitting = ratingUiState.isSubmitting,
+                    errorMessage = ratingUiState.errorMessage
+                )
             }
         }
     }

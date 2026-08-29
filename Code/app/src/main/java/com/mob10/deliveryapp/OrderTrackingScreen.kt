@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,17 +31,25 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
 import com.mob10.deliveryapp.data.model.DeliveryStatus
 import com.mob10.deliveryapp.ui.customer.ClientBottomNavigation
+import com.mob10.deliveryapp.ui.rating.RatingDialog
+import com.mob10.deliveryapp.ui.rating.RatingViewModel
+import com.mob10.deliveryapp.ui.rating.RatingViewModelFactory
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -65,6 +74,25 @@ fun OrderTrackingScreen(
     }
     val selectedOrder by orderViewModel.selectedOrder.collectAsState()
     val history by orderViewModel.selectedHistory.collectAsState()
+
+    // --- Rating: ViewModel + state riêng cho luồng đánh giá ---
+    val ratingViewModel: RatingViewModel = viewModel(factory = RatingViewModelFactory())
+    val ratingUiState by ratingViewModel.uiState.collectAsState()
+    var showRatingDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(selectedOrder?.id, selectedOrder?.status) {
+        val order = selectedOrder
+        if (order != null && order.status == DeliveryStatus.DA_GIAO) {
+            ratingViewModel.checkExistingRating(order.id)
+        }
+    }
+
+    LaunchedEffect(ratingUiState.submitSuccess) {
+        if (ratingUiState.submitSuccess) {
+            showRatingDialog = false
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -101,6 +129,7 @@ fun OrderTrackingScreen(
             }
         }
     }
+
     selectedOrder?.let { order ->
         AlertDialog(
             onDismissRequest = orderViewModel::clearSelectedOrder,
@@ -114,12 +143,53 @@ fun OrderTrackingScreen(
                             Text("${formatTimestamp(item.timestamp)}${item.note?.let { " · $it" }.orEmpty()}", color = TextSecondary, fontSize = 12.sp)
                         }
                     }
+
+                    // --- Nút Đánh giá: chỉ hiện khi đã giao xong và có tài xế ---
+                    val driverId = order.deliveryPersonId
+                    if (order.status == DeliveryStatus.DA_GIAO && driverId != null) {
+                        Spacer(Modifier.height(4.dp))
+                        if (ratingUiState.alreadyRated) {
+                            Text("Bạn đã đánh giá đơn này. Cảm ơn bạn!", color = TextSecondary, fontSize = 13.sp)
+                        } else {
+                            Button(
+                                onClick = { showRatingDialog = true },
+                                enabled = !ratingUiState.isLoading
+                            ) {
+                                Text("Đánh giá tài xế")
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = { TextButton(onClick = orderViewModel::clearSelectedOrder) { Text("Đóng") } }
         )
     }
-}
+
+    // --- Dialog đánh giá, hiển thị đè lên khi bấm nút ---
+    if (showRatingDialog && selectedOrder != null && selectedOrder!!.deliveryPersonId != null) {
+        val order = selectedOrder!!
+        RatingDialog(
+            deliveryRequestId = order.id,
+            clientId = orderViewModel.clientId,
+            driverId = order.deliveryPersonId!!,
+            onDismiss = {
+                showRatingDialog = false
+                ratingViewModel.clearError()
+            },
+            onSubmit = { stars, comment ->
+                ratingViewModel.submitRating(
+                    deliveryRequestId = order.id,
+                    clientId = orderViewModel.clientId,
+                    driverId = order.deliveryPersonId!!,
+                    stars = stars,
+                    comment = comment.ifBlank { null }
+                )
+            },
+            isSubmitting = ratingUiState.isSubmitting,
+            errorMessage = ratingUiState.errorMessage
+        )
+    }
+} // end fun OrderTrackingScreen
 
 @Composable
 private fun OrderCard(order: DeliveryRequestEntity, onClick: () -> Unit) {

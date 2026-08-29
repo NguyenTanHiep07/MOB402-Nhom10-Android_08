@@ -39,4 +39,6 @@ class UserRepository(
     fun getTotalUserCount() = userDao.getTotalUserCount()
     
     fun getCountByRole(role: com.mob10.deliveryapp.data.model.Role) = userDao.getCountByRole(role)
+
+    fun getUsersByRole(role: com.mob10.deliveryapp.data.model.Role) = userDao.getUsersByRole(role)
 }
