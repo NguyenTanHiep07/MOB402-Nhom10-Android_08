@@ -84,7 +84,7 @@ fun DriverHomeScreen(
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var showLoginAnimation by remember { mutableStateOf(true) }
-    
+
     val context = LocalContext.current
     val viewModel: DriverViewModel = viewModel(
         factory = DriverViewModelFactory(context)
@@ -269,21 +269,29 @@ fun DriverHomeScreen(
                     onClick = { selectedTab = 4 }
                 )
             } else if (selectedTab == 1) {
-                NewOrdersTab(
-                    newOrders = uiState.newOrders,
-                    packagesByOrder = uiState.packagesByOrder,
-                    onAcceptOrder = { orderId -> currentUser?.id?.let { viewModel.acceptOrder(orderId, it) } },
-                    onRejectOrder = { orderId, reason, note -> viewModel.rejectOrder(orderId, reason, note) },
-                    driverStatus = uiState.driverStatus
-                )
+                if (uiState.isLoading) {
+                    DriverLoadingState()
+                } else {
+                    NewOrdersTab(
+                        newOrders = uiState.newOrders,
+                        packagesByOrder = uiState.packagesByOrder,
+                        onAcceptOrder = { orderId -> viewModel.acceptOrder(orderId) },
+                        onRejectOrder = { orderId, reason, note -> viewModel.rejectOrder(orderId, reason, note) },
+                        driverStatus = uiState.driverStatus
+                    )
+                }
             } else if (selectedTab == 2) {
-                ActiveOrderTab(
-                    activeOrders = uiState.activeOrders,
-                    packagesByOrder = uiState.packagesByOrder,
-                    onUpdateStatus = { orderId, newStatus ->
-                        viewModel.updateOrderStatus(orderId, newStatus, driverId = currentUser?.id)
-                    }
-                )
+                if (uiState.isLoading) {
+                    DriverLoadingState()
+                } else {
+                    ActiveOrderTab(
+                        activeOrders = uiState.activeOrders,
+                        packagesByOrder = uiState.packagesByOrder,
+                        onUpdateStatus = { orderId, newStatus ->
+                            viewModel.updateOrderStatus(orderId, newStatus)
+                        }
+                    )
+                }
             } else if (selectedTab == 3) {
                 DriverProfileTab(
                     currentUser = currentUser,
@@ -317,7 +325,7 @@ fun DriverHomeScreen(
             onDismiss = { showLoginAnimation = false }
         )
     } // end Box
-}
+} // end fun DriverHomeScreen
 
 @Composable
 private fun ActiveDeliveryCard(
@@ -430,6 +438,29 @@ private fun ActiveDeliveryCard(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun DriverLoadingState() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(48.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            androidx.compose.material3.CircularProgressIndicator(color = UthPrimary)
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "Đang tải dữ liệu...",
+                color = UthOnSurfaceVariant,
+                fontSize = 13.sp
+            )
         }
     }
 }

@@ -41,7 +41,6 @@ data class DriverUiState(
     val reliabilityScore: Int = 100,
     val driverStatus: DriverWorkingStatus = DriverWorkingStatus.AVAILABLE,
     val isLoading: Boolean = false,
-    val error: String? = null,
     val acceptMessage: String? = null,
     val userMessage: String? = null
 )
@@ -147,7 +146,12 @@ class DriverViewModel(private val repository: DeliveryRepository) : ViewModel() 
         )
     }
 
-    fun acceptOrder(orderId: Int, driverId: Int) {
+    fun acceptOrder(orderId: Int) {
+        val driverId = currentDriverId
+        if (driverId == null) {
+            _uiState.value = _uiState.value.copy(userMessage = "Phiên đăng nhập không hợp lệ, vui lòng đăng nhập lại.")
+            return
+        }
         viewModelScope.launch {
             val result = repository.acceptRequest(orderId, driverId)
             val message = when (result) {
@@ -188,7 +192,12 @@ class DriverViewModel(private val repository: DeliveryRepository) : ViewModel() 
         )
     }
 
-    fun updateOrderStatus(orderId: Int, newStatus: DeliveryStatus, driverId: Int? = currentDriverId, note: String = "") {
+    fun updateOrderStatus(orderId: Int, newStatus: DeliveryStatus, note: String = "") {
+        val driverId = currentDriverId
+        if (driverId == null) {
+            _uiState.value = _uiState.value.copy(userMessage = "Phiên đăng nhập không hợp lệ, vui lòng đăng nhập lại.")
+            return
+        }
         val finalNote = note.ifBlank {
             when (newStatus) {
                 DeliveryStatus.DA_CHAP_NHAN -> "Tài xế đã nhận đơn"

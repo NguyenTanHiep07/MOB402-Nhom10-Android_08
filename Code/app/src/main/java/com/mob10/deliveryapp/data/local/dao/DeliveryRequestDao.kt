@@ -67,4 +67,9 @@ interface DeliveryRequestDao {
         clientId: Int,
         newStatus: DeliveryStatus
     ): Int
+    @Query("SELECT COUNT(*) FROM delivery_requests WHERE deliveryPersonId = :driverId AND status = 'DA_GIAO'")
+    fun getCompletedCountForDriverFlow(driverId: Int): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM delivery_requests WHERE deliveryPersonId = :driverId AND status = 'DA_HUY'")
+    fun getCancelledCountForDriverFlow(driverId: Int): Flow<Int>
 }
