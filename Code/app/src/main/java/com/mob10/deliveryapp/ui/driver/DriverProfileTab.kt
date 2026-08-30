@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mob10.deliveryapp.data.local.entity.UserEntity
+import com.mob10.deliveryapp.ui.components.SectionTitle
 import com.mob10.deliveryapp.ui.theme.*
 
 @Composable
@@ -74,41 +75,42 @@ fun DriverProfileTab(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Spacer(modifier = Modifier.height(4.dp))
-        Text(text = "Thông tin cá nhân", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = UthOnSurface)
+        
+        SectionTitle(title = "Thông tin cá nhân")
         ProfileInfoCard(currentUser = currentUser, onEditClick = { showEditDialog = true })
         
-        Text(text = "Điểm tin cậy & Hiệu suất", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = UthOnSurface)
+        SectionTitle(title = "Điểm tin cậy & Hiệu suất")
         ReliabilityScoreCard(
             reliabilityScore = reliabilityScore,
             completedCount = completedCount,
             rejectedCount = rejectedCount
         )
 
-        Text(text = "Trạng thái làm việc", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = UthOnSurface)
+        SectionTitle(title = "Trạng thái làm việc")
         DriverShiftSelectorCard(
             currentStatus = driverStatus,
             onStatusChanged = onStatusChanged
         )
         
-        Text(text = "Cài đặt & Tài khoản", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = UthOnSurface)
+        SectionTitle(title = "Cài đặt & Tài khoản")
         ProfileMenuCard()
         
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         Button(
             onClick = { showLogoutDialog = true },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
-            shape = RoundedCornerShape(14.dp),
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = UthSecondaryContainer,
+                containerColor = UthError.copy(alpha = 0.1f),
                 contentColor = UthError
             ),
             elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
         ) {
-            Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "Đăng xuất", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, modifier = Modifier.size(22.dp))
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(text = "Đăng xuất", fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.height(32.dp))
     }
@@ -134,12 +136,12 @@ fun ReliabilityScoreCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(18.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -166,7 +168,7 @@ fun ReliabilityScoreCard(
                 ) {
                     Text(
                         text = "$reliabilityScore/100",
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = scoreColor
@@ -174,22 +176,22 @@ fun ReliabilityScoreCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Progress Bar
             LinearProgressIndicator(
                 progress = { reliabilityScore / 100f },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
+                    .height(10.dp)
+                    .clip(RoundedCornerShape(5.dp)),
                 color = scoreColor,
                 trackColor = UthOutlineVariant
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(18.dp))
             HorizontalDivider(color = UthOutlineVariant)
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Stats Breakdown
             Row(
@@ -251,22 +253,23 @@ fun DriverShiftSelectorCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(18.dp)) {
             Text(
                 text = "Chọn chế độ làm việc hiện tại:",
-                style = MaterialTheme.typography.bodySmall,
-                color = UthOnSurfaceVariant
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = UthOnSurface
             )
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 // Sẵn sàng
                 val isAvailable = currentStatus == DriverWorkingStatus.AVAILABLE
@@ -274,18 +277,18 @@ fun DriverShiftSelectorCard(
                     modifier = Modifier
                         .weight(1f)
                         .clickable { onStatusChanged(DriverWorkingStatus.AVAILABLE) },
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     color = if (isAvailable) UthSuccessContainer else UthBackground,
                     border = BorderStroke(1.dp, if (isAvailable) UthSuccess else UthOutlineVariant)
                 ) {
                     Column(
-                        modifier = Modifier.padding(vertical = 8.dp),
+                        modifier = Modifier.padding(vertical = 12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "🟢 Sẵn sàng",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = if (isAvailable) FontWeight.Bold else FontWeight.Normal,
+                            text = "Sẵn sàng",
+                            fontSize = 14.sp,
+                            fontWeight = if (isAvailable) FontWeight.Bold else FontWeight.Medium,
                             color = if (isAvailable) UthSuccess else UthOnSurfaceVariant
                         )
                     }
@@ -297,18 +300,18 @@ fun DriverShiftSelectorCard(
                     modifier = Modifier
                         .weight(1f)
                         .clickable { onStatusChanged(DriverWorkingStatus.BUSY) },
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     color = if (isBusy) UthWarningContainer else UthBackground,
                     border = BorderStroke(1.dp, if (isBusy) UthWarning else UthOutlineVariant)
                 ) {
                     Column(
-                        modifier = Modifier.padding(vertical = 8.dp),
+                        modifier = Modifier.padding(vertical = 12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "🟡 Đang bận",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = if (isBusy) FontWeight.Bold else FontWeight.Normal,
+                            text = "Đang bận",
+                            fontSize = 14.sp,
+                            fontWeight = if (isBusy) FontWeight.Bold else FontWeight.Medium,
                             color = if (isBusy) UthWarning else UthOnSurfaceVariant
                         )
                     }
@@ -320,18 +323,18 @@ fun DriverShiftSelectorCard(
                     modifier = Modifier
                         .weight(1f)
                         .clickable { onStatusChanged(DriverWorkingStatus.OFFLINE) },
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     color = if (isOffline) UthSurfaceContainerHighest else UthBackground,
                     border = BorderStroke(1.dp, if (isOffline) UthOnSurfaceVariant else UthOutlineVariant)
                 ) {
                     Column(
-                        modifier = Modifier.padding(vertical = 8.dp),
+                        modifier = Modifier.padding(vertical = 12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "⚪ Nghỉ",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = if (isOffline) FontWeight.Bold else FontWeight.Normal,
+                            text = "Nghỉ",
+                            fontSize = 14.sp,
+                            fontWeight = if (isOffline) FontWeight.Bold else FontWeight.Medium,
                             color = if (isOffline) UthOnSurface else UthOnSurfaceVariant
                         )
                     }
@@ -345,7 +348,7 @@ fun DriverShiftSelectorCard(
 private fun ProfileInfoCard(currentUser: UserEntity?, onEditClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -353,19 +356,19 @@ private fun ProfileInfoCard(currentUser: UserEntity?, onEditClick: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopEnd) {
-                IconButton(onClick = onEditClick, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Edit, contentDescription = "Sửa hồ sơ", tint = UthPrimary, modifier = Modifier.size(20.dp))
+                IconButton(onClick = onEditClick, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Default.Edit, contentDescription = "Sửa hồ sơ", tint = UthPrimary, modifier = Modifier.size(22.dp))
                 }
             }
             
             // Avatar
             Box(
                 modifier = Modifier
-                    .size(80.dp)
+                    .size(88.dp)
                     .clip(CircleShape)
                     .background(UthPrimaryContainer),
                 contentAlignment = Alignment.Center
@@ -374,32 +377,38 @@ private fun ProfileInfoCard(currentUser: UserEntity?, onEditClick: () -> Unit) {
                     imageVector = Icons.Default.Person,
                     contentDescription = null,
                     tint = UthPrimary,
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.size(46.dp)
                 )
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
             Text(
                 text = currentUser?.fullName ?: "Tài xế",
                 color = UthOnSurface,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 20.sp,
+                fontWeight = FontWeight.ExtraBold
             )
             Text(
                 text = "Nhân viên giao hàng",
                 color = UthOnSurfaceVariant,
-                fontSize = 13.sp
+                fontSize = 14.sp
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             
             // Detail rows
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
             Spacer(modifier = Modifier.height(16.dp))
             ProfileDetailRow(label = "Họ và tên", value = currentUser?.fullName ?: "")
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+            Spacer(modifier = Modifier.height(14.dp))
             ProfileDetailRow(label = "Số điện thoại", value = currentUser?.phoneNumber ?: "")
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+            Spacer(modifier = Modifier.height(14.dp))
             ProfileDetailRow(label = "Tên đăng nhập", value = currentUser?.username ?: "")
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
+            Spacer(modifier = Modifier.height(14.dp))
             ProfileDetailRow(label = "Biển số xe", value = currentUser?.licensePlate ?: "Chưa cập nhật")
             Spacer(modifier = Modifier.height(8.dp))
         }
@@ -416,13 +425,13 @@ private fun ProfileDetailRow(label: String, value: String) {
         Text(
             text = label,
             color = UthOnSurfaceVariant,
-            fontSize = 13.sp
+            fontSize = 14.sp
         )
         Text(
             text = value,
             color = UthOnSurface,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold
         )
     }
 }
@@ -434,7 +443,7 @@ private fun ProfileMenuCard() {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -473,13 +482,13 @@ private fun ProfileMenuItem(icon: ImageVector, title: String, onClick: () -> Uni
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 18.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .size(40.dp)
+                .clip(RoundedCornerShape(12.dp))
                 .background(UthPrimaryContainer),
             contentAlignment = Alignment.Center
         ) {
@@ -487,22 +496,22 @@ private fun ProfileMenuItem(icon: ImageVector, title: String, onClick: () -> Uni
                 imageVector = icon,
                 contentDescription = null,
                 tint = UthPrimary,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(20.dp)
             )
         }
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(14.dp))
         Text(
             text = title,
             color = UthOnSurface,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f)
         )
         Icon(
             imageVector = Icons.Default.ChevronRight,
             contentDescription = null,
             tint = UthOnSurfaceVariant,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(22.dp)
         )
     }
 }

@@ -1,50 +1,46 @@
 package com.mob10.deliveryapp
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Surface
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mob10.deliveryapp.data.model.DeliveryStatus
+import com.mob10.deliveryapp.ui.components.DashboardHeroCard
 import com.mob10.deliveryapp.ui.components.DashboardNavItem
 import com.mob10.deliveryapp.ui.components.DashboardScaffold
 import com.mob10.deliveryapp.ui.components.GoDropHeader
 import com.mob10.deliveryapp.ui.components.MetricCard
 import com.mob10.deliveryapp.ui.components.QuickActionCard
 import com.mob10.deliveryapp.ui.components.SectionTitle
-import com.mob10.deliveryapp.ui.theme.UthPrimary
+import com.mob10.deliveryapp.ui.theme.UthOnSurface
+import com.mob10.deliveryapp.ui.theme.UthOnSurfaceVariant
 
 @Composable
 fun ClientHomeScreen(
@@ -85,56 +81,84 @@ fun ClientHomeScreen(
             )
         }
     ) {
-        SectionTitle(title = "Tổng quan đơn hàng", actionLabel = "Hôm nay")
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            MetricCard(
-                modifier = Modifier.weight(1f),
-                label = "Đang xử lý",
-                value = "%02d".format(pendingCount),
-                helper = if (pendingCount > 0) "Cần theo dõi" else "Không có đơn chờ",
-                icon = Icons.Default.PendingActions,
-                highlighted = pendingCount > 0
-            )
-            MetricCard(
-                modifier = Modifier.weight(1f),
-                label = "Đã hoàn tất",
-                value = "%02d".format(completedCount),
-                helper = "Tổng số đơn đã giao",
-                icon = Icons.Default.TaskAlt
-            )
-        }
-        ClientCreateDeliveryCard(onCreateRequestClick)
-        SectionTitle(title = "Thao tác nhanh")
-        QuickActionCard("Danh sách đơn của tôi", "Xem tất cả yêu cầu giao hàng", Icons.Default.ListAlt, onOrderListClick)
-        QuickActionCard("Theo dõi trạng thái", "Kiểm tra tiến độ đơn hàng", Icons.Default.LocalShipping, onTrackingClick)
-        QuickActionCard("Lịch sử hoạt động", "Xem lại các cập nhật trạng thái", Icons.Default.History, onOrderListClick)
-    }
-}
+        // Hero Card
+        DashboardHeroCard(
+            eyebrow = "Gửi hàng nội thành",
+            value = "Bạn gửi, GoDrop giao",
+            supportingText = "Ước tính phí rõ ràng, theo dõi từng chặng",
+            icon = Icons.Default.RocketLaunch,
+            actionLabel = "Tạo đơn giao hàng", // Nổi bật hơn
+            onActionClick = onCreateRequestClick
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
 
-@Composable
-private fun ClientCreateDeliveryCard(onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = UthPrimary),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier.size(48.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.16f)),
-                contentAlignment = Alignment.Center
-            ) { Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(25.dp)) }
-            Spacer(Modifier.width(13.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Tạo yêu cầu giao hàng", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text("Gửi hàng nhanh chóng chỉ trong vài bước", color = Color.White.copy(alpha = 0.76f), fontSize = 11.sp)
+        // Order Summary
+        SectionTitle(title = "Tổng quan đơn hàng", actionLabel = "Hôm nay")
+        if (orderList.isEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Bạn chưa có đơn hàng nào",
+                        color = UthOnSurfaceVariant,
+                        fontSize = 14.sp
+                    )
+                }
             }
-            Surface(shape = RoundedCornerShape(11.dp), color = Color.White) {
-                Text("Bắt đầu", color = UthPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 11.dp, vertical = 8.dp))
+        } else {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                MetricCard(
+                    modifier = Modifier.weight(1f),
+                    label = "Đang xử lý",
+                    value = "%02d".format(pendingCount),
+                    helper = if (pendingCount > 0) "Đang giao/chuẩn bị" else "Không có đơn chờ",
+                    icon = Icons.Default.PendingActions,
+                    highlighted = pendingCount > 0
+                )
+                MetricCard(
+                    modifier = Modifier.weight(1f),
+                    label = "Đã hoàn tất",
+                    value = "%02d".format(completedCount),
+                    helper = "Tổng số đơn đã giao",
+                    icon = Icons.Default.TaskAlt
+                )
             }
         }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Quick Actions
+        SectionTitle(title = "Thao tác nhanh")
+        QuickActionCard(
+            title = "Danh sách đơn của tôi",
+            subtitle = "Xem lại tất cả yêu cầu giao hàng",
+            icon = Icons.Default.ListAlt,
+            onClick = onOrderListClick
+        )
+        if (pendingCount > 0) {
+            QuickActionCard(
+                title = "Theo dõi đơn hàng ($pendingCount)",
+                subtitle = "Kiểm tra tiến độ đơn hàng đang giao trực tiếp",
+                icon = Icons.Default.LocalShipping,
+                onClick = onTrackingClick
+            )
+        }
+        QuickActionCard(
+            title = "Lịch sử hoạt động",
+            subtitle = "Xem lại các cập nhật trạng thái đã qua",
+            icon = Icons.Default.History,
+            onClick = onOrderListClick
+        )
     }
 }

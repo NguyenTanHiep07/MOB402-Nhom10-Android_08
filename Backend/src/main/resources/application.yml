@@ -31,6 +31,11 @@ app:
     lock-threshold-in-24-hours: 3
     lock-duration-minutes: 30
     alert-score-threshold: 70
+  location:
+    photon-base-url: ${PHOTON_BASE_URL:https://photon.komoot.io}
+    osrm-base-url: ${OSRM_BASE_URL:https://router.project-osrm.org}
+    request-timeout-ms: ${LOCATION_REQUEST_TIMEOUT_MS:8000}
+    user-agent: ${LOCATION_USER_AGENT:GoDrop-UTH-08/1.0-student-project}
 
 springdoc:
   swagger-ui:

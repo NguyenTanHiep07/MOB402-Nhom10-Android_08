@@ -17,13 +17,13 @@ val GoDropTypography = Typography(
     ),
     headlineSmall = TextStyle(
         fontFamily = GoDropFontFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 24.sp,
-        lineHeight = 30.sp
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 23.sp,
+        lineHeight = 29.sp
     ),
     titleLarge = TextStyle(
         fontFamily = GoDropFontFamily,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.ExtraBold,
         fontSize = 20.sp,
         lineHeight = 26.sp
     ),
@@ -45,6 +45,12 @@ val GoDropTypography = Typography(
         fontSize = 14.sp,
         lineHeight = 20.sp
     ),
+    bodySmall = TextStyle(
+        fontFamily = GoDropFontFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = 12.sp,
+        lineHeight = 18.sp
+    ),
     labelLarge = TextStyle(
         fontFamily = GoDropFontFamily,
         fontWeight = FontWeight.Bold,
@@ -56,5 +62,11 @@ val GoDropTypography = Typography(
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         lineHeight = 16.sp
+    ),
+    labelSmall = TextStyle(
+        fontFamily = GoDropFontFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 11.sp,
+        lineHeight = 15.sp
     )
 )

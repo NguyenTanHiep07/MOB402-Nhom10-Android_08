@@ -1,10 +1,22 @@
+// LEGACY / UNUSED
 package com.mob10.deliveryapp.ui.customer
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
@@ -12,6 +24,8 @@ import com.mob10.deliveryapp.data.model.DeliveryStatus
 import com.mob10.deliveryapp.ui.rating.RatingDialog
 import com.mob10.deliveryapp.ui.rating.RatingViewModel
 import com.mob10.deliveryapp.ui.rating.RatingViewModelFactory
+import java.text.NumberFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,10 +92,13 @@ fun CustomerOrderDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Chi tiết đơn hàng") },
+                title = { Text("Chi tiết đơn hàng", fontWeight = FontWeight.ExtraBold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Text("←") }
-                }
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -89,6 +106,7 @@ fun CustomerOrderDetailScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
                 .padding(padding)
         ) {
             when {
@@ -110,21 +128,88 @@ fun CustomerOrderDetailScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
                             .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Text("Đơn #${currentOrder.id}", style = MaterialTheme.typography.headlineSmall)
-                        Text("Trạng thái: ${currentOrder.status.name}")
-                        Text("Lấy hàng: ${currentOrder.pickupAddress}")
-                        Text("Giao đến: ${currentOrder.deliveryAddress}")
-                        Text("Người nhận: ${currentOrder.recipientName} - ${currentOrder.recipientPhone}")
-                        Text("Tổng phí: ${currentOrder.totalCost}đ")
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(22.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    "MÃ ĐƠN #${currentOrder.id}",
+                                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    currentOrder.status.detailLabel(),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                                Text(
+                                    "Theo dõi hành trình và cập nhật mới nhất của đơn hàng",
+                                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.78f)
+                                )
+                            }
+                        }
+
+                        DetailCard(title = "Hành trình") {
+                            DetailRow(Icons.Default.LocationOn, "Điểm lấy hàng", currentOrder.pickupAddress)
+                            DetailRow(Icons.Default.LocalShipping, "Điểm giao hàng", currentOrder.deliveryAddress)
+                        }
+
+                        DetailCard(title = "Người nhận") {
+                            Text(currentOrder.recipientName, fontWeight = FontWeight.Bold)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Call,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(currentOrder.recipientPhone, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(18.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text("Tổng phí", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("${currentOrder.distanceKm} km", style = MaterialTheme.typography.labelMedium)
+                                }
+                                Text(
+                                    "${NumberFormat.getNumberInstance(Locale.forLanguageTag("vi-VN")).format(currentOrder.totalCost)} đ",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                            }
+                        }
 
                         val canCancel = currentOrder.status == DeliveryStatus.CHO_TIEP_NHAN ||
                                 currentOrder.status == DeliveryStatus.DA_CHAP_NHAN
 
                         if (canCancel) {
-                            Button(onClick = { viewModel.cancelOrder(currentOrder.id) }) {
+                            OutlinedButton(
+                                onClick = { viewModel.cancelOrder(currentOrder.id) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
                                 Text("Hủy đơn hàng")
                             }
                         }
@@ -135,13 +220,19 @@ fun CustomerOrderDetailScreen(
                             if (ratingUiState.alreadyRated) {
                                 Text(
                                     "Bạn đã đánh giá đơn này. Cảm ơn bạn!",
-                                    style = MaterialTheme.typography.bodyMedium
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             } else {
                                 Button(
                                     onClick = { showRatingDialog = true },
-                                    enabled = !ratingUiState.isLoading
+                                    enabled = !ratingUiState.isLoading,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(16.dp)
                                 ) {
+                                    Icon(Icons.Default.Star, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text("Đánh giá tài xế")
                                 }
                             }
@@ -175,4 +266,41 @@ fun CustomerOrderDetailScreen(
             }
         }
     }
+}
+
+@Composable
+private fun DetailCard(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+            content()
+        }
+    }
+}
+
+@Composable
+private fun DetailRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+private fun DeliveryStatus.detailLabel(): String = when (this) {
+    DeliveryStatus.CHO_TIEP_NHAN -> "Đang chờ tài xế"
+    DeliveryStatus.DA_CHAP_NHAN -> "Tài xế đã nhận đơn"
+    DeliveryStatus.DA_DEN_NHA_HANG -> "Tài xế đã đến điểm lấy"
+    DeliveryStatus.DA_LAY_HANG -> "Đã lấy hàng"
+    DeliveryStatus.DA_DEN_KHACH_HANG -> "Đã đến điểm giao"
+    DeliveryStatus.DA_GIAO -> "Giao hàng thành công"
+    DeliveryStatus.DA_HUY -> "Đơn hàng đã hủy"
 }

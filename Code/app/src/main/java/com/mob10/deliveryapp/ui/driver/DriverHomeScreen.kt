@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -59,6 +60,7 @@ import com.mob10.deliveryapp.data.local.entity.UserEntity
 import com.mob10.deliveryapp.data.model.DeliveryStatus
 import com.mob10.deliveryapp.ui.components.DashboardNavItem
 import com.mob10.deliveryapp.ui.components.DashboardScaffold
+import com.mob10.deliveryapp.ui.components.DashboardHeroCard
 import com.mob10.deliveryapp.ui.components.GoDropHeader
 import com.mob10.deliveryapp.ui.components.LottieOverlay
 import com.mob10.deliveryapp.ui.components.MetricCard
@@ -149,43 +151,52 @@ fun DriverHomeScreen(
             if (uiState.reliabilityScore < 60) {
                 Surface(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    shape = RoundedCornerShape(12.dp),
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
                     color = UthWarningContainer,
                     border = BorderStroke(1.dp, UthWarning)
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = Icons.Default.Warning,
                             contentDescription = null,
                             tint = UthWarning,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(22.dp)
                         )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Điểm tin cậy thấp (${uiState.reliabilityScore}/100)",
                                 fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.labelMedium,
+                                style = MaterialTheme.typography.labelLarge,
                                 color = UthOnSurface
                             )
                             Text(
                                 text = "Bạn đã từ chối ${uiState.rejectedCount} đơn. Hãy hoàn thành các đơn mới để nâng cao điểm tin cậy.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = UthOnSurfaceVariant,
-                                fontSize = 11.sp
+                                fontSize = 12.sp
                             )
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
             }
 
             if (selectedTab == 0) {
+                // ── Hero thu nhập ────────────────────────────────────
+                DashboardHeroCard(
+                    eyebrow = "Thu nhập hôm nay",
+                    value = "${String.format("%,.0f", uiState.todayEarnings)}đ",
+                    supportingText = "${uiState.deliveredTodayCount} chuyến hoàn thành • ${uiState.reliabilityScore}/100 tin cậy",
+                    icon = Icons.Default.AccountBalanceWallet,
+                    actionLabel = "Lịch sử",
+                    onActionClick = { selectedTab = 4 }
+                )
+
+                // ── Hiệu suất ────────────────────────────────────────
                 SectionTitle(
                     title = "Hiệu suất hôm nay",
                     actionLabel = "Chi tiết",
@@ -212,12 +223,14 @@ fun DriverHomeScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                // ── Trạng thái làm việc ──────────────────────────────
+                Spacer(modifier = Modifier.height(4.dp))
                 DriverShiftSelectorCard(
                     currentStatus = uiState.driverStatus,
                     onStatusChanged = { viewModel.setWorkingStatus(it) }
                 )
 
+                // ── Đơn đang thực hiện ───────────────────────────────
                 SectionTitle(title = "Đơn đang thực hiện")
                 val firstActiveOrder = uiState.activeOrders.firstOrNull()
                 if (firstActiveOrder != null) {
@@ -230,14 +243,14 @@ fun DriverHomeScreen(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(24.dp),
+                                .padding(28.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -249,6 +262,7 @@ fun DriverHomeScreen(
                     }
                 }
 
+                // ── Thao tác nhanh ───────────────────────────────────
                 SectionTitle(title = "Thao tác nhanh")
                 QuickActionCard(
                     title = "Đơn đang chờ (Open Pool)",
@@ -321,7 +335,7 @@ fun DriverHomeScreen(
             visible = showLoginAnimation,
             animationResId = R.raw.online_delivery_service,
             title = "Chào mừng, ${currentUser?.fullName ?: "Tài xế"}!",
-            subtitle = "Chúc bạn có một ngày giao hàng hiệu quả \uD83D\uDE80",
+            subtitle = "Chúc bạn có một ngày giao hàng hiệu quả",
             onDismiss = { showLoginAnimation = false }
         )
     } // end Box
@@ -360,7 +374,7 @@ private fun ActiveDeliveryCard(
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -370,13 +384,13 @@ private fun ActiveDeliveryCard(
                     Text(
                         text = "#GD-${order.id}",
                         color = UthOnSurface,
-                        fontSize = 14.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = "Đơn đang thực hiện",
                         color = UthOnSurfaceVariant,
-                        fontSize = 11.sp
+                        fontSize = 12.sp
                     )
                 }
                 StatusPill(
@@ -386,40 +400,44 @@ private fun ActiveDeliveryCard(
                     dotColor = statusColor
                 )
             }
-            Spacer(modifier = Modifier.size(13.dp))
+            Spacer(modifier = Modifier.size(14.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(9.dp)
+                        .size(10.dp)
                         .clip(CircleShape)
                         .background(UthPrimary)
                 )
-                Spacer(modifier = Modifier.width(9.dp))
+                Spacer(modifier = Modifier.width(10.dp))
                 Text(
                     text = order.pickupAddress.ifEmpty { "Chưa có địa chỉ lấy hàng" },
                     color = UthOnSurface,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
-            Spacer(modifier = Modifier.size(7.dp))
+            Spacer(modifier = Modifier.size(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(9.dp)
+                        .size(10.dp)
                         .clip(CircleShape)
                         .background(UthSuccess)
                 )
-                Spacer(modifier = Modifier.width(9.dp))
+                Spacer(modifier = Modifier.width(10.dp))
                 Text(
                     text = order.deliveryAddress.ifEmpty { "Chưa có địa chỉ giao" },
                     color = UthOnSurface,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
             if (history != null) {
-                Spacer(modifier = Modifier.size(13.dp))
+                Spacer(modifier = Modifier.size(14.dp))
                 val dateFormat = remember { java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()) }
                 val timeString = dateFormat.format(java.util.Date(history.timestamp))
                 Row(verticalAlignment = Alignment.CenterVertically) {

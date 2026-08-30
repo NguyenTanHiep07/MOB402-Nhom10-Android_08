@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -42,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mob10.deliveryapp.ui.components.DashboardNavItem
 import com.mob10.deliveryapp.ui.components.DashboardScaffold
+import com.mob10.deliveryapp.ui.components.DashboardHeroCard
 import com.mob10.deliveryapp.ui.components.GoDropHeader
 import com.mob10.deliveryapp.ui.components.MetricCard
 import com.mob10.deliveryapp.ui.components.QuickActionCard
@@ -87,6 +89,16 @@ fun AdminHomeScreen(
             )
         }
     ) {
+        // ── Hero card ────────────────────────────────────────────────
+        DashboardHeroCard(
+            eyebrow = "Vận hành hôm nay",
+            value = "$totalRequests yêu cầu",
+            supportingText = "$pendingCount đơn đang chờ • $driverCount tài xế trong hệ thống",
+            icon = Icons.Default.Analytics,
+            actionLabel = "Báo cáo"
+        )
+
+        // ── System health ────────────────────────────────────────────
         SectionTitle(title = "Sức khoẻ hệ thống", actionLabel = "Cập nhật vừa xong")
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -128,8 +140,10 @@ fun AdminHomeScreen(
             )
         }
 
+        // ── Attention banner ─────────────────────────────────────────
         AdminAttentionCard(pendingCount = pendingCount)
 
+        // ── Quick actions ────────────────────────────────────────────
         SectionTitle(title = "Quản trị nhanh")
         QuickActionCard(
             title = "Toàn bộ yêu cầu",
@@ -154,11 +168,12 @@ fun AdminHomeScreen(
     }
 }
 
+// ── Attention Card (warning banner) ──────────────────────────────────
 @Composable
 private fun AdminAttentionCard(pendingCount: Int = 0) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(19.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = UthWarningContainer),
         border = BorderStroke(1.dp, Color(0xFFFDE68A)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -166,34 +181,34 @@ private fun AdminAttentionCard(pendingCount: Int = 0) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 15.dp, vertical = 14.dp),
+                .padding(horizontal = 16.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(42.dp)
-                    .background(UthSecondaryContainer, RoundedCornerShape(13.dp)),
+                    .size(46.dp)
+                    .background(UthSecondaryContainer, RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.PendingActions,
                     contentDescription = null,
                     tint = UthSecondary,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "$pendingCount yêu cầu đang chờ phân công",
                     color = UthOnSurface,
-                    fontSize = 14.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "Kiểm tra để đảm bảo giao đúng thời gian",
                     color = UthOnSurfaceVariant,
-                    fontSize = 11.sp
+                    fontSize = 12.sp
                 )
             }
             StatusPill(

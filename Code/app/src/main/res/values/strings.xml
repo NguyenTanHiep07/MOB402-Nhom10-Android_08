@@ -4,7 +4,7 @@
     <string name="project_code">Android_08</string>
     <string name="login_logo_description">Biểu tượng giao hàng</string>
     <string name="login_title">GoDrop</string>
-    <string name="login_subtitle">Đăng nhập để tiếp tục hành trình giao hàng</string>
+    <string name="login_subtitle">Một ứng dụng cho mọi hành trình giao nhận</string>
     <string name="email_label">Số điện thoại</string>
     <string name="password_label">Mật khẩu</string>
     <string name="show_password">Hiện mật khẩu</string>

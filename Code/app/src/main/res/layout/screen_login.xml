@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/godrop_background"
     android:fillViewport="true"
     tools:ignore="UnusedResources">
 
@@ -11,7 +12,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:minHeight="720dp"
         android:orientation="vertical"
         android:padding="20dp">
 
@@ -20,9 +20,7 @@
             android:layout_height="wrap_content"
             app:cardBackgroundColor="@color/godrop_surface"
             app:cardCornerRadius="28dp"
-            app:cardElevation="4dp"
-            app:strokeColor="@color/godrop_primary_container"
-            app:strokeWidth="1dp">
+            app:cardElevation="4dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -35,9 +33,9 @@
                 <ImageView
                     android:layout_width="92dp"
                     android:layout_height="78dp"
+                    android:src="@drawable/delivery_logo"
                     android:contentDescription="@string/login_logo_description"
-                    android:scaleType="fitCenter"
-                    android:src="@drawable/delivery_logo" />
+                    android:scaleType="fitCenter" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -47,6 +45,7 @@
                     android:text="@string/login_title"
                     android:textColor="@color/godrop_primary"
                     android:textSize="30sp"
+                    android:letterSpacing="-0.05"
                     android:textStyle="bold" />
 
                 <TextView
@@ -69,6 +68,8 @@
                     app:boxCornerRadiusTopEnd="14dp"
                     app:boxCornerRadiusTopStart="14dp"
                     app:boxStrokeColor="@color/godrop_primary"
+                    app:hintTextColor="@color/godrop_primary"
+                    app:boxBackgroundColor="@color/white"
                     app:startIconDrawable="@android:drawable/ic_menu_call"
                     app:startIconTint="@color/godrop_on_surface_variant">
 
@@ -77,6 +78,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="phone"
+                        android:textColor="@color/godrop_on_surface"
+                        android:minHeight="56dp"
                         android:maxLines="1" />
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -91,6 +94,8 @@
                     app:boxCornerRadiusTopEnd="14dp"
                     app:boxCornerRadiusTopStart="14dp"
                     app:boxStrokeColor="@color/godrop_primary"
+                    app:hintTextColor="@color/godrop_primary"
+                    app:boxBackgroundColor="@color/white"
                     app:endIconMode="password_toggle"
                     app:startIconDrawable="@android:drawable/ic_lock_lock"
                     app:startIconTint="@color/godrop_on_surface_variant">
@@ -100,6 +105,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="textPassword"
+                        android:textColor="@color/godrop_on_surface"
+                        android:minHeight="56dp"
                         android:maxLines="1" />
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -122,18 +129,36 @@
                     android:padding="8dp"
                     android:text="@string/forgot_password"
                     android:textColor="@color/godrop_primary"
+                    android:textSize="13sp"
+                    android:minHeight="48dp"
+                    android:gravity="center_vertical"
                     android:textStyle="bold" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/loginButton"
+                <FrameLayout
                     android:layout_width="match_parent"
-                    android:layout_height="53dp"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/login_button"
-                    android:textAllCaps="false"
-                    android:textStyle="bold"
-                    app:backgroundTint="@color/godrop_primary"
-                    app:cornerRadius="15dp" />
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/loginButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:text="@string/login_button"
+                        android:textAllCaps="false"
+                        android:textStyle="bold"
+                        android:textSize="15sp"
+                        app:backgroundTint="@color/godrop_primary"
+                        app:cornerRadius="15dp" />
+
+                    <ProgressBar
+                        android:id="@+id/loginProgressBar"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_gravity="center"
+                        android:elevation="2dp"
+                        android:indeterminateTint="@color/white"
+                        android:visibility="gone" />
+                </FrameLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -143,7 +168,7 @@
             android:layout_marginTop="12dp"
             android:gravity="center"
             android:text="@string/login_copyright"
-            android:textColor="@color/godrop_on_surface_variant"
+            android:textColor="#B3374151" 
             android:textSize="11sp" />
     </LinearLayout>
 </ScrollView>

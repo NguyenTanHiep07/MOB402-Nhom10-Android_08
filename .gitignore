@@ -28,6 +28,7 @@ captures/
 # Environment và bảo mật
 .env
 .env.*
+!.env.example
 *api_key*
 *apikey*
 *password*

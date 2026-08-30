@@ -27,29 +27,32 @@ private val LightColors = lightColorScheme(
     surface = UthSurface,
     onSurface = UthOnSurface,
     onSurfaceVariant = UthOnSurfaceVariant,
+    surfaceContainerLow = UthSurfaceContainerLow,
+    surfaceContainerHighest = UthSurfaceContainerHighest,
     outline = UthOutline,
     outlineVariant = UthOutlineVariant,
-    error = UthError
+    error = UthError,
+    errorContainer = UthErrorContainer
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFFB7B9FF),
-    onPrimary = Color(0xFF1F1B62),
-    primaryContainer = Color(0xFF3730A3),
-    onPrimaryContainer = Color(0xFFE0E0FF),
-    secondary = Color(0xFFFFB787),
+    primary = Color(0xFF5BE0AF),
+    onPrimary = Color(0xFF003828),
+    primaryContainer = Color(0xFF075B42),
+    onPrimaryContainer = Color(0xFFBDF4DE),
+    secondary = Color(0xFFFFB77E),
     onSecondary = Color(0xFF552000),
-    secondaryContainer = Color(0xFF7A3500),
-    onSecondaryContainer = Color(0xFFFFDBBF),
-    background = Color(0xFF10131C),
-    onBackground = Color(0xFFE8EAF2),
-    surface = Color(0xFF171A24),
-    onSurface = Color(0xFFE8EAF2),
-    onSurfaceVariant = Color(0xFFB9BBC8),
-    outline = Color(0xFF8D909F),
-    outlineVariant = Color(0xFF414452),
-    error = Color(0xFFFFB4AB)
-
+    secondaryContainer = Color(0xFF743500),
+    onSecondaryContainer = Color(0xFFFFDCC2),
+    background = Color(0xFF0E1713),
+    onBackground = Color(0xFFE2EEE8),
+    surface = Color(0xFF15211C),
+    onSurface = Color(0xFFE2EEE8),
+    onSurfaceVariant = Color(0xFFB5C6BE),
+    outline = Color(0xFF82958C),
+    outlineVariant = Color(0xFF35483F),
+    error = Color(0xFFFFB4AB),
+    errorContainer = Color(0xFF93000A)
 )
 
 @Composable
@@ -63,7 +66,7 @@ fun Android08Theme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
+            window.statusBarColor = colorScheme.surface.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }

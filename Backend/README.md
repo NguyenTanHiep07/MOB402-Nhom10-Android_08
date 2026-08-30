@@ -11,6 +11,8 @@ Backend REST dùng chung cho ứng dụng Client, Delivery và Admin. Server s�
 - Lý do hợp lệ không trừ điểm. Lý do không hợp lệ trừ điểm Reliability Score.
 - Ba lần Reject bị phạt trong 24 giờ sẽ khóa nhận đơn 30 phút.
 - Admin xem người dùng, tài xế, đơn và danh sách cảnh báo Reliability Score.
+- Client tìm địa chỉ thật trong Việt Nam và nhận ước lượng quãng đường chạy xe/thời gian/phí từ backend.
+- Khi tạo đơn, backend tự tính lại quãng đường và phí, không tin số km do Android gửi lên.
 - Flyway tự tạo schema; seeder chỉ thêm dữ liệu mẫu khi dữ liệu chưa tồn tại.
 
 Auto Assignment và FCM là P1 nên chưa triển khai.
@@ -66,6 +68,14 @@ Một số đơn có dữ liệu Reject để kiểm tra việc ẩn đơn theo 
 | `JWT_EXPIRATION_MS` | `86400000` | Thời hạn token, mặc định 24 giờ |
 | `CORS_ALLOWED_ORIGINS` | `*` | Origin được phép gọi API |
 | `SERVER_PORT` | `8080` | Port server |
+| `PHOTON_BASE_URL` | `https://photon.komoot.io` | Provider autocomplete địa chỉ OpenStreetMap |
+| `OSRM_BASE_URL` | `https://router.project-osrm.org` | Provider tính tuyến đường chạy xe |
+| `LOCATION_REQUEST_TIMEOUT_MS` | `8000` | Timeout gọi provider bản đồ |
+| `LOCATION_USER_AGENT` | `GoDrop-UTH-08/1.0-student-project` | User-Agent nhận diện project khi gọi provider |
+
+Các URL mặc định là public demo server, phù hợp bài tập và demo lưu lượng thấp nhưng không có cam kết uptime.
+Nếu triển khai thực tế, cấu hình provider riêng hoặc dịch vụ bản đồ có SLA. Android chỉ gọi GoDrop backend,
+không phụ thuộc trực tiếp vào provider bên ngoài.
 
 Chi tiết endpoint xem tại [docs/API_CONTRACT.md](docs/API_CONTRACT.md) và Swagger.
 

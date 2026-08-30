@@ -1,3 +1,4 @@
+// LEGACY / UNUSED - Replaced by ClientHomeScreen
 package com.mob10.deliveryapp.ui.customer
 
 import androidx.compose.foundation.BorderStroke

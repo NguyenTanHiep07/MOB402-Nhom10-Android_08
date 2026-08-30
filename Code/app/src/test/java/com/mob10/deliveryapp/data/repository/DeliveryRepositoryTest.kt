@@ -191,7 +191,11 @@ class DeliveryRepositoryTest {
             val requestId = createTestRequest()
 
             // Direct transition CHO_TIEP_NHAN -> DA_GIAO is INVALID
-            val result = repository.updateRequestStatus(requestId, DeliveryStatus.DA_GIAO)
+            val result = repository.updateRequestStatus(
+                requestId = requestId,
+                newStatus = DeliveryStatus.DA_GIAO,
+                updatedBy = testDriverId
+            )
             assertFalse(result)
 
             val request = repository.getRequestById(requestId)
@@ -308,7 +312,7 @@ class DeliveryRepositoryTest {
     }
 
     @Test
-    fun testUpdateStatus_WithoutUpdatedBy_CannotBypassOwnerCheck() {
+    fun testUpdateStatus_WithInvalidUser_CannotBypassOwnerCheck() {
         runBlocking {
             val requestId = createTestRequest()
             repository.acceptRequest(requestId, testDriverId)
@@ -316,7 +320,7 @@ class DeliveryRepositoryTest {
             val result = repository.updateRequestStatus(
                 requestId,
                 DeliveryStatus.DA_DEN_NHA_HANG,
-                updatedBy = null
+                updatedBy = 0
             )
 
             assertFalse(result)

@@ -56,6 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mob10.deliveryapp.R
@@ -101,7 +102,7 @@ fun ActiveOrderTab(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(80.dp)
+                        .size(88.dp)
                         .clip(CircleShape)
                         .background(UthPrimaryContainer.copy(alpha = 0.6f)),
                     contentAlignment = Alignment.Center
@@ -110,17 +111,17 @@ fun ActiveOrderTab(
                         imageVector = Icons.Default.LocalShipping,
                         contentDescription = null,
                         tint = UthPrimary,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(42.dp)
                     )
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
                 Text(
                     text = "Chưa có đơn hàng nào đang giao",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                     color = UthOnSurface
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     text = "Hãy chuyển sang tab \"Đơn chờ\" để nhận các đơn hàng có sẵn trong khu vực.",
                     style = MaterialTheme.typography.bodyMedium,
@@ -141,17 +142,17 @@ fun ActiveOrderTab(
             ) {
                 Text(
                     text = "Đơn đang thực hiện (${activeOrders.size})",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
                     color = UthOnSurface
                 )
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(10.dp),
                     color = UthPrimaryContainer
                 ) {
                     Text(
                         text = "Đang giao",
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelSmall,
                         color = UthPrimary,
                         fontWeight = FontWeight.Bold
@@ -223,19 +224,14 @@ fun ActiveOrderCard(
         else -> order.deliveryAddress
     }
 
-    val currentTargetLabel = when (order.status) {
-        DeliveryStatus.DA_CHAP_NHAN, DeliveryStatus.DA_DEN_NHA_HANG -> "Điểm lấy hàng (Người gửi / Cửa hàng)"
-        else -> "Điểm giao hàng (Khách nhận)"
-    }
-
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, UthOutlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(18.dp)) {
             // Header: Code, Price & Call Button
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -247,15 +243,16 @@ fun ActiveOrderCard(
                         Text(
                             text = "#GD-${order.id}",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.ExtraBold,
                             color = UthPrimary
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
                         DriverStatusBadge(status = order.status)
                     }
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Phí giao: ${String.format("%,.0fđ", order.totalCost)}",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = UthSuccess
                     )
@@ -276,16 +273,16 @@ fun ActiveOrderCard(
                         color = UthSuccessContainer
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Phone,
                                 contentDescription = "Gọi điện",
                                 tint = UthSuccess,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(18.dp)
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = "Gọi",
                                 style = MaterialTheme.typography.labelSmall,
@@ -297,21 +294,21 @@ fun ActiveOrderCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             // Step-by-step Delivery Progress Indicator
             DeliveryStepProgress(currentStatus = order.status)
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             // Route & Google Maps Card
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(16.dp),
                 color = UthBackground,
                 border = BorderStroke(1.dp, UthOutlineVariant)
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                Column(modifier = Modifier.padding(14.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -322,25 +319,25 @@ fun ActiveOrderCard(
                                 imageVector = Icons.Default.NearMe,
                                 contentDescription = null,
                                 tint = UthPrimary,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(20.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Lộ trình di chuyển",
-                                style = MaterialTheme.typography.labelMedium,
+                                style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = UthOnSurface
                             )
                         }
                         Text(
                             text = String.format("%.1f km (~%d phút)", order.distanceKm, (order.distanceKm * 3 + 4).toInt()),
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.labelMedium,
                             color = UthPrimary,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.ExtraBold
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     // Origin & Destination display
                     RoutePointRow(
@@ -351,7 +348,7 @@ fun ActiveOrderCard(
                         isHighlighted = order.status in listOf(DeliveryStatus.DA_CHAP_NHAN, DeliveryStatus.DA_DEN_NHA_HANG)
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     RoutePointRow(
                         icon = Icons.Default.LocationOn,
@@ -361,61 +358,63 @@ fun ActiveOrderCard(
                         isHighlighted = order.status in listOf(DeliveryStatus.DA_LAY_HANG, DeliveryStatus.DA_DEN_KHACH_HANG)
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     // Button mở Google Maps chỉ đường
                     Button(
                         onClick = { openMaps(currentTargetAddress) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = UthPrimary)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Directions,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Chỉ đường qua Google Maps (${if (order.status in listOf(DeliveryStatus.DA_CHAP_NHAN, DeliveryStatus.DA_DEN_NHA_HANG)) "Điểm lấy" else "Điểm giao"})",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold
+                            text = "Chỉ đường Google Maps (${if (order.status in listOf(DeliveryStatus.DA_CHAP_NHAN, DeliveryStatus.DA_DEN_NHA_HANG)) "Điểm lấy" else "Điểm giao"})",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Packages Checklist
             if (packages.isNotEmpty()) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(14.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
+                    Column(modifier = Modifier.padding(14.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.Inventory,
                                 contentDescription = null,
                                 tint = UthOnSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(18.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Danh sách kiện hàng (${packages.size} món):",
-                                style = MaterialTheme.typography.labelSmall,
+                                style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = UthOnSurface
                             )
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         packages.forEach { pkg ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 2.dp),
+                                    .padding(vertical = 4.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
@@ -435,23 +434,23 @@ fun ActiveOrderCard(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(18.dp))
             }
 
-            // Next Step Action Button
+            // Next Step Action Button - Nổi bật hơn
             when (order.status) {
                 DeliveryStatus.DA_CHAP_NHAN -> {
                     Button(
                         onClick = { onUpdateStatus(order.id, DeliveryStatus.DA_DEN_NHA_HANG) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = UthPrimary)
                     ) {
-                        Icon(Icons.Default.Store, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("TÔI ĐÃ ĐẾN ĐIỂM LẤY HÀNG", fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.Store, contentDescription = null, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text("TÔI ĐÃ ĐẾN ĐIỂM LẤY HÀNG", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
                     }
                 }
                 DeliveryStatus.DA_DEN_NHA_HANG -> {
@@ -459,13 +458,13 @@ fun ActiveOrderCard(
                         onClick = { onUpdateStatus(order.id, DeliveryStatus.DA_LAY_HANG) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = UthSuccess)
                     ) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("XÁC NHẬN ĐÃ NHẬN ĐỦ HÀNG", fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text("XÁC NHẬN ĐÃ NHẬN ĐỦ HÀNG", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
                     }
                 }
                 DeliveryStatus.DA_LAY_HANG -> {
@@ -473,13 +472,13 @@ fun ActiveOrderCard(
                         onClick = { onUpdateStatus(order.id, DeliveryStatus.DA_DEN_KHACH_HANG) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = UthPrimary)
                     ) {
-                        Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("TÔI ĐÃ ĐẾN ĐIỂM GIAO CHO KHÁCH", fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text("TÔI ĐÃ ĐẾN ĐIỂM GIAO CHO KHÁCH", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
                     }
                 }
                 DeliveryStatus.DA_DEN_KHACH_HANG -> {
@@ -487,13 +486,13 @@ fun ActiveOrderCard(
                         onClick = { onShowSuccess(order) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = UthSuccess)
                     ) {
-                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("XÁC NHẬN GIAO HÀNG THÀNH CÔNG", fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text("XÁC NHẬN GIAO HÀNG THÀNH CÔNG", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
                     }
                 }
                 else -> {}
@@ -511,31 +510,29 @@ fun RoutePointRow(
     isHighlighted: Boolean
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(if (isHighlighted) Modifier.background(iconColor.copy(alpha = 0.08f), RoundedCornerShape(8.dp)).padding(6.dp) else Modifier),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(28.dp)
+                .size(32.dp)
                 .clip(CircleShape)
                 .background(iconColor.copy(alpha = 0.2f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(16.dp))
+            Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(18.dp))
         }
-        Spacer(modifier = Modifier.width(10.dp))
+        Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Medium,
                 color = UthOnSurface
             )
             Text(
                 text = address,
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelMedium,
                 color = UthOnSurfaceVariant,
                 maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
@@ -566,7 +563,7 @@ fun DeliveryStepProgress(currentStatus: DeliveryStatus) {
             ) {
                 Box(
                     modifier = Modifier
-                        .size(24.dp)
+                        .size(28.dp)
                         .clip(CircleShape)
                         .background(if (isCompleted) UthSuccess else UthOutlineVariant),
                     contentAlignment = Alignment.Center
@@ -576,22 +573,23 @@ fun DeliveryStepProgress(currentStatus: DeliveryStatus) {
                             imageVector = Icons.Default.Check,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                     } else {
                         Text(
                             text = "${index + 1}",
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.White,
-                            fontSize = 11.sp
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelSmall,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     color = if (isCompleted) UthSuccess else UthOnSurfaceVariant,
                     fontWeight = if (isCompleted) FontWeight.Bold else FontWeight.Normal
                 )
@@ -614,11 +612,11 @@ fun DriverStatusBadge(status: DeliveryStatus) {
 
     Surface(
         color = containerColor,
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(10.dp)
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             color = color

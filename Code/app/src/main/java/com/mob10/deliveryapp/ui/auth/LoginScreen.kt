@@ -209,7 +209,7 @@ fun LoginScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(53.dp),
+                            .height(56.dp),
                         enabled = !isLoading,
                         shape = RoundedCornerShape(15.dp),
                         colors = ButtonDefaults.buttonColors(
