@@ -52,9 +52,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
-import com.mob10.deliveryapp.data.local.entity.PackageEntity
-import com.mob10.deliveryapp.data.local.entity.StatusHistoryEntity
+import com.mob10.deliveryapp.data.model.Order
+import com.mob10.deliveryapp.data.model.OrderPackage
+import com.mob10.deliveryapp.data.model.StatusHistory
 import com.mob10.deliveryapp.data.model.DeliveryStatus
 import com.mob10.deliveryapp.ui.components.MetricCard
 import com.mob10.deliveryapp.ui.components.SectionTitle
@@ -78,9 +78,9 @@ enum class HistoryFilter {
 
 @Composable
 fun DeliveryHistoryTab(
-    historyOrders: List<DeliveryRequestEntity>,
-    packagesByOrder: Map<Int, List<PackageEntity>>,
-    historiesByOrder: Map<Int, List<StatusHistoryEntity>>,
+    historyOrders: List<Order>,
+    packagesByOrder: Map<Int, List<OrderPackage>> = emptyMap(),
+    historiesByOrder: Map<Int, List<StatusHistory>> = emptyMap(),
     totalEarnings: Double,
     todayEarnings: Double,
     completedCount: Int,
@@ -208,8 +208,8 @@ fun DeliveryHistoryTab(
             filteredOrders.forEach { order ->
                 HistoryOrderCard(
                     order = order,
-                    packages = packagesByOrder[order.id] ?: emptyList(),
-                    histories = historiesByOrder[order.id] ?: emptyList()
+                    packages = packagesByOrder[order.id.toInt()] ?: order.packages,
+                    histories = historiesByOrder[order.id.toInt()] ?: emptyList()
                 )
             }
         }
@@ -218,16 +218,13 @@ fun DeliveryHistoryTab(
 
 @Composable
 private fun HistoryOrderCard(
-    order: DeliveryRequestEntity,
-    packages: List<PackageEntity>,
-    histories: List<StatusHistoryEntity>
+    order: Order,
+    packages: List<OrderPackage> = order.packages,
+    histories: List<StatusHistory> = emptyList()
 ) {
     var isExpanded by remember { mutableStateOf(false) }
-    val dateFormat = remember { SimpleDateFormat("HH:mm - dd/MM/yyyy", Locale.getDefault()) }
-    val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
 
-    val displayTime = order.actualDeliveryTime?.let { dateFormat.format(Date(it)) }
-        ?: dateFormat.format(Date(order.createdAt))
+    val displayTime = order.actualDeliveryTime ?: order.createdAt ?: "Giao hoàn tất"
 
     val isCompleted = order.status == DeliveryStatus.DA_GIAO
 
@@ -396,7 +393,7 @@ private fun HistoryOrderCard(
                         val sortedHistories = histories.sortedBy { it.timestamp }
                         sortedHistories.forEachIndexed { index, history ->
                             val isLast = index == sortedHistories.size - 1
-                            val statusTime = timeFormat.format(Date(history.timestamp))
+                            val statusTime = history.timestamp ?: ""
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -425,7 +422,7 @@ private fun HistoryOrderCard(
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
                                         Text(
-                                            text = getStatusLabel(history.toStatus),
+                                            text = getStatusLabel(history.toStatus ?: DeliveryStatus.CHO_TIEP_NHAN),
                                             fontWeight = if (isLast) FontWeight.Bold else FontWeight.Medium,
                                             fontSize = 13.sp,
                                             color = if (isLast) UthPrimary else UthOnSurface

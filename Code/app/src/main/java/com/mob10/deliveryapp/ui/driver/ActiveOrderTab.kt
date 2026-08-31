@@ -60,8 +60,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mob10.deliveryapp.R
-import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
-import com.mob10.deliveryapp.data.local.entity.PackageEntity
+import com.mob10.deliveryapp.data.model.Order
+import com.mob10.deliveryapp.data.model.OrderPackage
 import com.mob10.deliveryapp.data.model.DeliveryStatus
 import com.mob10.deliveryapp.ui.components.LottieOverlay
 import com.mob10.deliveryapp.ui.components.StatusPill
@@ -83,11 +83,11 @@ import java.util.Locale
 
 @Composable
 fun ActiveOrderTab(
-    activeOrders: List<DeliveryRequestEntity>,
-    packagesByOrder: Map<Int, List<PackageEntity>>,
+    activeOrders: List<Order>,
+    packagesByOrder: Map<Int, List<OrderPackage>> = emptyMap(),
     onUpdateStatus: (orderId: Int, newStatus: DeliveryStatus) -> Unit
 ) {
-    var successOrder by remember { mutableStateOf<DeliveryRequestEntity?>(null) }
+    var successOrder by remember { mutableStateOf<Order?>(null) }
 
     if (activeOrders.isEmpty()) {
         Box(
@@ -163,7 +163,7 @@ fun ActiveOrderTab(
             activeOrders.forEach { order ->
                 ActiveOrderCard(
                     order = order,
-                    packages = packagesByOrder[order.id] ?: emptyList(),
+                    packages = packagesByOrder[order.id.toInt()] ?: order.packages,
                     onUpdateStatus = onUpdateStatus,
                     onShowSuccess = { successOrder = it }
                 )
@@ -171,7 +171,7 @@ fun ActiveOrderTab(
         }
     }
 
-    // Success Lottie Overlay chúc mừng khi hoàn tất đơn
+    // Success Lottie Overlay chúc mừng khi hoàn tất đơn (tự động biến mất sau 2s)
     successOrder?.let { order ->
         val currencyFormatter = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("vi-VN"))
         val formattedAmount = currencyFormatter.format(order.totalCost)
@@ -180,9 +180,9 @@ fun ActiveOrderTab(
             animationResId = R.raw.online_delivery_service,
             title = "Giao hàng thành công!",
             subtitle = "Đơn #${order.id} đã hoàn thành xuất sắc\nThu nhập cộng thêm: $formattedAmount",
-            buttonText = "Xác nhận & Hoàn tất",
+            buttonText = null,
+            autoDismissMs = 2000L,
             onDismiss = {
-                onUpdateStatus(order.id, DeliveryStatus.DA_GIAO)
                 successOrder = null
             }
         )
@@ -191,10 +191,10 @@ fun ActiveOrderTab(
 
 @Composable
 fun ActiveOrderCard(
-    order: DeliveryRequestEntity,
-    packages: List<PackageEntity>,
+    order: Order,
+    packages: List<OrderPackage> = order.packages,
     onUpdateStatus: (Int, DeliveryStatus) -> Unit,
-    onShowSuccess: (DeliveryRequestEntity) -> Unit
+    onShowSuccess: (Order) -> Unit
 ) {
     val context = LocalContext.current
 
@@ -441,7 +441,7 @@ fun ActiveOrderCard(
             when (order.status) {
                 DeliveryStatus.DA_CHAP_NHAN -> {
                     Button(
-                        onClick = { onUpdateStatus(order.id, DeliveryStatus.DA_DEN_NHA_HANG) },
+                        onClick = { onUpdateStatus(order.id.toInt(), DeliveryStatus.DA_DEN_NHA_HANG) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
@@ -455,7 +455,7 @@ fun ActiveOrderCard(
                 }
                 DeliveryStatus.DA_DEN_NHA_HANG -> {
                     Button(
-                        onClick = { onUpdateStatus(order.id, DeliveryStatus.DA_LAY_HANG) },
+                        onClick = { onUpdateStatus(order.id.toInt(), DeliveryStatus.DA_LAY_HANG) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
@@ -469,7 +469,7 @@ fun ActiveOrderCard(
                 }
                 DeliveryStatus.DA_LAY_HANG -> {
                     Button(
-                        onClick = { onUpdateStatus(order.id, DeliveryStatus.DA_DEN_KHACH_HANG) },
+                        onClick = { onUpdateStatus(order.id.toInt(), DeliveryStatus.DA_DEN_KHACH_HANG) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
@@ -483,7 +483,10 @@ fun ActiveOrderCard(
                 }
                 DeliveryStatus.DA_DEN_KHACH_HANG -> {
                     Button(
-                        onClick = { onShowSuccess(order) },
+                        onClick = {
+                            onUpdateStatus(order.id.toInt(), DeliveryStatus.DA_GIAO)
+                            onShowSuccess(order)
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
