@@ -54,10 +54,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mob10.deliveryapp.R
-import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
-import com.mob10.deliveryapp.data.local.entity.StatusHistoryEntity
 import com.mob10.deliveryapp.data.local.entity.UserEntity
 import com.mob10.deliveryapp.data.model.DeliveryStatus
+import com.mob10.deliveryapp.data.model.Order
+import com.mob10.deliveryapp.data.model.StatusHistory
 import com.mob10.deliveryapp.ui.components.DashboardNavItem
 import com.mob10.deliveryapp.ui.components.DashboardScaffold
 import com.mob10.deliveryapp.ui.components.DashboardHeroCard
@@ -236,7 +236,6 @@ fun DriverHomeScreen(
                 if (firstActiveOrder != null) {
                     ActiveDeliveryCard(
                         order = firstActiveOrder,
-                        history = uiState.historiesByOrder[firstActiveOrder.id]?.maxByOrNull { it.timestamp },
                         onClick = { selectedTab = 2 }
                     )
                 } else {
@@ -288,7 +287,6 @@ fun DriverHomeScreen(
                 } else {
                     NewOrdersTab(
                         newOrders = uiState.newOrders,
-                        packagesByOrder = uiState.packagesByOrder,
                         onAcceptOrder = { orderId -> viewModel.acceptOrder(orderId) },
                         onRejectOrder = { orderId, reason, note -> viewModel.rejectOrder(orderId, reason, note) },
                         driverStatus = uiState.driverStatus
@@ -300,7 +298,6 @@ fun DriverHomeScreen(
                 } else {
                     ActiveOrderTab(
                         activeOrders = uiState.activeOrders,
-                        packagesByOrder = uiState.packagesByOrder,
                         onUpdateStatus = { orderId, newStatus ->
                             viewModel.updateOrderStatus(orderId, newStatus)
                         }
@@ -311,7 +308,7 @@ fun DriverHomeScreen(
                     currentUser = currentUser,
                     driverStatus = uiState.driverStatus,
                     onStatusChanged = { viewModel.setWorkingStatus(it) },
-                    reliabilityScore = uiState.reliabilityScore,
+                    reliabilityScore = uiState.reliabilityScore.toInt(),
                     completedCount = uiState.completedCount,
                     rejectedCount = uiState.rejectedCount,
                     onLogout = onLogout,
@@ -320,8 +317,6 @@ fun DriverHomeScreen(
             } else if (selectedTab == 4) {
                 DeliveryHistoryTab(
                     historyOrders = uiState.historyOrders,
-                    packagesByOrder = uiState.packagesByOrder,
-                    historiesByOrder = uiState.historiesByOrder,
                     totalEarnings = uiState.totalEarnings,
                     todayEarnings = uiState.todayEarnings,
                     completedCount = uiState.completedCount,
@@ -343,8 +338,8 @@ fun DriverHomeScreen(
 
 @Composable
 private fun ActiveDeliveryCard(
-    order: DeliveryRequestEntity,
-    history: StatusHistoryEntity? = null,
+    order: Order,
+    history: StatusHistory? = null,
     onClick: () -> Unit = {}
 ) {
     val statusText = when (order.status) {
@@ -438,8 +433,7 @@ private fun ActiveDeliveryCard(
             }
             if (history != null) {
                 Spacer(modifier = Modifier.size(14.dp))
-                val dateFormat = remember { java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()) }
-                val timeString = dateFormat.format(java.util.Date(history.timestamp))
+                val timeString = history.timestamp ?: ""
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.History,
@@ -449,7 +443,7 @@ private fun ActiveDeliveryCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Cập nhật lúc $timeString: ${history.note ?: "Chuyển sang ${history.toStatus.name}"}",
+                        text = "Cập nhật: ${history.note ?: "Chuyển sang ${history.toStatus?.name ?: ""}"}",
                         color = UthOnSurfaceVariant,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium

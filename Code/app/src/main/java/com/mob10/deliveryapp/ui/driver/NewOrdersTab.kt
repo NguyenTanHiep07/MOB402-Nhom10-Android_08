@@ -54,8 +54,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.animation.animateContentSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
-import com.mob10.deliveryapp.data.local.entity.PackageEntity
+import com.mob10.deliveryapp.data.model.Order
+import com.mob10.deliveryapp.data.model.OrderPackage
 import com.mob10.deliveryapp.ui.theme.UthError
 import com.mob10.deliveryapp.ui.theme.UthOnSurface
 import com.mob10.deliveryapp.ui.theme.UthOnSurfaceVariant
@@ -72,8 +72,8 @@ import com.mob10.deliveryapp.ui.theme.UthWarningContainer
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewOrdersTab(
-    newOrders: List<DeliveryRequestEntity>,
-    packagesByOrder: Map<Int, List<PackageEntity>>,
+    newOrders: List<Order>,
+    packagesByOrder: Map<Int, List<OrderPackage>> = emptyMap(),
     onAcceptOrder: (Int) -> Unit,
     onRejectOrder: (orderId: Int, reason: String, note: String) -> Unit,
     driverStatus: DriverWorkingStatus = DriverWorkingStatus.AVAILABLE
@@ -208,9 +208,9 @@ fun NewOrdersTab(
             newOrders.forEach { order ->
                 NewOrderCard(
                     order = order,
-                    packages = packagesByOrder[order.id] ?: emptyList(),
-                    onAccept = { onAcceptOrder(order.id) },
-                    onReject = { selectedRejectOrderId = order.id }
+                    packages = packagesByOrder[order.id.toInt()] ?: order.packages,
+                    onAccept = { onAcceptOrder(order.id.toInt()) },
+                    onReject = { selectedRejectOrderId = order.id.toInt() }
                 )
             }
         }
@@ -220,14 +220,15 @@ fun NewOrdersTab(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun NewOrderCard(
-    order: DeliveryRequestEntity,
-    packages: List<PackageEntity>,
+    order: Order,
+    packages: List<OrderPackage> = order.packages,
     onAccept: () -> Unit,
     onReject: () -> Unit
 ) {
-    val totalWeight = packages.sumOf { it.weightKg }
-    val hasFragile = packages.any { it.isFragile }
-    val isExpress = order.fragileCharge > (if (hasFragile) 5000.0 else 0.0)
+    val actualPackages = if (packages.isNotEmpty()) packages else order.packages
+    val totalWeight = actualPackages.sumOf { it.weightKg }
+    val hasFragile = actualPackages.any { it.isFragile }
+    val isExpress = actualPackages.any { it.isExpress } || order.fragileCharge > (if (hasFragile) 5000.0 else 0.0)
     
     var isItemsExpanded by remember { mutableStateOf(false) }
 

@@ -1,193 +1,166 @@
 package com.mob10.deliveryapp.ui.driver
 
-import android.content.Context
-import androidx.room.Room
-import androidx.test.core.app.ApplicationProvider
-import com.mob10.deliveryapp.data.local.AppDatabase
-import com.mob10.deliveryapp.data.local.entity.FeeRuleEntity
-import com.mob10.deliveryapp.data.local.entity.UserEntity
-import com.mob10.deliveryapp.data.model.DeliveryStatus
-import com.mob10.deliveryapp.data.model.Role
-import com.mob10.deliveryapp.data.repository.AcceptResult
-import com.mob10.deliveryapp.data.repository.DeliveryRepository
-import com.mob10.deliveryapp.data.repository.NewPackageInfo
-import kotlinx.coroutines.runBlocking
+import com.mob10.deliveryapp.data.model.*
+import com.mob10.deliveryapp.data.repository.ShipperRepository
+import com.mob10.deliveryapp.data.util.NetworkResult
+import io.mockk.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.*
 import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
-@RunWith(RobolectricTestRunner::class)
-@Config(manifest = Config.NONE)
+@OptIn(ExperimentalCoroutinesApi::class)
 class DriverViewModelTest {
 
-    private lateinit var db: AppDatabase
-    private lateinit var repository: DeliveryRepository
+    private val repository: ShipperRepository = mockk(relaxed = true)
     private lateinit var viewModel: DriverViewModel
-    private var testClientId: Int = 0
-    private var testDriverId: Int = 0
+    private val testDispatcher = StandardTestDispatcher()
+
+    private val sampleOrder1 = Order(
+        id = 101L, client = null, deliveryPerson = null,
+        pickupAddress = "123 Lê Lợi, Q1", deliveryAddress = "456 Nguyễn Huệ, Q1",
+        pickupLatitude = 10.77, pickupLongitude = 106.70,
+        deliveryLatitude = 10.78, deliveryLongitude = 106.69,
+        senderName = "Shop A", senderPhone = "0901",
+        recipientName = "Khách B", recipientPhone = "0902",
+        distanceKm = 3.5, baseFee = 15000.0, distanceFee = 15000.0,
+        weightFee = 3000.0, fragileCharge = 0.0, totalCost = 33000.0,
+        status = DeliveryStatus.CHO_TIEP_NHAN, scheduledPickupTime = null,
+        actualDeliveryTime = null, note = null, createdAt = "2026-08-31T08:00:00Z",
+        updatedAt = null, packages = listOf(OrderPackage(1L, "Cơm sườn", "FOOD", 0.5, 1, null, false, false))
+    )
+
+    private val sampleActiveOrder = sampleOrder1.copy(
+        id = 102L,
+        status = DeliveryStatus.DA_CHAP_NHAN
+    )
+
+    private val sampleStatistics = DriverStatistics(
+        driverId = 1L, totalAccepted = 10, totalRejected = 1,
+        penalizedRejections = 0, reliabilityScore = 95.0,
+        lockedUntil = null, isLocked = false, isWarning = false
+    )
 
     @Before
     fun setUp() {
-        runBlocking {
-            val context = ApplicationProvider.getApplicationContext<Context>()
-            db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
-                .allowMainThreadQueries()
-                .build()
+        Dispatchers.setMain(testDispatcher)
 
-            repository = DeliveryRepository(
-                db = db,
-                requestDao = db.deliveryRequestDao(),
-                packageDao = db.packageDao(),
-                historyDao = db.statusHistoryDao(),
-                feeRuleDao = db.feeRuleDao()
-            )
+        coEvery { repository.getOpenOrders() } returns NetworkResult.Success(listOf(sampleOrder1))
+        coEvery { repository.getMyOrders() } returns NetworkResult.Success(listOf(sampleActiveOrder))
+        coEvery { repository.getMyStatistics() } returns NetworkResult.Success(sampleStatistics)
+        coEvery { repository.getRejectionReasons() } returns NetworkResult.Success(emptyList())
 
-            testClientId = db.userDao().insert(
-                UserEntity(
-                    username = "client_test",
-                    password = "123",
-                    fullName = "Khách Hàng Test",
-                    phoneNumber = "0901234567",
-                    role = Role.CLIENT
-                )
-            ).toInt()
-
-            testDriverId = db.userDao().insert(
-                UserEntity(
-                    username = "driver_test",
-                    password = "123",
-                    fullName = "Tài Xế Test",
-                    phoneNumber = "0907654321",
-                    role = Role.DELIVERY,
-                    licensePlate = "59-X1 12345"
-                )
-            ).toInt()
-
-            db.feeRuleDao().insert(
-                FeeRuleEntity(
-                    ruleName = "Bảng giá test",
-                    baseFee = 15000.0,
-                    pricePerKm = 5000.0,
-                    pricePerKg = 3000.0,
-                    fragileFee = 5000.0,
-                    isActive = true
-                )
-            )
-
-            viewModel = DriverViewModel(repository)
-        }
+        viewModel = DriverViewModel(repository)
     }
 
     @After
     fun tearDown() {
-        db.close()
+        Dispatchers.resetMain()
     }
 
     @Test
-    fun testRejectOrder_updatesRejectionCountAndReliabilityScore() {
-        // Initial state
-        assertEquals(100, viewModel.uiState.value.reliabilityScore)
-        assertEquals(0, viewModel.uiState.value.rejectedCount)
+    fun `loadDriverData fetches open orders, my orders, and statistics`() = runTest {
+        viewModel.loadDriverData(1)
+        advanceUntilIdle()
 
-        // Reject an order with reason and note
-        viewModel.rejectOrder(
-            orderId = 101,
-            reason = "Khoảng cách lấy hoặc giao hàng quá xa",
-            note = "Cách 25km"
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+        assertEquals(1, state.newOrders.size)
+        assertEquals(101L, state.newOrders.first().id)
+        assertEquals(1, state.activeOrders.size)
+        assertEquals(102L, state.activeOrders.first().id)
+        assertEquals(95.0, state.reliabilityScore, 0.01)
+    }
+
+    @Test
+    fun `acceptOrder success updates UI state with message`() = runTest {
+        coEvery { repository.acceptOrder(101L) } returns NetworkResult.Success(sampleActiveOrder)
+
+        viewModel.acceptOrder(101)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isConflictError)
+        assertNotNull(state.acceptMessage)
+        assertTrue(state.acceptMessage!!.contains("Nhận đơn #101 thành công"))
+    }
+
+    @Test
+    fun `acceptOrder 409 conflict sets isConflictError true`() = runTest {
+        coEvery { repository.acceptOrder(101L) } returns NetworkResult.Error(
+            code = "ORDER_ALREADY_TAKEN",
+            message = "Đơn hàng #101 đã được tài xế khác nhận trước.",
+            httpCode = 409
         )
 
+        viewModel.acceptOrder(101)
+        advanceUntilIdle()
+
         val state = viewModel.uiState.value
-        assertEquals(1, state.rejectedCount)
-        assertTrue(state.rejectedOrderIds.contains(101))
-        assertEquals(95, state.reliabilityScore)
+        assertTrue(state.isConflictError)
         assertNotNull(state.userMessage)
-        assertTrue(state.userMessage!!.contains("101"))
+        assertTrue(state.userMessage!!.lowercase().contains("tài xế khác"))
     }
 
     @Test
-    fun testMultipleRejections_lowersReliabilityScore() {
-        viewModel.rejectOrder(orderId = 1, reason = "Hàng quá cồng kềnh")
-        viewModel.rejectOrder(orderId = 2, reason = "Thời tiết xấu")
-        viewModel.rejectOrder(orderId = 3, reason = "Xe hỏng")
+    fun `rejectOrder success updates statistics and displays message`() = runTest {
+        val updatedStats = sampleStatistics.copy(totalRejected = 2, reliabilityScore = 90.0)
+        val rejectInfo = RejectInfo(
+            message = "Đã từ chối đơn #101",
+            penaltyApplied = true,
+            statistics = updatedStats
+        )
+        coEvery { repository.rejectOrder(101L, "VEHICLE_ISSUE", any()) } returns NetworkResult.Success(rejectInfo)
+
+        viewModel.rejectOrder(101, "VEHICLE_ISSUE", "Thủng lốp")
+        advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals(3, state.rejectedCount)
-        assertEquals(85, state.reliabilityScore) // 100 - (3 * 5) = 85
+        assertEquals(90.0, state.reliabilityScore, 0.01)
+        assertNotNull(state.userMessage)
+        assertTrue(state.userMessage!!.contains("từ chối đơn #101"))
     }
 
     @Test
-    fun testSetWorkingStatus() {
-        assertEquals(DriverWorkingStatus.AVAILABLE, viewModel.uiState.value.driverStatus)
+    fun `updateOrderStatus success calls repository and refreshes my orders`() = runTest {
+        coEvery { repository.updateOrderStatus(102L, DeliveryStatus.DA_DEN_NHA_HANG, any()) } returns NetworkResult.Success(sampleActiveOrder.copy(status = DeliveryStatus.DA_DEN_NHA_HANG))
+
+        viewModel.updateOrderStatus(102, DeliveryStatus.DA_DEN_NHA_HANG)
+        advanceUntilIdle()
+
+        coVerify { repository.updateOrderStatus(102L, DeliveryStatus.DA_DEN_NHA_HANG, any()) }
+        assertNotNull(viewModel.uiState.value.userMessage)
+    }
+
+    @Test
+    fun `setWorkingStatus calls updateAvailability and updates uiState`() = runTest {
+        coEvery { repository.updateAvailability("BUSY") } returns NetworkResult.Success("BUSY")
 
         viewModel.setWorkingStatus(DriverWorkingStatus.BUSY)
+        advanceUntilIdle()
+
         assertEquals(DriverWorkingStatus.BUSY, viewModel.uiState.value.driverStatus)
         assertEquals("Đang bận giao", viewModel.uiState.value.driverStatus.label)
-
-        viewModel.setWorkingStatus(DriverWorkingStatus.OFFLINE)
-        assertEquals(DriverWorkingStatus.OFFLINE, viewModel.uiState.value.driverStatus)
-        assertEquals("Ngoại tuyến", viewModel.uiState.value.driverStatus.label)
     }
 
     @Test
-    fun testClearAcceptMessage() {
-        viewModel.rejectOrder(orderId = 5, reason = "Lý do khác")
-        assertNotNull(viewModel.uiState.value.userMessage)
+    fun `clearAcceptMessage resets userMessage and isConflictError`() = runTest {
+        coEvery { repository.acceptOrder(101L) } returns NetworkResult.Error(
+            code = "ORDER_ALREADY_TAKEN",
+            message = "Conflict",
+            httpCode = 409
+        )
+        viewModel.acceptOrder(101)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.isConflictError)
 
         viewModel.clearAcceptMessage()
-        assertNull(viewModel.uiState.value.userMessage)
         assertNull(viewModel.uiState.value.acceptMessage)
-    }
-
-    @Test
-    fun testAcceptRequestViaRepository_atomicSuccess() = runBlocking {
-        // Create an order
-        val orderId = repository.createRequest(
-            clientId = testClientId,
-            pickupAddress = "123 Lê Lợi, Q1",
-            deliveryAddress = "456 Nguyễn Huệ, Q1",
-            senderName = "Cửa hàng A",
-            senderPhone = "0901111111",
-            recipientName = "Khách B",
-            recipientPhone = "0902222222",
-            distanceKm = 3.5,
-            packages = listOf(
-                NewPackageInfo(name = "Cơm sườn", weightKg = 1.0, quantity = 2)
-            )
-        ).toInt()
-
-        val acceptResult = repository.acceptRequest(orderId, testDriverId)
-        assertEquals(AcceptResult.Success, acceptResult)
-
-        val requestAfterAccept = repository.getRequestById(orderId)
-        assertNotNull(requestAfterAccept)
-        assertEquals(DeliveryStatus.DA_CHAP_NHAN, requestAfterAccept!!.status)
-        assertEquals(testDriverId, requestAfterAccept.deliveryPersonId)
-
-        // Update status to DA_DEN_NHA_HANG
-        val update1 = repository.updateRequestStatus(orderId, DeliveryStatus.DA_DEN_NHA_HANG, updatedBy = testDriverId)
-        assertTrue(update1)
-        assertEquals(DeliveryStatus.DA_DEN_NHA_HANG, repository.getRequestById(orderId)!!.status)
-
-        // Update status to DA_LAY_HANG
-        val update2 = repository.updateRequestStatus(orderId, DeliveryStatus.DA_LAY_HANG, updatedBy = testDriverId)
-        assertTrue(update2)
-        assertEquals(DeliveryStatus.DA_LAY_HANG, repository.getRequestById(orderId)!!.status)
-
-        // Update status to DA_DEN_KHACH_HANG
-        val update3 = repository.updateRequestStatus(orderId, DeliveryStatus.DA_DEN_KHACH_HANG, updatedBy = testDriverId)
-        assertTrue(update3)
-        assertEquals(DeliveryStatus.DA_DEN_KHACH_HANG, repository.getRequestById(orderId)!!.status)
-
-        // Update status to DA_GIAO
-        val update4 = repository.updateRequestStatus(orderId, DeliveryStatus.DA_GIAO, updatedBy = testDriverId)
-        assertTrue(update4)
-        assertEquals(DeliveryStatus.DA_GIAO, repository.getRequestById(orderId)!!.status)
+        assertNull(viewModel.uiState.value.userMessage)
+        assertFalse(viewModel.uiState.value.isConflictError)
     }
 }
