@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mob10.deliveryapp.data.model.RejectionReason
 import com.mob10.deliveryapp.ui.theme.UthError
 import com.mob10.deliveryapp.ui.theme.UthOnSurface
 import com.mob10.deliveryapp.ui.theme.UthOnSurfaceVariant
@@ -49,25 +50,32 @@ import com.mob10.deliveryapp.ui.theme.UthPrimary
 import com.mob10.deliveryapp.ui.theme.UthSurfaceContainerLow
 
 val DEFAULT_REJECTION_REASONS = listOf(
-    "Hàng quá cồng kềnh / vượt tải trọng",
-    "Khoảng cách lấy hoặc giao hàng quá xa",
-    "Phương tiện gặp sự cố kỹ thuật",
-    "Thời tiết xấu / ngập nước / kẹt xe nghiêm trọng",
-    "Đang có việc gấp / sắp hết ca làm việc",
-    "Lý do khác"
+    RejectionReason("VEHICLE_ISSUE", "Xe gặp sự cố", true, 0, true),
+    RejectionReason("EMERGENCY", "Tình huống khẩn cấp", true, 0, true),
+    RejectionReason("PACKAGE_UNSAFE", "Hàng hóa không an toàn hoặc sai quy định", true, 0, true),
+    RejectionReason("TOO_FAR", "Khoảng cách quá xa", false, 10, false),
+    RejectionReason("BUSY", "Đang bận", false, 10, false),
+    RejectionReason("LOW_FEE", "Phí giao hàng thấp", false, 10, false),
+    RejectionReason("OTHER", "Lý do khác", false, 10, true)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RejectReasonBottomSheet(
     orderId: Int,
+    rejectionReasons: List<RejectionReason> = emptyList(),
     onDismiss: () -> Unit,
     onConfirmReject: (orderId: Int, reason: String, note: String) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var selectedReason by remember { mutableStateOf(DEFAULT_REJECTION_REASONS.first()) }
+    val availableReasons = rejectionReasons.ifEmpty { DEFAULT_REJECTION_REASONS }
+    var selectedReasonCode by remember(availableReasons) {
+        mutableStateOf(availableReasons.first().code)
+    }
     var customNote by remember { mutableStateOf("") }
     var isSubmitting by remember { mutableStateOf(false) }
+    val selectedReason = availableReasons.first { it.code == selectedReasonCode }
+    val missingRequiredNote = selectedReason.requiresNote && customNote.isBlank()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -150,13 +158,13 @@ fun RejectReasonBottomSheet(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Radio Options
-            DEFAULT_REJECTION_REASONS.forEach { reason ->
-                val isSelected = selectedReason == reason
+            availableReasons.forEach { reason ->
+                val isSelected = selectedReasonCode == reason.code
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
-                        .clickable { selectedReason = reason },
+                        .clickable { selectedReasonCode = reason.code },
                     shape = RoundedCornerShape(12.dp),
                     color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surface,
                     border = androidx.compose.foundation.BorderStroke(
@@ -172,7 +180,7 @@ fun RejectReasonBottomSheet(
                     ) {
                         RadioButton(
                             selected = isSelected,
-                            onClick = { selectedReason = reason },
+                            onClick = { selectedReasonCode = reason.code },
                             colors = RadioButtonDefaults.colors(
                                 selectedColor = UthPrimary,
                                 unselectedColor = UthOnSurfaceVariant
@@ -180,7 +188,7 @@ fun RejectReasonBottomSheet(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = reason,
+                            text = reason.label,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                             color = UthOnSurface
@@ -199,7 +207,13 @@ fun RejectReasonBottomSheet(
                 placeholder = { Text("Nhập chi tiết lý do (nếu cần)...") },
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 3,
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                isError = missingRequiredNote,
+                supportingText = if (missingRequiredNote) {
+                    { Text("Lý do này yêu cầu nhập ghi chú.") }
+                } else {
+                    null
+                }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -221,13 +235,13 @@ fun RejectReasonBottomSheet(
                 Button(
                     onClick = {
                         isSubmitting = true
-                        onConfirmReject(orderId, selectedReason, customNote)
+                        onConfirmReject(orderId, selectedReason.code, customNote)
                         onDismiss()
                     },
                     modifier = Modifier.weight(1.5f),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = UthError),
-                    enabled = !isSubmitting
+                    enabled = !isSubmitting && !missingRequiredNote
                 ) {
                     Text("Xác nhận từ chối", fontWeight = FontWeight.Bold)
                 }

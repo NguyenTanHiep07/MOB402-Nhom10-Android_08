@@ -18,7 +18,7 @@ import com.mob10.deliveryapp.R
  */
 @Composable
 fun XmlLoginScreen(
-    onLogin: (phoneNumber: String, password: String) -> Unit,
+    onLogin: (username: String, password: String) -> Unit,
     onForgotPassword: () -> Unit = {},
     isLoading: Boolean = false
 ) {
@@ -30,7 +30,7 @@ fun XmlLoginScreen(
             }
         },
         update = { root ->
-            val phoneInput = root.findViewById<TextInputEditText>(R.id.phoneInput)
+            val usernameInput = root.findViewById<TextInputEditText>(R.id.usernameInput)
             val passwordInput = root.findViewById<TextInputEditText>(R.id.passwordInput)
             val validationError = root.findViewById<TextView>(R.id.loginValidationError)
             val loginButton = root.findViewById<MaterialButton>(R.id.loginButton)
@@ -41,13 +41,13 @@ fun XmlLoginScreen(
                 if (isLoading) R.string.login_initializing else R.string.login_button
             )
             loginButton.setOnClickListener {
-                val phoneNumber = phoneInput.text?.toString()?.trim().orEmpty()
+                val username = usernameInput.text?.toString()?.trim().orEmpty()
                 val password = passwordInput.text?.toString().orEmpty()
-                if (phoneNumber.isBlank() || password.isBlank()) {
+                if (username.isBlank() || password.isBlank()) {
                     validationError.visibility = View.VISIBLE
                 } else {
                     validationError.visibility = View.GONE
-                    onLogin(phoneNumber, password)
+                    onLogin(username, password)
                 }
             }
             forgotPassword.setOnClickListener { onForgotPassword() }

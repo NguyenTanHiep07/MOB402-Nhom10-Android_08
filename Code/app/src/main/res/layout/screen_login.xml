@@ -74,10 +74,10 @@
                     app:startIconTint="@color/godrop_on_surface_variant">
 
                     <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/phoneInput"
+                        android:id="@+id/usernameInput"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="phone"
+                        android:inputType="text"
                         android:textColor="@color/godrop_on_surface"
                         android:minHeight="56dp"
                         android:maxLines="1" />

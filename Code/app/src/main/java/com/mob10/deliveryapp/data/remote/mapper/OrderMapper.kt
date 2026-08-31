@@ -10,7 +10,7 @@ import com.mob10.deliveryapp.data.remote.dto.*
  *
  * Quy tắc:
  * - Null-safe: mọi field nullable đều có default value.
- * - Status string → DeliveryStatus enum: dùng valueOf với fallback CHO_TIEP_NHAN.
+ * - Status string phải khớp DeliveryStatus trong API Contract; mã lạ được báo là response lỗi.
  * - Số tiền server trả BigDecimal nhưng Gson parse thành Double — đủ chính xác cho hiển thị.
  */
 object OrderMapper {
@@ -152,9 +152,5 @@ object OrderMapper {
 
     // ── Helper ──
 
-    private fun parseStatus(status: String): DeliveryStatus = try {
-        DeliveryStatus.valueOf(status)
-    } catch (_: IllegalArgumentException) {
-        DeliveryStatus.CHO_TIEP_NHAN
-    }
+    private fun parseStatus(status: String): DeliveryStatus = DeliveryStatus.valueOf(status)
 }

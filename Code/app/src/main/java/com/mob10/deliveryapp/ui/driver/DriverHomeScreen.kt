@@ -104,8 +104,12 @@ fun DriverHomeScreen(
 
     LaunchedEffect(currentUser?.id) {
         if (currentUser != null) {
-            viewModel.loadDriverData(currentUser.id)
+            viewModel.loadDriverData()
         }
+    }
+
+    LaunchedEffect(uiState.isSessionExpired) {
+        if (uiState.isSessionExpired) onLogout()
     }
 
     val headerStatusText = when (uiState.driverStatus) {
@@ -287,6 +291,7 @@ fun DriverHomeScreen(
                 } else {
                     NewOrdersTab(
                         newOrders = uiState.newOrders,
+                        rejectionReasons = uiState.rejectionReasons,
                         onAcceptOrder = { orderId -> viewModel.acceptOrder(orderId) },
                         onRejectOrder = { orderId, reason, note -> viewModel.rejectOrder(orderId, reason, note) },
                         driverStatus = uiState.driverStatus
@@ -317,6 +322,7 @@ fun DriverHomeScreen(
             } else if (selectedTab == 4) {
                 DeliveryHistoryTab(
                     historyOrders = uiState.historyOrders,
+                    historiesByOrder = uiState.historiesByOrder,
                     totalEarnings = uiState.totalEarnings,
                     todayEarnings = uiState.todayEarnings,
                     completedCount = uiState.completedCount,

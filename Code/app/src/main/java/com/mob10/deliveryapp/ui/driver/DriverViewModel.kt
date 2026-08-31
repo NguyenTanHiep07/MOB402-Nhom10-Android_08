@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
 enum class DriverWorkingStatus(val label: String) {
     AVAILABLE("Sẵn sàng nhận đơn"),
@@ -28,6 +31,7 @@ data class DriverUiState(
     val newOrders: List<Order> = emptyList(),
     val activeOrders: List<Order> = emptyList(),
     val historyOrders: List<Order> = emptyList(),
+    val historiesByOrder: Map<Int, List<StatusHistory>> = emptyMap(),
     val rejectionReasons: List<RejectionReason> = emptyList(),
     val statistics: DriverStatistics? = null,
     val pendingCount: Int = 0,
@@ -59,21 +63,18 @@ data class DriverUiState(
 class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(DriverUiState(isLoading = true))
     val uiState: StateFlow<DriverUiState> = _uiState.asStateFlow()
-    private var currentDriverId: Int? = null
-
     /**
      * Load toàn bộ dữ liệu driver: Open Pool + My Orders + Statistics + Rejection Reasons.
      * Gọi khi DriverHomeScreen mở lần đầu hoặc khi pull-to-refresh.
      */
-    fun loadDriverData(driverId: Int) {
-        currentDriverId = driverId
+    fun loadDriverData() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
 
-            // Load song song: open orders, my orders, statistics, rejection reasons
+            // Nạp đầy đủ dữ liệu cần cho các tab tài xế.
             loadOpenOrders()
-            loadMyOrders(driverId)
-            loadStatistics(driverId)
+            loadMyOrders()
+            loadStatistics()
             loadRejectionReasons()
 
             _uiState.value = _uiState.value.copy(isLoading = false)
@@ -85,8 +86,8 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isRefreshing = true)
             loadOpenOrders()
-            loadMyOrders(currentDriverId)
-            loadStatistics(currentDriverId)
+            loadMyOrders()
+            loadStatistics()
             _uiState.value = _uiState.value.copy(isRefreshing = false)
         }
     }
@@ -114,8 +115,8 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
 
     // ── My Orders ──────────────────────────────────────────────
 
-    private suspend fun loadMyOrders(driverId: Int? = currentDriverId) {
-        when (val result = repository.getMyOrders(driverId)) {
+    private suspend fun loadMyOrders() {
+        when (val result = repository.getMyOrders()) {
             is NetworkResult.Success -> {
                 val allMyOrders = result.data
                 val active = allMyOrders.filter { order ->
@@ -133,19 +134,25 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
                     )
                 }
                 val completed = history.filter { it.status == DeliveryStatus.DA_GIAO }
+                val today = LocalDate.now()
+                val completedToday = completed.filter { it.actualDeliveryTime.isToday(today) }
+                val historiesByOrder = loadHistories(history)
 
                 _uiState.value = _uiState.value.copy(
                     activeOrders = active,
                     historyOrders = history,
+                    historiesByOrder = historiesByOrder,
                     completedCount = completed.size,
                     totalEarnings = completed.sumOf { it.totalCost },
-                    deliveredTodayCount = completed.size // TODO: filter by today
+                    deliveredTodayCount = completedToday.size,
+                    todayEarnings = completedToday.sumOf { it.totalCost }
                 )
             }
             is NetworkResult.Empty -> {
                 _uiState.value = _uiState.value.copy(
                     activeOrders = emptyList(),
-                    historyOrders = emptyList()
+                    historyOrders = emptyList(),
+                    historiesByOrder = emptyMap()
                 )
             }
             is NetworkResult.Error -> handleError(result)
@@ -155,8 +162,8 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
 
     // ── Statistics ──────────────────────────────────────────────
 
-    private suspend fun loadStatistics(driverId: Int? = currentDriverId) {
-        when (val result = repository.getMyStatistics(driverId)) {
+    private suspend fun loadStatistics() {
+        when (val result = repository.getMyStatistics()) {
             is NetworkResult.Success -> {
                 val stats = result.data
                 _uiState.value = _uiState.value.copy(
@@ -166,7 +173,10 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
                 )
             }
             is NetworkResult.Error -> handleError(result)
-            else -> { /* ignored */ }
+            is NetworkResult.Empty -> handleError(
+                NetworkResult.Error(message = "Máy chủ chưa có thống kê tài xế.")
+            )
+            is NetworkResult.Loading -> Unit
         }
     }
 
@@ -177,7 +187,11 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
             is NetworkResult.Success -> {
                 _uiState.value = _uiState.value.copy(rejectionReasons = result.data)
             }
-            else -> { /* silent fail, UI shows default reasons */ }
+            is NetworkResult.Error -> handleError(result)
+            is NetworkResult.Empty -> handleError(
+                NetworkResult.Error(message = "Máy chủ chưa cấu hình lý do từ chối.")
+            )
+            is NetworkResult.Loading -> Unit
         }
     }
 
@@ -187,16 +201,17 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
 
-            when (val result = repository.acceptOrder(orderId.toLong(), currentDriverId)) {
+            when (val result = repository.acceptOrder(orderId.toLong())) {
                 is NetworkResult.Success -> {
                     _uiState.value = _uiState.value.copy(
                         acceptMessage = "Nhận đơn #$orderId thành công!",
                         userMessage = "Nhận đơn #$orderId thành công!",
-                        isConflictError = false
+                        isConflictError = false,
+                        driverStatus = DriverWorkingStatus.BUSY
                     )
                     // Refresh data để cập nhật danh sách
                     loadOpenOrders()
-                    loadMyOrders(currentDriverId)
+                    loadMyOrders()
                 }
                 is NetworkResult.Error -> {
                     if (result.code == "ORDER_ALREADY_TAKEN") {
@@ -229,7 +244,6 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
                 orderId = orderId.toLong(),
                 reasonCode = reason,
                 note = note.ifBlank { null },
-                driverId = currentDriverId
             )) {
                 is NetworkResult.Success -> {
                     val rejectInfo = result.data
@@ -269,7 +283,7 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
                 DeliveryStatus.DA_DEN_KHACH_HANG -> "Đã tới điểm giao cho khách"
                 DeliveryStatus.DA_GIAO -> "Giao hàng thành công cho khách"
                 DeliveryStatus.DA_HUY -> "Đã hủy đơn hàng"
-                else -> "Cập nhật trạng thái"
+                DeliveryStatus.CHO_TIEP_NHAN -> "Chờ tiếp nhận"
             }
         }
 
@@ -277,24 +291,30 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
             when (val result = repository.updateOrderStatus(
                 orderId = orderId.toLong(),
                 newStatus = newStatus,
-                driverId = currentDriverId,
                 note = finalNote
             )) {
                 is NetworkResult.Success -> {
                     val statusLabel = when (newStatus) {
+                        DeliveryStatus.CHO_TIEP_NHAN -> "Chờ tiếp nhận"
+                        DeliveryStatus.DA_CHAP_NHAN -> "Đã nhận đơn"
                         DeliveryStatus.DA_DEN_NHA_HANG -> "Đã đến nhà hàng"
                         DeliveryStatus.DA_LAY_HANG -> "Đã lấy hàng"
                         DeliveryStatus.DA_DEN_KHACH_HANG -> "Đã đến khách hàng"
                         DeliveryStatus.DA_GIAO -> "Đã giao thành công"
-                        else -> newStatus.name
+                        DeliveryStatus.DA_HUY -> "Đã hủy"
                     }
                     _uiState.value = _uiState.value.copy(
-                        userMessage = "Đơn #$orderId: $statusLabel"
+                        userMessage = "Đơn #$orderId: $statusLabel",
+                        driverStatus = if (newStatus == DeliveryStatus.DA_GIAO) {
+                            DriverWorkingStatus.AVAILABLE
+                        } else {
+                            _uiState.value.driverStatus
+                        }
                     )
                     // Refresh data
-                    loadMyOrders(currentDriverId)
+                    loadMyOrders()
                     if (newStatus == DeliveryStatus.DA_GIAO) {
-                        loadStatistics(currentDriverId)
+                        loadStatistics()
                     }
                 }
                 is NetworkResult.Error -> handleError(result)
@@ -308,12 +328,21 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
     fun setWorkingStatus(status: DriverWorkingStatus) {
         viewModelScope.launch {
             when (val result = repository.updateAvailability(status.name)) {
-                is NetworkResult.Success, is NetworkResult.Empty -> {
+                is NetworkResult.Success -> {
+                    val confirmedStatus = runCatching {
+                        DriverWorkingStatus.valueOf(result.data)
+                    }.getOrElse {
+                        handleError(NetworkResult.Error(message = "Máy chủ trả về trạng thái tài xế không hợp lệ."))
+                        return@launch
+                    }
                     _uiState.value = _uiState.value.copy(
-                        driverStatus = status,
-                        userMessage = "Đã chuyển sang: ${status.label}"
+                        driverStatus = confirmedStatus,
+                        userMessage = "Đã chuyển sang: ${confirmedStatus.label}"
                     )
                 }
+                is NetworkResult.Empty -> handleError(
+                    NetworkResult.Error(message = "Máy chủ không xác nhận trạng thái làm việc.")
+                )
                 is NetworkResult.Error -> handleError(result)
                 is NetworkResult.Loading -> { /* ignored */ }
             }
@@ -338,32 +367,43 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
                 isSessionExpired = true,
                 userMessage = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
             )
-        } else if (_uiState.value.userMessage == null) {
-            // Chỉ set message nếu chưa có message cụ thể hơn
+        } else {
             _uiState.value = _uiState.value.copy(userMessage = error.message)
         }
     }
+
+    private suspend fun loadHistories(orders: List<Order>): Map<Int, List<StatusHistory>> {
+        val result = linkedMapOf<Int, List<StatusHistory>>()
+        orders.forEach { order ->
+            when (val historyResult = repository.getOrderHistory(order.id)) {
+                is NetworkResult.Success -> result[order.id.toInt()] = historyResult.data
+                is NetworkResult.Empty -> result[order.id.toInt()] = emptyList()
+                is NetworkResult.Error -> handleError(historyResult)
+                is NetworkResult.Loading -> Unit
+            }
+        }
+        return result
+    }
+}
+
+private fun String?.isToday(today: LocalDate): Boolean {
+    if (this.isNullOrBlank()) return false
+    return runCatching {
+        Instant.parse(this).atZone(ZoneId.systemDefault()).toLocalDate() == today
+    }.getOrDefault(false)
 }
 
 /**
- * Factory tạo DriverViewModel với ShipperRepository (REST API + Room fallback).
+ * Factory tạo DriverViewModel với ShipperRepository dùng REST API thật.
  */
 class DriverViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(DriverViewModel::class.java)) {
             RetrofitClient.init(context)
-            val db = com.mob10.deliveryapp.data.local.AppDatabase.getDatabase(context.applicationContext)
-            val deliveryRepository = com.mob10.deliveryapp.data.repository.DeliveryRepository(
-                db,
-                db.deliveryRequestDao(),
-                db.packageDao(),
-                db.statusHistoryDao()
-            )
             val repository = ShipperRepository(
                 driverApi = RetrofitClient.driverApi,
-                orderApi = RetrofitClient.orderApi,
-                deliveryRepository = deliveryRepository
+                orderApi = RetrofitClient.orderApi
             )
             return DriverViewModel(repository) as T
         }

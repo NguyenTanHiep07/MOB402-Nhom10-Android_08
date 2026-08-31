@@ -1,6 +1,7 @@
 package com.mob10.deliveryapp.data.remote
 
 import android.content.Context
+import com.mob10.deliveryapp.BuildConfig
 import com.mob10.deliveryapp.data.remote.api.AuthApiService
 import com.mob10.deliveryapp.data.remote.api.DriverApiService
 import com.mob10.deliveryapp.data.remote.api.OrderApiService
@@ -23,24 +24,28 @@ import java.util.concurrent.TimeUnit
  *          sau đó truy cập `RetrofitClient.driverApi`, `RetrofitClient.authApi`, v.v.
  */
 object RetrofitClient {
-
-    // Emulator: 10.0.2.2 = localhost của máy host
-    // Device thật trên cùng WiFi: thay bằng IP LAN (ví dụ: 192.168.1.x)
-    private const val BASE_URL = "http://10.0.2.2:8080/api/"
-
     private const val CONNECT_TIMEOUT = 30L
     private const val READ_TIMEOUT = 30L
     private const val WRITE_TIMEOUT = 30L
 
+    @Volatile
+    private var initialized = false
     private lateinit var tokenManager: TokenManager
     private lateinit var retrofit: Retrofit
 
     /** Phải gọi trước khi sử dụng bất kỳ API service nào. */
+    @Synchronized
     fun init(context: Context) {
-        tokenManager = TokenManager(context)
+        if (initialized) return
+
+        tokenManager = TokenManager(context.applicationContext)
 
         val loggingInterceptor = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BASIC
+            } else {
+                HttpLoggingInterceptor.Level.NONE
+            }
         }
 
         val authInterceptor = AuthInterceptor(tokenManager)
@@ -54,11 +59,16 @@ object RetrofitClient {
             .build()
 
         retrofit = Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(normalizeBaseUrl(BuildConfig.API_BASE_URL))
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
+
+        initialized = true
     }
+
+    private fun normalizeBaseUrl(value: String): String =
+        value.trim().let { if (it.endsWith('/')) it else "$it/" }
 
     fun getTokenManager(): TokenManager = tokenManager
 

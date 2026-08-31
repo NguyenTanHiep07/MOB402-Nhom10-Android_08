@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mob10.deliveryapp.data.model.Order
 import com.mob10.deliveryapp.data.model.OrderPackage
+import com.mob10.deliveryapp.data.model.RejectionReason
 import com.mob10.deliveryapp.ui.theme.UthError
 import com.mob10.deliveryapp.ui.theme.UthOnSurface
 import com.mob10.deliveryapp.ui.theme.UthOnSurfaceVariant
@@ -73,6 +74,7 @@ import com.mob10.deliveryapp.ui.theme.UthWarningContainer
 @Composable
 fun NewOrdersTab(
     newOrders: List<Order>,
+    rejectionReasons: List<RejectionReason> = emptyList(),
     packagesByOrder: Map<Int, List<OrderPackage>> = emptyMap(),
     onAcceptOrder: (Int) -> Unit,
     onRejectOrder: (orderId: Int, reason: String, note: String) -> Unit,
@@ -84,6 +86,7 @@ fun NewOrdersTab(
     selectedRejectOrderId?.let { orderId ->
         RejectReasonBottomSheet(
             orderId = orderId,
+            rejectionReasons = rejectionReasons,
             onDismiss = { selectedRejectOrderId = null },
             onConfirmReject = { id, reason, note ->
                 onRejectOrder(id, reason, note)
