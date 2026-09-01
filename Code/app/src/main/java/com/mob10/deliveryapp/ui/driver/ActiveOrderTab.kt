@@ -198,15 +198,24 @@ fun ActiveOrderCard(
 ) {
     val context = LocalContext.current
 
-    val openMaps: (String) -> Unit = { address ->
-        val query = if (address.isNotBlank()) address else "${order.distanceKm} km"
+    val isPickupPhase = order.status in listOf(DeliveryStatus.DA_CHAP_NHAN, DeliveryStatus.DA_DEN_NHA_HANG)
+    val targetLat = if (isPickupPhase) order.pickupLatitude else order.deliveryLatitude
+    val targetLng = if (isPickupPhase) order.pickupLongitude else order.deliveryLongitude
+    val currentTargetAddress = if (isPickupPhase) order.pickupAddress else order.deliveryAddress
+
+    val openMaps: (String, Double?, Double?) -> Unit = { address, lat, lng ->
+        val query = when {
+            lat != null && lng != null -> "$lat,$lng"
+            address.isNotBlank() -> address
+            else -> "${order.distanceKm} km"
+        }
         val uri = Uri.parse("google.navigation:q=${Uri.encode(query)}")
         val intent = Intent(Intent.ACTION_VIEW, uri).apply {
             setPackage("com.google.android.apps.maps")
         }
-        if (intent.resolveActivity(context.packageManager) != null) {
+        try {
             context.startActivity(intent)
-        } else {
+        } catch (e: Exception) {
             val fallbackUri = Uri.parse("https://www.google.com/maps/search/?api=1&query=${Uri.encode(query)}")
             context.startActivity(Intent(Intent.ACTION_VIEW, fallbackUri))
         }
@@ -217,11 +226,6 @@ fun ActiveOrderCard(
             val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
             context.startActivity(intent)
         }
-    }
-
-    val currentTargetAddress = when (order.status) {
-        DeliveryStatus.DA_CHAP_NHAN, DeliveryStatus.DA_DEN_NHA_HANG -> order.pickupAddress
-        else -> order.deliveryAddress
     }
 
     Card(
@@ -362,7 +366,7 @@ fun ActiveOrderCard(
 
                     // Button mở Google Maps chỉ đường
                     Button(
-                        onClick = { openMaps(currentTargetAddress) },
+                        onClick = { openMaps(currentTargetAddress, targetLat, targetLng) },
                         modifier = Modifier.fillMaxWidth().height(48.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = UthPrimary)

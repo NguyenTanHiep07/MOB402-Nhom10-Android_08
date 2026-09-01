@@ -17,9 +17,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 enum class DriverWorkingStatus(val label: String) {
     AVAILABLE("Sẵn sàng nhận đơn"),
@@ -134,8 +134,8 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
                     )
                 }
                 val completed = history.filter { it.status == DeliveryStatus.DA_GIAO }
-                val today = LocalDate.now()
-                val completedToday = completed.filter { it.actualDeliveryTime.isToday(today) }
+                val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                val completedToday = completed.filter { it.actualDeliveryTime.isToday(todayStr) }
                 val historiesByOrder = loadHistories(history)
 
                 _uiState.value = _uiState.value.copy(
@@ -386,11 +386,9 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
     }
 }
 
-private fun String?.isToday(today: LocalDate): Boolean {
+private fun String?.isToday(todayStr: String): Boolean {
     if (this.isNullOrBlank()) return false
-    return runCatching {
-        Instant.parse(this).atZone(ZoneId.systemDefault()).toLocalDate() == today
-    }.getOrDefault(false)
+    return this.startsWith(todayStr)
 }
 
 /**
