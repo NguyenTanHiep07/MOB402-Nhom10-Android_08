@@ -121,6 +121,55 @@ CHO_TIEP_NHAN
 | GET | `/admin/drivers/alerts` | Tài xế có Reliability Score dưới 70 |
 | GET | `/admin/orders` | Toàn bộ đơn |
 
+## Đánh giá tài xế
+
+### `POST /ratings`
+
+Chỉ `CLIENT` là chủ đơn và chỉ sau khi đơn ở trạng thái `DA_GIAO` mới được đánh giá.
+Mỗi đơn chỉ có một đánh giá. Server luôn lấy khách hàng từ JWT và tài xế được gán trong đơn;
+hai trường `clientId`/`driverId` trong body cũ chỉ được nhận để tương thích Android và bị bỏ qua.
+
+```json
+{
+  "deliveryRequestId": 10,
+  "clientId": 1,
+  "driverId": 6,
+  "stars": 5,
+  "comment": "Giao hàng nhanh và cẩn thận"
+}
+```
+
+Response `201 Created`:
+
+```json
+{
+  "id": 1,
+  "deliveryRequestId": 10,
+  "clientId": 1,
+  "driverId": 6,
+  "stars": 5,
+  "comment": "Giao hàng nhanh và cẩn thận",
+  "createdAt": "2026-09-03T01:30:00Z"
+}
+```
+
+### `GET /ratings?deliveryRequestId={id}`
+
+Trả đánh giá của một đơn. Chỉ khách sở hữu đơn, tài xế đã giao đơn hoặc Admin được xem.
+Nếu đơn chưa được đánh giá, API trả `404 RATING_NOT_FOUND`.
+
+### `GET /ratings/drivers/{driverId}/summary`
+
+Trả tổng số đánh giá và điểm sao trung bình của tài xế:
+
+```json
+{
+  "driverId": 6,
+  "ratingCount": 12,
+  "averageStars": 4.75
+}
+```
+
 ## Mã lỗi quan trọng
 
 | HTTP | Code | Trường hợp |
@@ -133,6 +182,12 @@ CHO_TIEP_NHAN
 | 409 | `ORDER_ALREADY_TAKEN` | Tài xế khác đã nhận trước |
 | 409 | `INVALID_STATUS_TRANSITION` | Cập nhật sai chuỗi trạng thái |
 | 409 | `ORDER_ALREADY_REJECTED` | Tài xế đã Reject đơn này |
+| 403 | `RATING_ACCESS_DENIED` | Không có quyền xem đánh giá của đơn |
+| 404 | `RATING_NOT_FOUND` | Đơn chưa có đánh giá |
+| 404 | `DRIVER_NOT_FOUND` | Không tìm thấy tài xế cần xem thống kê sao |
+| 409 | `ORDER_NOT_DELIVERED` | Đánh giá trước khi đơn giao thành công |
+| 409 | `ORDER_HAS_NO_DRIVER` | Đơn không có tài xế để đánh giá |
+| 409 | `RATING_ALREADY_EXISTS` | Đơn đã được đánh giá trước đó |
 | 423 | `DRIVER_TEMPORARILY_LOCKED` | Bị giới hạn nhận đơn tạm thời |
 
 Response lỗi có cấu trúc thống nhất: `timestamp`, `status`, `code`, `message`, `path`, `fields`.
