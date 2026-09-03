@@ -34,9 +34,9 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun RatingDialog(
-    deliveryRequestId: Int,
-    clientId: Int,
-    driverId: Int,
+    deliveryRequestId: Long,
+    clientId: Long,
+    driverId: Long,
     onDismiss: () -> Unit,
     onSubmit: (stars: Int, comment: String) -> Unit,
     isSubmitting: Boolean = false,

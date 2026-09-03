@@ -54,8 +54,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
 import com.mob10.deliveryapp.data.model.DeliveryStatus
+import com.mob10.deliveryapp.data.model.Order
+import com.mob10.deliveryapp.data.model.StatusHistory
 import com.mob10.deliveryapp.ui.components.StatusPill
 import com.mob10.deliveryapp.ui.customer.ClientBottomNavigation
 import com.mob10.deliveryapp.ui.rating.RatingDialog
@@ -226,7 +227,7 @@ fun OrderTrackingScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        text = item.toStatus.label(),
+                                        text = item.toStatus?.label() ?: "Không rõ",
                                         fontWeight = if (isLast) FontWeight.Bold else FontWeight.Medium,
                                         color = if (isLast) UthPrimary else UthOnSurface,
                                         fontSize = 13.sp
@@ -242,7 +243,7 @@ fun OrderTrackingScreen(
                     }
 
                     // --- Nút Đánh giá: chỉ hiện khi đã giao xong và có tài xế ---
-                    val driverId = order.deliveryPersonId
+                    val driverId = order.deliveryPerson?.id
                     if (order.status == DeliveryStatus.DA_GIAO && driverId != null) {
                         Spacer(Modifier.height(8.dp))
                         if (ratingUiState.alreadyRated) {
@@ -271,21 +272,22 @@ fun OrderTrackingScreen(
     }
 
     // --- Dialog đánh giá, hiển thị đè lên khi bấm nút ---
-    if (showRatingDialog && selectedOrder != null && selectedOrder!!.deliveryPersonId != null) {
-        val order = selectedOrder!!
+    val currentSelectedOrder = selectedOrder
+    val currentDriverId = currentSelectedOrder?.deliveryPerson?.id
+    if (showRatingDialog && currentSelectedOrder != null && currentDriverId != null) {
         RatingDialog(
-            deliveryRequestId = order.id,
-            clientId = orderViewModel.clientId,
-            driverId = order.deliveryPersonId!!,
+            deliveryRequestId = currentSelectedOrder.id,
+            clientId = orderViewModel.clientId.toLong(),
+            driverId = currentDriverId,
             onDismiss = {
                 showRatingDialog = false
                 ratingViewModel.clearError()
             },
             onSubmit = { stars, comment ->
                 ratingViewModel.submitRating(
-                    deliveryRequestId = order.id,
-                    clientId = orderViewModel.clientId,
-                    driverId = order.deliveryPersonId!!,
+                    deliveryRequestId = currentSelectedOrder.id,
+                    clientId = orderViewModel.clientId.toLong(),
+                    driverId = currentDriverId,
                     stars = stars,
                     comment = comment.ifBlank { null }
                 )
@@ -297,7 +299,7 @@ fun OrderTrackingScreen(
 } // end fun OrderTrackingScreen
 
 @Composable
-private fun OrderCard(order: DeliveryRequestEntity, onClick: () -> Unit) {
+private fun OrderCard(order: Order, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -362,7 +364,7 @@ private fun OrderCard(order: DeliveryRequestEntity, onClick: () -> Unit) {
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("${order.distanceKm} km", color = UthOnSurfaceVariant, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 }
-                Text(String.format("%,.0fđ", order.totalCost.toDouble()), color = UthOnSurface, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                Text(String.format("%,.0fđ", order.totalCost), color = UthOnSurface, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
             }
             
             Spacer(Modifier.height(12.dp))
@@ -389,4 +391,25 @@ private fun DeliveryStatus.pillColors(): Pair<Color, Color> = when (this) {
     DeliveryStatus.DA_HUY -> Pair(UthErrorContainer, UthError)
 }
 
-private fun formatTimestamp(timestamp: Long): String = SimpleDateFormat("HH:mm · dd/MM/yyyy", Locale.forLanguageTag("vi-VN")).format(Date(timestamp))
+/**
+ * Format timestamp — hỗ trợ cả ISO 8601 string (từ REST API) và epoch millis string.
+ */
+private fun formatTimestamp(timestamp: String?): String {
+    if (timestamp.isNullOrBlank()) return ""
+    // Thử parse ISO 8601 trước
+    return try {
+        val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+        val date = isoFormat.parse(timestamp.take(19)) // lấy phần không có timezone
+        val displayFormat = SimpleDateFormat("HH:mm · dd/MM/yyyy", Locale.forLanguageTag("vi-VN"))
+        displayFormat.format(date!!)
+    } catch (_: Exception) {
+        // Fallback: thử parse epoch millis
+        try {
+            val millis = timestamp.toLong()
+            val displayFormat = SimpleDateFormat("HH:mm · dd/MM/yyyy", Locale.forLanguageTag("vi-VN"))
+            displayFormat.format(Date(millis))
+        } catch (_: Exception) {
+            timestamp
+        }
+    }
+}
