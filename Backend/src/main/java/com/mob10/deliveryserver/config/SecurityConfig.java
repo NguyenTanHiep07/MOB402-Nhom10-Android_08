@@ -34,6 +34,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/locations/**", "/api/routes/**").hasRole("CLIENT")
                         .requestMatchers(HttpMethod.POST, "/api/orders").hasRole("CLIENT")
+                        .requestMatchers(HttpMethod.POST, "/api/ratings").hasRole("CLIENT")
                         .requestMatchers("/api/driver/**").hasRole("DELIVERY")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

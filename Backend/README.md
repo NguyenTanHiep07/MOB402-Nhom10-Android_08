@@ -11,6 +11,8 @@ Backend REST dùng chung cho ứng dụng Client, Delivery và Admin. Server s�
 - Lý do hợp lệ không trừ điểm. Lý do không hợp lệ trừ điểm Reliability Score.
 - Ba lần Reject bị phạt trong 24 giờ sẽ khóa nhận đơn 30 phút.
 - Admin xem người dùng, tài xế, đơn và danh sách cảnh báo Reliability Score.
+- Client đánh giá tài xế sau khi giao thành công; mỗi đơn chỉ được đánh giá một lần.
+- Khách sở hữu đơn, tài xế đã giao và Admin có thể xem đánh giá; API có thống kê sao trung bình theo tài xế.
 - Client tìm địa chỉ thật trong Việt Nam và nhận ước lượng quãng đường chạy xe/thời gian/phí từ backend.
 - Khi tạo đơn, backend tự tính lại quãng đường và phí, không tin số km do Android gửi lên.
 - Flyway tự tạo schema; seeder chỉ thêm dữ liệu mẫu khi dữ liệu chưa tồn tại.
