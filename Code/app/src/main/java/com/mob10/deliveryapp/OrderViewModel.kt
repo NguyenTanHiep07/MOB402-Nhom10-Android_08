@@ -41,7 +41,7 @@ data class OrderSubmissionState(
 
 class OrderViewModel(
     private val repository: DeliveryRepository,
-    private val clientId: Int
+    val clientId: Int
 ) : ViewModel() {
     private val _pendingOrder = MutableStateFlow(PendingOrderData())
     val pendingOrder: StateFlow<PendingOrderData> = _pendingOrder.asStateFlow()

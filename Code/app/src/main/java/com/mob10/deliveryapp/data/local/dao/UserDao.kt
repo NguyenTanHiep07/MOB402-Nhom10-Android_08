@@ -16,6 +16,9 @@ interface UserDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(user: UserEntity): Long
 
+    @Upsert
+    suspend fun upsert(user: UserEntity)
+
     @Update
     suspend fun update(user: UserEntity)
 
@@ -34,5 +37,4 @@ interface UserDao {
     @Query("SELECT COUNT(*) FROM users")
     fun getTotalUserCount(): Flow<Int>
 }
-
 

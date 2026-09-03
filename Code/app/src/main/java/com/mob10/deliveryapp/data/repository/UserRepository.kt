@@ -32,6 +32,12 @@ class UserRepository(
         sessionStorage?.clear()
     }
 
+    /** Lưu thông tin user do backend xác thực để các màn hiện tại dùng chung current user. */
+    suspend fun saveAuthenticatedUser(user: UserEntity) {
+        userDao.upsert(user)
+        sessionStorage?.saveUserId(user.id)
+    }
+
     suspend fun updateUser(user: UserEntity) {
         userDao.update(user)
     }
@@ -39,4 +45,6 @@ class UserRepository(
     fun getTotalUserCount() = userDao.getTotalUserCount()
     
     fun getCountByRole(role: com.mob10.deliveryapp.data.model.Role) = userDao.getCountByRole(role)
+
+    fun getUsersByRole(role: com.mob10.deliveryapp.data.model.Role) = userDao.getUsersByRole(role)
 }

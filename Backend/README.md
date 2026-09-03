@@ -70,6 +70,14 @@ Một số đơn có dữ liệu Reject để kiểm tra việc ẩn đơn theo 
 | `JWT_EXPIRATION_MS` | `86400000` | Thời hạn token, mặc định 24 giờ |
 | `CORS_ALLOWED_ORIGINS` | `*` | Origin được phép gọi API |
 | `SERVER_PORT` | `8080` | Port server |
+| `PHOTON_BASE_URL` | `https://photon.komoot.io` | Provider autocomplete địa chỉ OpenStreetMap |
+| `OSRM_BASE_URL` | `https://router.project-osrm.org` | Provider tính tuyến đường chạy xe |
+| `LOCATION_REQUEST_TIMEOUT_MS` | `8000` | Timeout gọi provider bản đồ |
+| `LOCATION_USER_AGENT` | `GoDrop-UTH-08/1.0-student-project` | User-Agent nhận diện project khi gọi provider |
+
+Các URL mặc định là public demo server, phù hợp bài tập và demo lưu lượng thấp nhưng không có cam kết uptime.
+Nếu triển khai thực tế, cấu hình provider riêng hoặc dịch vụ bản đồ có SLA. Android chỉ gọi GoDrop backend,
+không phụ thuộc trực tiếp vào provider bên ngoài.
 
 Chi tiết endpoint xem tại [docs/API_CONTRACT.md](docs/API_CONTRACT.md) và Swagger.
 

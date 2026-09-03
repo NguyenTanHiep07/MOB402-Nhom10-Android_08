@@ -1,6 +1,7 @@
 package com.mob10.deliveryserver.service;
 
 import com.mob10.deliveryserver.domain.*;
+import com.mob10.deliveryserver.dto.LocationDtos.CoordinateInput;
 import com.mob10.deliveryserver.dto.OrderDtos.*;
 import com.mob10.deliveryserver.exception.ApiException;
 import com.mob10.deliveryserver.repository.*;
@@ -14,28 +15,30 @@ import java.util.List;
 
 @Service
 public class OrderService {
-    private static final BigDecimal BASE_FEE = new BigDecimal("15000");
-    private static final BigDecimal PRICE_PER_KM = new BigDecimal("5000");
-    private static final BigDecimal PRICE_PER_KG = new BigDecimal("3000");
-    private static final BigDecimal FRAGILE_FEE = new BigDecimal("5000");
-    private static final BigDecimal EXPRESS_FEE = new BigDecimal("10000");
-
     private final DeliveryRequestRepository orders;
     private final UserRepository users;
     private final StatusHistoryRepository histories;
     private final OrderRejectionRepository rejections;
     private final DtoMapper mapper;
+    private final LocationService locationService;
+    private final PricingService pricingService;
 
     public OrderService(DeliveryRequestRepository orders, UserRepository users, StatusHistoryRepository histories,
-                        OrderRejectionRepository rejections, DtoMapper mapper) {
+                        OrderRejectionRepository rejections, DtoMapper mapper,
+                        LocationService locationService, PricingService pricingService) {
         this.orders = orders; this.users = users; this.histories = histories; this.rejections = rejections; this.mapper = mapper;
+        this.locationService = locationService; this.pricingService = pricingService;
     }
 
     @Transactional
     public OrderResponse create(AuthenticatedUser principal, CreateOrderRequest input) {
         requireRole(principal, Role.CLIENT);
         User client = getUser(principal.id());
-        DeliveryRequest order = new DeliveryRequest(client, money(input.distanceKm()), input.pickupAddress().trim(),
+        CoordinateInput pickup = new CoordinateInput(input.pickupLatitude(), input.pickupLongitude());
+        CoordinateInput delivery = new CoordinateInput(input.deliveryLatitude(), input.deliveryLongitude());
+        OpenStreetMapClient.RouteMetrics route = locationService.calculateRoute(pickup, delivery);
+
+        DeliveryRequest order = new DeliveryRequest(client, route.distanceKm(), input.pickupAddress().trim(),
                 input.deliveryAddress().trim(), coordinate(input.pickupLatitude()), coordinate(input.pickupLongitude()),
                 coordinate(input.deliveryLatitude()), coordinate(input.deliveryLongitude()),
                 input.senderName().trim(), input.senderPhone().trim(),
@@ -52,11 +55,8 @@ public class OrderService {
             order.addPackage(new PackageItem(item.name().trim(), clean(item.packageType()), itemWeight,
                     item.quantity(), clean(item.notes()), item.fragile(), item.express()));
         }
-        BigDecimal distanceFee = money(input.distanceKm().multiply(PRICE_PER_KM));
-        BigDecimal weightFee = money(totalWeight.multiply(PRICE_PER_KG));
-        BigDecimal optionalFee = (fragile ? FRAGILE_FEE : BigDecimal.ZERO).add(express ? EXPRESS_FEE : BigDecimal.ZERO);
-        BigDecimal total = BASE_FEE.add(distanceFee).add(weightFee).add(optionalFee);
-        order.applyFees(BASE_FEE, distanceFee, weightFee, optionalFee, total);
+        PricingService.PricingQuote quote = pricingService.quote(route.distanceKm(), totalWeight, fragile, express);
+        order.applyFees(quote.baseFee(), quote.distanceFee(), quote.weightFee(), quote.serviceFee(), quote.totalFee());
         orders.save(order);
         histories.save(new StatusHistory(order, null, DeliveryStatus.CHO_TIEP_NHAN, client, "Đơn hàng được tạo"));
         return mapper.toOrderResponse(order);

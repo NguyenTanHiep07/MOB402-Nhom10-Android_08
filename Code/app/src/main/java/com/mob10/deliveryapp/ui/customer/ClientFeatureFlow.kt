@@ -17,7 +17,8 @@ import com.mob10.deliveryapp.OrderViewModel
 import com.mob10.deliveryapp.OrderViewModelFactory
 import com.mob10.deliveryapp.data.local.entity.UserEntity
 
-private enum class ClientScreen { HOME, CREATE_REQUEST, CONFIRMATION, ORDERS, TRACKING, PROFILE }
+
+private enum class ClientScreen { HOME, CREATE_REQUEST, CONFIRMATION, ORDERS, TRACKING, PROFILE, }
 
 @Composable
 fun ClientFeatureFlow(currentUser: UserEntity, onLogout: () -> Unit) {
@@ -78,6 +79,7 @@ fun ClientFeatureFlow(currentUser: UserEntity, onLogout: () -> Unit) {
             selectedTab = 2,
             onTabSelected = { tab -> destinationName = clientScreenForTab(tab).name }
         )
+
         ClientScreen.PROFILE -> ClientProfileScreen(
             currentUser = currentUser,
             onBack = { destinationName = ClientScreen.HOME.name },

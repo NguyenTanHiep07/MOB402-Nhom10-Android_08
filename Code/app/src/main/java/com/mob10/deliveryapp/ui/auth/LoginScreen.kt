@@ -21,7 +21,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
@@ -65,11 +65,11 @@ import com.mob10.deliveryapp.ui.theme.UthSecondaryContainer
 
 @Composable
 fun LoginScreen(
-    onLogin: (phoneNumber: String, password: String) -> Unit = { _, _ -> },
+    onLogin: (username: String, password: String) -> Unit = { _, _ -> },
     onForgotPassword: () -> Unit = {},
     isLoading: Boolean = false
 ) {
-    var phoneNumber by rememberSaveable { mutableStateOf("") }
+    var username by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var showValidationError by rememberSaveable { mutableStateOf(false) }
@@ -142,14 +142,14 @@ fun LoginScreen(
                     Spacer(modifier = Modifier.height(26.dp))
 
                     LoginTextField(
-                        value = phoneNumber,
+                        value = username,
                         onValueChange = {
-                            phoneNumber = it
+                            username = it
                             showValidationError = false
                         },
                         label = stringResource(R.string.email_label),
-                        keyboardType = KeyboardType.Phone,
-                        leadingIcon = Icons.Default.Phone
+                        keyboardType = KeyboardType.Text,
+                        leadingIcon = Icons.Default.Person
                     )
                     Spacer(modifier = Modifier.height(14.dp))
                     LoginTextField(
@@ -180,7 +180,7 @@ fun LoginScreen(
                     )
                     if (showValidationError) {
                         Text(
-                            text = "Vui lòng nhập số điện thoại và mật khẩu",
+                            text = stringResource(R.string.login_validation_error),
                             color = MaterialTheme.colorScheme.error,
                             fontSize = 12.sp,
                             modifier = Modifier
@@ -201,15 +201,15 @@ fun LoginScreen(
                     }
                     Button(
                         onClick = {
-                            if (phoneNumber.isBlank() || password.isBlank()) {
+                            if (username.isBlank() || password.isBlank()) {
                                 showValidationError = true
                             } else {
-                                onLogin(phoneNumber.trim(), password)
+                                onLogin(username.trim(), password)
                             }
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(53.dp),
+                            .height(56.dp),
                         enabled = !isLoading,
                         shape = RoundedCornerShape(15.dp),
                         colors = ButtonDefaults.buttonColors(
