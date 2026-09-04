@@ -1,26 +1,41 @@
 package com.mob10.deliveryapp.data.remote.dto
 
 /**
- * Request gửi lên backend khi khách đánh giá tài xế.
- * clientId và driverId KHÔNG được nhập tay từ UI:
- * - clientId lấy từ session đăng nhập (AuthViewModel.currentUser.id)
- * - driverId lấy từ deliveryPersonId của chính đơn hàng đó
- * TODO: xác nhận field names chính xác với Thịnh khi có API Contract thật.
+ * DTOs cho Rating API.
+ * Map trực tiếp với backend RatingDtos.java.
+ *
+ * Lưu ý: clientId/driverId trong request chỉ để tương thích Android cũ —
+ * server luôn lấy client từ JWT và driver từ đơn hàng.
  */
+
+// ── Request DTO ──────────────────────────────────────────────
+
 data class RatingRequest(
-    val deliveryRequestId: Int,
-    val clientId: Int,
-    val driverId: Int,
+    val deliveryRequestId: Long,
+    val clientId: Long,
+    val driverId: Long,
     val stars: Int,          // 1..5
     val comment: String? = null
 )
 
+// ── Response DTOs ──────────────────────────────────────────────
+
 data class RatingResponse(
-    val id: Int,
-    val deliveryRequestId: Int,
-    val clientId: Int,
-    val driverId: Int,
+    val id: Long,
+    val deliveryRequestId: Long,
+    val clientId: Long,
+    val driverId: Long,
     val stars: Int,
     val comment: String?,
     val createdAt: String
+)
+
+/**
+ * Tổng quan sao trung bình của tài xế.
+ * GET /ratings/drivers/{driverId}/summary
+ */
+data class DriverRatingSummaryDto(
+    val driverId: Long,
+    val ratingCount: Long,
+    val averageStars: Double
 )
