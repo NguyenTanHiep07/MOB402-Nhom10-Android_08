@@ -33,9 +33,9 @@ import com.mob10.deliveryapp.ui.theme.UthPrimary
 
 @Composable
 fun RatingScreen(
-    deliveryRequestId: Long,
-    clientId: Long,
-    driverId: Long,
+    deliveryRequestId: Int,
+    clientId: Int,
+    driverId: Int,
     onDone: () -> Unit,
     viewModel: RatingViewModel = viewModel(factory = RatingViewModelFactory())
 ) {

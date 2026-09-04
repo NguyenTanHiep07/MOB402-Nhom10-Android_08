@@ -19,8 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
 import com.mob10.deliveryapp.data.model.DeliveryStatus
-import com.mob10.deliveryapp.data.model.Order
 import com.mob10.deliveryapp.ui.rating.RatingDialog
 import com.mob10.deliveryapp.ui.rating.RatingViewModel
 import com.mob10.deliveryapp.ui.rating.RatingViewModelFactory
@@ -30,11 +30,11 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomerOrderDetailScreen(
-    orderId: Long,
+    orderId: Int,
     viewModel: CustomerViewModel,
     onBack: () -> Unit
 ) {
-    var order by remember { mutableStateOf<Order?>(null) }
+    var order by remember { mutableStateOf<DeliveryRequestEntity?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -215,8 +215,8 @@ fun CustomerOrderDetailScreen(
                         }
 
                         // --- Nút Đánh giá: chỉ hiện khi đơn đã giao xong và có tài xế ---
-                        val driverPerson = currentOrder.deliveryPerson
-                        if (currentOrder.status == DeliveryStatus.DA_GIAO && driverPerson != null) {
+                        val driverId = currentOrder.deliveryPersonId
+                        if (currentOrder.status == DeliveryStatus.DA_GIAO && driverId != null) {
                             if (ratingUiState.alreadyRated) {
                                 Text(
                                     "Bạn đã đánh giá đơn này. Cảm ơn bạn!",
@@ -242,23 +242,20 @@ fun CustomerOrderDetailScreen(
             }
 
             // --- Dialog đánh giá ---
-            val currentOrder = order
-            val driverPerson = currentOrder?.deliveryPerson
-            val clientPerson = currentOrder?.client
-            if (showRatingDialog && currentOrder != null && driverPerson != null) {
+            if (showRatingDialog && order != null && order!!.deliveryPersonId != null) {
                 RatingDialog(
-                    deliveryRequestId = currentOrder.id,
-                    clientId = clientPerson?.id ?: 0L,
-                    driverId = driverPerson.id,
+                    deliveryRequestId = order!!.id,
+                    clientId = viewModel.clientId,
+                    driverId = order!!.deliveryPersonId!!,
                     onDismiss = {
                         showRatingDialog = false
                         ratingViewModel.clearError()
                     },
                     onSubmit = { stars, comment ->
                         ratingViewModel.submitRating(
-                            deliveryRequestId = currentOrder.id,
-                            clientId = clientPerson?.id ?: 0L,
-                            driverId = driverPerson.id,
+                            deliveryRequestId = order!!.id,
+                            clientId = viewModel.clientId,
+                            driverId = order!!.deliveryPersonId!!,
                             stars = stars,
                             comment = comment.ifBlank { null }
                         )

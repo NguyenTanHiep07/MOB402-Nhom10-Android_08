@@ -17,7 +17,6 @@ import com.mob10.deliveryapp.data.remote.mapper.OrderMapper.toDomainHistoryList
 import com.mob10.deliveryapp.data.remote.mapper.OrderMapper.toDomainList
 import com.mob10.deliveryapp.data.remote.mapper.OrderMapper.toDomainReasonList
 import com.mob10.deliveryapp.data.util.NetworkResult
-import com.mob10.deliveryapp.data.util.mapData
 
 /**
  * Nguồn dữ liệu REST duy nhất cho nghiệp vụ tài xế.
@@ -98,4 +97,18 @@ class ShipperRepository(
         RemoteDataSource.safeApiCall {
             driverApi.updateAvailability(UpdateAvailabilityRequestDto(availability))
         }
+}
+
+private fun <T, R> NetworkResult<T>.mapData(transform: (T) -> R): NetworkResult<R> = when (this) {
+    is NetworkResult.Success -> try {
+        NetworkResult.Success(transform(data))
+    } catch (_: RuntimeException) {
+        NetworkResult.Error(
+            code = "INVALID_SERVER_RESPONSE",
+            message = "Dữ liệu máy chủ trả về không đúng định dạng."
+        )
+    }
+    is NetworkResult.Empty -> NetworkResult.Empty
+    is NetworkResult.Error -> this
+    is NetworkResult.Loading -> NetworkResult.Loading
 }
