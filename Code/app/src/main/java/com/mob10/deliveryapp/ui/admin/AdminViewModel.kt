@@ -1,65 +1,67 @@
 package com.mob10.deliveryapp.ui.admin
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.mob10.deliveryapp.data.local.AppDatabase
-import com.mob10.deliveryapp.data.model.Role
-import com.mob10.deliveryapp.data.repository.DeliveryRepository
-import com.mob10.deliveryapp.data.repository.UserRepository
-import kotlinx.coroutines.flow.SharingStarted
+import com.mob10.deliveryapp.data.remote.ApiClient
+import com.mob10.deliveryapp.data.repository.AdminRepository
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+data class AdminUiState(
+    val isLoading: Boolean = true,
+    val totalRequestCount: Int = 0,
+    val pendingRequestCount: Int = 0,
+    val totalUserCount: Int = 0,
+    val clientCount: Int = 0,
+    val driverCount: Int = 0,
+    val errorMessage: String? = null
+)
 
 class AdminViewModel(
-    private val deliveryRepository: DeliveryRepository,
-    private val userRepository: UserRepository
+    private val repository: AdminRepository
 ) : ViewModel() {
 
-    /** Tổng số đơn hàng */
-    val totalRequestCount: StateFlow<Int> = deliveryRepository
-        .getTotalCount()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+    private val _uiState = MutableStateFlow(AdminUiState())
+    val uiState: StateFlow<AdminUiState> = _uiState.asStateFlow()
 
-    /** Số đơn đang chờ phân công */
-    val pendingRequestCount: StateFlow<Int> = deliveryRepository
-        .getPendingCount()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+    init {
+        refresh()
+    }
 
-    /** Tổng số người dùng */
-    val totalUserCount: StateFlow<Int> = userRepository
-        .getTotalUserCount()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+    fun refresh() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
 
-    /** Chỉ đếm khách hàng, không gộp tài xế và admin. */
-    val clientCount: StateFlow<Int> = userRepository
-        .getCountByRole(Role.CLIENT)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+            val totalRequests = repository.getTotalRequestCount()
+            val pendingRequests = repository.getPendingRequestCount()
+            val totalUsers = repository.getTotalUserCount()
+            val clients = repository.getClientCount()
+            val drivers = repository.getDriverCount()
 
-    /** Số tài xế hiện có */
-    val driverCount: StateFlow<Int> = userRepository
-        .getCountByRole(Role.DELIVERY)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+            val hasError = listOf(totalRequests, pendingRequests, totalUsers, clients, drivers).any { it == null }
+
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                totalRequestCount = totalRequests ?: _uiState.value.totalRequestCount,
+                pendingRequestCount = pendingRequests ?: _uiState.value.pendingRequestCount,
+                totalUserCount = totalUsers ?: _uiState.value.totalUserCount,
+                clientCount = clients ?: _uiState.value.clientCount,
+                driverCount = drivers ?: _uiState.value.driverCount,
+                errorMessage = if (hasError) "Không thể tải đầy đủ dữ liệu từ máy chủ." else null
+            )
+        }
+    }
 }
 
-class AdminViewModelFactory(context: Context) : ViewModelProvider.Factory {
-    private val applicationContext = context.applicationContext
-
+class AdminViewModelFactory : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(AdminViewModel::class.java)) {
-            val database = AppDatabase.getDatabase(applicationContext)
-            val deliveryRepository = DeliveryRepository(
-                database,
-                database.deliveryRequestDao(),
-                database.packageDao(),
-                database.statusHistoryDao()
-            )
-            return AdminViewModel(
-                deliveryRepository = deliveryRepository,
-                userRepository = UserRepository(database.userDao())
-            ) as T
+            val repository = AdminRepository(ApiClient.adminApiService)
+            return AdminViewModel(repository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
