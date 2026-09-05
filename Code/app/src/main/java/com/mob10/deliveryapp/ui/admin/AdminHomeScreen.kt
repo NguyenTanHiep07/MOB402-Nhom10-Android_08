@@ -63,11 +63,14 @@ fun AdminHomeScreen(
 ) {
     var selectedTab by remember { mutableStateOf(0) }
 
-    // Collect state từ ViewModel (nếu có), fallback về 0
-    val totalRequests by (viewModel?.totalRequestCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsState()
-    val pendingCount by (viewModel?.pendingRequestCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsState()
-    val clientCount by (viewModel?.clientCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsState()
-    val driverCount by (viewModel?.driverCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsState()
+    // Collect state từ ViewModel (nếu có), fallback về giá trị mặc định
+    val uiState by (viewModel?.uiState?.collectAsState()
+        ?: remember { mutableStateOf(AdminUiState()) })
+
+    val totalRequests = uiState.totalRequestCount
+    val pendingCount = uiState.pendingRequestCount
+    val clientCount = uiState.clientCount
+    val driverCount = uiState.driverCount
 
     DashboardScaffold(
         selectedTab = selectedTab,

@@ -44,7 +44,7 @@ fun DeliveryApp(authViewModel: AuthViewModel) {
         when (destinationFor(currentUser?.role)) {
             AppDestination.ADMIN_HOME -> {
                 val adminViewModel: AdminViewModel = viewModel(
-                    factory = AdminViewModelFactory(context.applicationContext)
+                    factory = AdminViewModelFactory()
                 )
                 AdminHomeScreen(
                     adminName = currentUser?.fullName.orEmpty(),
