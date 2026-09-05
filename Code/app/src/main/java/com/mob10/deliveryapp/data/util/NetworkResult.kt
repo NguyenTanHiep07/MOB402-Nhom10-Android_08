@@ -59,3 +59,31 @@ sealed class NetworkResult<out T> {
         }
     }
 }
+
+/**
+ * Chuyển đổi dữ liệu bên trong NetworkResult.Success mà không mất thông tin lỗi.
+ *
+ * Dùng trong Repository để map DTO → Domain Model:
+ * ```
+ * RemoteDataSource.safeApiCall { api.getOrders() }
+ *     .mapData { it.toDomainList() }
+ * ```
+ *
+ * Nếu [transform] ném RuntimeException (ví dụ IllegalArgumentException khi parse enum),
+ * kết quả sẽ là NetworkResult.Error thay vì crash.
+ */
+fun <T, R> NetworkResult<T>.mapData(transform: (T) -> R): NetworkResult<R> = when (this) {
+    is NetworkResult.Success -> try {
+        NetworkResult.Success(transform(data))
+    } catch (cancelled: kotlinx.coroutines.CancellationException) {
+        throw cancelled
+    } catch (_: RuntimeException) {
+        NetworkResult.Error(
+            code = "INVALID_SERVER_RESPONSE",
+            message = "Dữ liệu máy chủ trả về không đúng định dạng."
+        )
+    }
+    is NetworkResult.Empty -> NetworkResult.Empty
+    is NetworkResult.Error -> this
+    is NetworkResult.Loading -> NetworkResult.Loading
+}

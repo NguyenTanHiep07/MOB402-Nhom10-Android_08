@@ -30,6 +30,7 @@ public class DriverStatistics {
     protected DriverStatistics() {}
     public DriverStatistics(User driver) { this.driver = driver; }
     public Long getDriverId() { return driverId; }
+    public DriverAvailability getAvailability() { return driver.getDriverAvailability(); }
     public int getTotalAccepted() { return totalAccepted; }
     public int getTotalRejected() { return totalRejected; }
     public int getPenalizedRejections() { return penalizedRejections; }

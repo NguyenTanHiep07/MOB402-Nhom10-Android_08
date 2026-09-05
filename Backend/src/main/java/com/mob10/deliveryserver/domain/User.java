@@ -39,6 +39,11 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
+    @Column(name = "credential_version", nullable = false)
+    private long credentialVersion = 0;
+
+    public long getCredentialVersion() { return credentialVersion; }
+
     protected User() {}
 
     public User(String username, String passwordHash, String fullName, String phoneNumber, Role role, String licensePlate) {

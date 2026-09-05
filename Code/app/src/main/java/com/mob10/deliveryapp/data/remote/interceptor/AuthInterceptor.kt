@@ -17,7 +17,7 @@ class AuthInterceptor(private val tokenManager: TokenManager) : Interceptor {
         val originalRequest = chain.request()
 
         // Không gắn token cho endpoint login
-        if (originalRequest.url.encodedPath.contains("/auth/login")) {
+        if (originalRequest.url.encodedPath.startsWith("/api/auth/")) {
             return chain.proceed(originalRequest)
         }
 
@@ -31,6 +31,8 @@ class AuthInterceptor(private val tokenManager: TokenManager) : Interceptor {
             .header("Content-Type", "application/json")
             .build()
 
-        return chain.proceed(authenticatedRequest)
+        return chain.proceed(authenticatedRequest).also { response ->
+            if (response.code == 401) tokenManager.invalidateIfCurrent(token)
+        }
     }
 }

@@ -34,16 +34,16 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun RatingDialog(
-    deliveryRequestId: Int,
-    clientId: Int,
-    driverId: Int,
+    deliveryRequestId: Long,
+    clientId: Long,
+    driverId: Long,
     onDismiss: () -> Unit,
     onSubmit: (stars: Int, comment: String) -> Unit,
     isSubmitting: Boolean = false,
     errorMessage: String? = null
 ) {
-    var selectedStars by remember { mutableIntStateOf(0) }
-    var comment by remember { mutableStateOf("") }
+    var selectedStars by androidx.compose.runtime.saveable.rememberSaveable(deliveryRequestId) { mutableIntStateOf(0) }
+    var comment by androidx.compose.runtime.saveable.rememberSaveable(deliveryRequestId) { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = { if (!isSubmitting) onDismiss() },
@@ -54,7 +54,7 @@ fun RatingDialog(
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                     for (i in 1..5) {
-                        IconButton(onClick = { selectedStars = i }) {
+                        IconButton(onClick = { selectedStars = i }, enabled = !isSubmitting) {
                             Icon(
                                 imageVector = if (i <= selectedStars) Icons.Default.Star else Icons.Default.StarBorder,
                                 contentDescription = "Chọn $i sao",
@@ -66,7 +66,7 @@ fun RatingDialog(
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
                     value = comment,
-                    onValueChange = { comment = it },
+                    onValueChange = { comment = it.take(1000) },
                     label = { Text("Nhận xét (không bắt buộc)") },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isSubmitting

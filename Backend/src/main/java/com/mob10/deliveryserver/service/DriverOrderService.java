@@ -52,7 +52,13 @@ public class DriverOrderService {
     @Transactional
     public OrderResponse accept(AuthenticatedUser principal, Long requestId) {
         requireDriver(principal);
-        User driver = getDriver(principal.id());
+        // Lock the order first, then the driver, consistently with status/cancel/reject.
+        DeliveryRequest assigned = orders.findByIdForUpdate(requestId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", "Không tìm thấy đơn hàng"));
+        if (assigned.getStatus() != DeliveryStatus.CHO_TIEP_NHAN || assigned.getDeliveryPerson() != null) {
+            throw new ApiException(HttpStatus.CONFLICT, "ORDER_ALREADY_TAKEN", "Đơn hàng đã được nhận hoặc không còn chờ tiếp nhận");
+        }
+        User driver = users.findByIdForUpdate(principal.id()).orElseThrow();
         DriverStatistics stats = getStatistics(driver);
         if (stats.isLocked()) {
             throw new ApiException(HttpStatus.LOCKED, "DRIVER_TEMPORARILY_LOCKED",
@@ -64,12 +70,7 @@ public class DriverOrderService {
         if (rejections.existsByDeliveryRequestIdAndDriverId(requestId, driver.getId())) {
             throw new ApiException(HttpStatus.CONFLICT, "ORDER_ALREADY_REJECTED", "Bạn đã từ chối đơn hàng này");
         }
-        int affected = orders.assignAtomically(requestId, driver, DeliveryStatus.CHO_TIEP_NHAN, DeliveryStatus.DA_CHAP_NHAN);
-        if (affected == 0) {
-            if (!orders.existsById(requestId)) throw new ApiException(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", "Không tìm thấy đơn hàng");
-            throw new ApiException(HttpStatus.CONFLICT, "ORDER_ALREADY_TAKEN", "Đơn hàng đã được tài xế khác nhận hoặc không còn chờ tiếp nhận");
-        }
-        DeliveryRequest assigned = orders.findByIdForUpdate(requestId).orElseThrow();
+        assigned.assignDriver(driver, Instant.now());
         driver.setDriverAvailability(DriverAvailability.BUSY);
         stats.recordAcceptance();
         histories.save(new StatusHistory(assigned, DeliveryStatus.CHO_TIEP_NHAN, DeliveryStatus.DA_CHAP_NHAN,
@@ -81,9 +82,9 @@ public class DriverOrderService {
     @Transactional
     public RejectResult reject(AuthenticatedUser principal, Long requestId, RejectOrderRequest input) {
         requireDriver(principal);
-        User driver = getDriver(principal.id());
         DeliveryRequest order = orders.findByIdForUpdate(requestId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", "Không tìm thấy đơn hàng"));
+        User driver = users.findByIdForUpdate(principal.id()).orElseThrow();
         if (order.getStatus() != DeliveryStatus.CHO_TIEP_NHAN || order.getDeliveryPerson() != null) {
             throw new ApiException(HttpStatus.CONFLICT, "ORDER_NOT_OPEN", "Đơn hàng không còn trong danh sách chờ");
         }
@@ -122,9 +123,17 @@ public class DriverOrderService {
             throw new ApiException(HttpStatus.CONFLICT, "INVALID_STATUS_TRANSITION",
                     "Không thể chuyển trạng thái từ " + previous + " sang " + input.status());
         }
+        if (input.status() == DeliveryStatus.DA_GIAO && order.getDeliveryPhoto() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "DELIVERY_PHOTO_REQUIRED", "Hãy chụp ảnh kiện hàng để xác nhận giao thành công");
+        }
         order.changeStatus(input.status());
         histories.save(new StatusHistory(order, previous, input.status(), driver, clean(input.note())));
-        if (input.status() == DeliveryStatus.DA_GIAO) driver.setDriverAvailability(DriverAvailability.AVAILABLE);
+        if (input.status() == DeliveryStatus.DA_GIAO) {
+            User lockedDriver = users.findByIdForUpdate(driver.getId()).orElseThrow();
+            boolean hasOtherActive = orders.findAllByDeliveryPersonIdOrderByCreatedAtDesc(driver.getId()).stream()
+                    .anyMatch(other -> !other.getId().equals(requestId) && other.getStatus() != DeliveryStatus.DA_GIAO && other.getStatus() != DeliveryStatus.DA_HUY);
+            lockedDriver.setDriverAvailability(hasOtherActive ? DriverAvailability.BUSY : DriverAvailability.AVAILABLE);
+        }
         order.getPackages().size();
         return mapper.toOrderResponse(order);
     }
@@ -146,7 +155,7 @@ public class DriverOrderService {
     @Transactional
     public DriverAvailability updateAvailability(AuthenticatedUser principal, UpdateAvailabilityRequest input) {
         requireDriver(principal);
-        User driver = getDriver(principal.id());
+        User driver = users.findByIdForUpdate(principal.id()).orElseThrow();
         boolean hasActiveOrder = orders.findAllByDeliveryPersonIdOrderByCreatedAtDesc(driver.getId()).stream()
                 .anyMatch(order -> order.getStatus() != DeliveryStatus.DA_GIAO && order.getStatus() != DeliveryStatus.DA_HUY);
         if (hasActiveOrder && input.availability() != DriverAvailability.BUSY) {
@@ -161,7 +170,8 @@ public class DriverOrderService {
         return switch (from) {
             case DA_CHAP_NHAN -> to == DeliveryStatus.DA_DEN_NHA_HANG;
             case DA_DEN_NHA_HANG -> to == DeliveryStatus.DA_LAY_HANG;
-            case DA_LAY_HANG -> to == DeliveryStatus.DA_DEN_KHACH_HANG;
+            case DA_LAY_HANG -> to == DeliveryStatus.DANG_VAN_CHUYEN;
+            case DANG_VAN_CHUYEN -> to == DeliveryStatus.DA_DEN_KHACH_HANG;
             case DA_DEN_KHACH_HANG -> to == DeliveryStatus.DA_GIAO;
             default -> false;
         };

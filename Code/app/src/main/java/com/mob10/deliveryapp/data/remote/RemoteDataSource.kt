@@ -30,6 +30,8 @@ object RemoteDataSource {
         return try {
             val response = apiCall()
             handleResponse(response)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: SocketTimeoutException) {
             NetworkResult.Error.timeout()
         } catch (e: UnknownHostException) {

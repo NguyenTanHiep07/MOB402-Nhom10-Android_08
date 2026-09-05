@@ -16,11 +16,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.ListAlt
-import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PendingActions
@@ -32,7 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mob10.deliveryapp.data.model.DeliveryStatus
 import com.mob10.deliveryapp.ui.components.DashboardNavItem
 import com.mob10.deliveryapp.ui.components.DashboardScaffold
 import com.mob10.deliveryapp.ui.components.GoDropHeader
@@ -68,17 +69,17 @@ fun CustomerHomeScreen(
 ) {
     var selectedTab by remember { mutableStateOf(0) }
 
-    val activeCount by (viewModel?.activeOrderCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsState()
-    val completedCount by (viewModel?.completedOrderCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsState()
-    val recentOrder by (viewModel?.recentOrder ?: remember { kotlinx.coroutines.flow.MutableStateFlow(null) }).collectAsState()
+    val activeCount by (viewModel?.activeOrderCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsStateWithLifecycle()
+    val completedCount by (viewModel?.completedOrderCount ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0) }).collectAsStateWithLifecycle()
+    val recentOrder by (viewModel?.recentOrder ?: remember { kotlinx.coroutines.flow.MutableStateFlow(null) }).collectAsStateWithLifecycle()
 
     DashboardScaffold(
         selectedTab = selectedTab,
         onTabSelected = { selectedTab = it },
         navItems = listOf(
             DashboardNavItem("Trang chủ", Icons.Default.Home),
-            DashboardNavItem("Đơn hàng", Icons.Default.ListAlt),
-            DashboardNavItem("Theo dõi", Icons.Default.LocalShipping),
+            DashboardNavItem("Đơn hàng", Icons.AutoMirrored.Filled.ListAlt),
+            DashboardNavItem("Theo dõi", Icons.Default.TwoWheeler),
             DashboardNavItem("Hồ sơ", Icons.Default.Person)
         ),
         header = {
@@ -98,7 +99,7 @@ fun CustomerHomeScreen(
             MetricCard(
                 modifier = Modifier.weight(1f),
                 label = "Đang xử lý",
-                value = String.format("%02d", activeCount),
+                value = String.format(java.util.Locale.forLanguageTag("vi-VN"), "%02d", activeCount),
                 helper = if (activeCount > 0) "Cần theo dõi" else "Không có đơn chờ",
                 icon = Icons.Default.PendingActions
             )
@@ -118,13 +119,13 @@ fun CustomerHomeScreen(
         QuickActionCard(
             title = "Danh sách đơn của tôi",
             subtitle = "Xem và quản lý các yêu cầu giao hàng",
-            icon = Icons.Default.ListAlt,
+            icon = Icons.AutoMirrored.Filled.ListAlt,
             onClick = onOrderListClick
         )
         QuickActionCard(
             title = "Theo dõi trạng thái",
             subtitle = "Kiểm tra vị trí và tiến độ đơn hàng",
-            icon = Icons.Default.LocalShipping
+            icon = Icons.Default.TwoWheeler
         )
         QuickActionCard(
             title = "Lịch sử hoạt động",
@@ -139,21 +140,22 @@ fun CustomerHomeScreen(
                 pickupAddress = recentOrder!!.pickupAddress,
                 deliveryAddress = recentOrder!!.deliveryAddress,
                 totalCost = recentOrder!!.totalCost,
-                statusLabel = when (recentOrder!!.status.name) {
-                    "PENDING" -> "Đang chờ"
-                    "ACCEPTED" -> "Đã nhận"
-                    "PICKED_UP" -> "Đã lấy hàng"
-                    "IN_TRANSIT" -> "Đang giao"
-                    "DELIVERED" -> "Đã giao"
-                    "CANCELLED" -> "Đã huỷ"
-                    else -> recentOrder!!.status.name
+                statusLabel = when (recentOrder!!.status) {
+                    DeliveryStatus.CHO_TIEP_NHAN -> "Chờ tiếp nhận"
+                    DeliveryStatus.DA_CHAP_NHAN -> "Đã nhận"
+                    DeliveryStatus.DA_DEN_NHA_HANG -> "Đã đến điểm lấy"
+                    DeliveryStatus.DA_LAY_HANG -> "Đã lấy hàng"
+                    DeliveryStatus.DANG_VAN_CHUYEN -> "Đang vận chuyển"
+                    DeliveryStatus.DA_DEN_KHACH_HANG -> "Đã đến điểm giao"
+                    DeliveryStatus.DA_GIAO -> "Đã giao"
+                    DeliveryStatus.DA_HUY -> "Đã hủy"
                 }
             )
         } else {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = MaterialTheme.shapes.medium,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
@@ -180,7 +182,7 @@ private fun CreateDeliveryCard() {
         modifier = Modifier
             .fillMaxWidth()
             .clickable { },
-        shape = RoundedCornerShape(22.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = UthPrimary),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
@@ -245,8 +247,8 @@ private fun RecentOrderCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -270,7 +272,7 @@ private fun RecentOrderCard(
             )
             Spacer(modifier = Modifier.size(7.dp))
             OrderRouteRow(
-                icon = Icons.Default.LocalShipping,
+                icon = Icons.Default.TwoWheeler,
                 text = deliveryAddress,
                 iconColor = UthSecondary
             )
@@ -286,7 +288,7 @@ private fun RecentOrderCard(
                     fontSize = 11.sp
                 )
                 Text(
-                    text = "${String.format("%,.0f", totalCost)}đ",
+                    text = "${String.format(java.util.Locale.forLanguageTag("vi-VN"), "%,.0f", totalCost)}đ",
                     color = UthOnSurface,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold

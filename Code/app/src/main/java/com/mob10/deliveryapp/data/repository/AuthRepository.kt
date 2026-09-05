@@ -21,6 +21,7 @@ class AuthRepository(
     private val authApi: AuthApiService,
     private val tokenManager: TokenManager
 ) {
+    val sessionExpired = tokenManager.expired
 
     /**
      * Đăng nhập bằng username/password.
@@ -34,6 +35,9 @@ class AuthRepository(
         // Session/current user chỉ được lưu sau khi AuthViewModel ánh xạ user thành công.
         if (result is NetworkResult.Success) {
             val loginResponse = result.data
+            if (loginResponse.accessToken.isBlank() || !loginResponse.tokenType.equals("Bearer", ignoreCase = true)) {
+                return NetworkResult.Error(message = "Phản hồi đăng nhập không hợp lệ.")
+            }
             tokenManager.saveToken(
                 token = loginResponse.accessToken,
                 type = loginResponse.tokenType,

@@ -39,22 +39,15 @@ class DriverOrderServiceTest {
     @Test
     void onlyOneOfTwoDriversCanWinAtomicAccept() {
         User driverOne = availableDriver(11L);
-        User driverTwo = availableDriver(12L);
         when(driverOne.getDriverAvailability()).thenReturn(DriverAvailability.AVAILABLE);
-        when(driverTwo.getDriverAvailability()).thenReturn(DriverAvailability.AVAILABLE);
         DeliveryRequest assigned = mock(DeliveryRequest.class);
         when(assigned.getPackages()).thenReturn(new ArrayList<>());
 
-        when(users.findById(11L)).thenReturn(Optional.of(driverOne));
-        when(users.findById(12L)).thenReturn(Optional.of(driverTwo));
+        when(users.findByIdForUpdate(11L)).thenReturn(Optional.of(driverOne));
         when(statistics.findById(11L)).thenReturn(Optional.of(new DriverStatistics(driverOne)));
-        when(statistics.findById(12L)).thenReturn(Optional.of(new DriverStatistics(driverTwo)));
         when(rejections.existsByDeliveryRequestIdAndDriverId(99L, 11L)).thenReturn(false);
-        when(rejections.existsByDeliveryRequestIdAndDriverId(99L, 12L)).thenReturn(false);
-        when(orders.assignAtomically(eq(99L), eq(driverOne), any(), any())).thenReturn(1);
-        when(orders.assignAtomically(eq(99L), eq(driverTwo), any(), any())).thenReturn(0);
         when(orders.findByIdForUpdate(99L)).thenReturn(Optional.of(assigned));
-        when(orders.existsById(99L)).thenReturn(true);
+        when(assigned.getStatus()).thenReturn(DeliveryStatus.CHO_TIEP_NHAN, DeliveryStatus.DA_CHAP_NHAN);
 
         assertDoesNotThrow(() -> service.accept(principal(11L), 99L));
         ApiException loser = assertThrows(ApiException.class, () -> service.accept(principal(12L), 99L));
@@ -72,7 +65,7 @@ class DriverOrderServiceTest {
         OrderRejection rejection = new OrderRejection(order, driver, reason, null);
         DriverStatistics stats = new DriverStatistics(driver);
 
-        when(users.findById(11L)).thenReturn(Optional.of(driver));
+        when(users.findByIdForUpdate(11L)).thenReturn(Optional.of(driver));
         when(orders.findByIdForUpdate(99L)).thenReturn(Optional.of(order));
         when(order.getStatus()).thenReturn(DeliveryStatus.CHO_TIEP_NHAN);
         when(order.getDeliveryPerson()).thenReturn(null);
@@ -114,7 +107,7 @@ class DriverOrderServiceTest {
     private User availableDriver(Long id) {
         User driver = mock(User.class);
         when(driver.getId()).thenReturn(id);
-        when(driver.getRole()).thenReturn(Role.DELIVERY);
+        lenient().when(driver.getRole()).thenReturn(Role.DELIVERY);
         return driver;
     }
 

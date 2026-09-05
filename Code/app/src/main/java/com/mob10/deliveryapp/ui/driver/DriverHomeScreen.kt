@@ -17,15 +17,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.ListAlt
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Inventory
-import androidx.compose.material.icons.filled.ListAlt
-import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Update
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material3.Card
@@ -38,7 +37,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,7 +52,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.repeatOnLifecycle
 import com.mob10.deliveryapp.R
+import com.mob10.deliveryapp.formatServerTimestamp
 import com.mob10.deliveryapp.data.local.entity.UserEntity
 import com.mob10.deliveryapp.data.model.DeliveryStatus
 import com.mob10.deliveryapp.data.model.Order
@@ -81,17 +82,19 @@ import com.mob10.deliveryapp.ui.theme.UthWarningContainer
 @Composable
 fun DriverHomeScreen(
     currentUser: UserEntity? = null,
-    onLogout: () -> Unit = {},
-    onUpdateProfile: (String, String, String, String) -> Unit = { _, _, _, _ -> }
+    onLogout: () -> Unit = {}
 ) {
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(0) }
+    var notificationOrderId by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<Long?>(null) }
     var showLoginAnimation by remember { mutableStateOf(true) }
 
     val context = LocalContext.current
     val viewModel: DriverViewModel = viewModel(
+        key = "driver_${currentUser?.id}",
         factory = DriverViewModelFactory(context)
     )
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val notifications by viewModel.notifications.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Hiển thị Snackbar khi có thông báo (Accept / Reject / Error)
@@ -101,12 +104,24 @@ fun DriverHomeScreen(
             viewModel.clearAcceptMessage()
         }
     }
+    LaunchedEffect(notifications.firstOrNull()?.id) {
+        notifications.firstOrNull { !it.isRead }?.let { notification ->
+            snackbarHostState.showSnackbar(notification.message)
+        }
+    }
 
     LaunchedEffect(currentUser?.id) {
         if (currentUser != null) {
             viewModel.loadDriverData()
         }
     }
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+            while (true) { viewModel.refreshData(); kotlinx.coroutines.delay(15_000) }
+        }
+    }
+    androidx.activity.compose.BackHandler(selectedTab != 0) { selectedTab = 0 }
 
     LaunchedEffect(uiState.isSessionExpired) {
         if (uiState.isSessionExpired) onLogout()
@@ -130,29 +145,43 @@ fun DriverHomeScreen(
             onTabSelected = { selectedTab = it },
             navItems = listOf(
                 DashboardNavItem("Trang chủ", Icons.Default.Home),
-                DashboardNavItem("Đơn chờ", Icons.Default.ListAlt),
-                DashboardNavItem("Đang giao", Icons.Default.LocalShipping),
+                DashboardNavItem("Đơn chờ", Icons.AutoMirrored.Filled.ListAlt),
+                DashboardNavItem("Đang giao", Icons.Default.TwoWheeler),
                 DashboardNavItem("Hồ sơ", Icons.Default.Person)
             ),
             header = {
+                val headerSubtitle = when (selectedTab) {
+                    1 -> if (uiState.driverStatus == DriverWorkingStatus.BUSY) "Đang thực hiện chuyến giao" else "Danh sách đơn hàng chờ nhận"
+                    2 -> "Tiến trình đơn hàng đang giao"
+                    3 -> "Thông tin tài khoản và hiệu suất"
+                    4 -> "Lịch sử giao hàng và thu nhập"
+                    else -> if (uiState.driverStatus == DriverWorkingStatus.BUSY) "Đang trong tiến trình giao hàng" else "Sẵn sàng làm việc hôm nay"
+                }
                 GoDropHeader(
                     roleLabel = "Khu vực tài xế",
                     name = currentUser?.fullName ?: "Tài xế",
-                    subtitle = if (selectedTab == 4) "Lịch sử giao hàng & Thu nhập" else "Sẵn sàng làm việc hôm nay",
+                    subtitle = headerSubtitle,
                     statusLabel = headerStatusText,
                     statusColor = headerStatusColor,
-                    onLogout = onLogout
+                    showNotifications = true,
+                    notifications = notifications,
+                onNotificationsOpened = viewModel::markNotificationsRead,
+                    onNotificationClick = {
+                        viewModel.markNotificationRead(it.id)
+                        notificationOrderId = it.orderId
+                        selectedTab = 1
+                    },
+                    onProfileClick = { selectedTab = 3 },
+                    onLogout = onLogout,
+                    onRefresh = viewModel::refreshData
                 )
             }
         ) {
-            // Snackbar overlay cho feedback
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+            if (uiState.isRefreshing || uiState.actionInProgress) androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
+            uiState.errorMessage?.let { Text(it, color = UthError) }
 
-            // Warning Banner nếu Reliability Score < 60
-            if (uiState.reliabilityScore < 60) {
+            // Cảnh báo khi điểm tin cậy dưới 60
+            if (uiState.statistics?.isWarning == true || uiState.statistics?.isLocked == true) {
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth(),
@@ -179,7 +208,8 @@ fun DriverHomeScreen(
                                 color = UthOnSurface
                             )
                             Text(
-                                text = "Bạn đã từ chối ${uiState.rejectedCount} đơn. Hãy hoàn thành các đơn mới để nâng cao điểm tin cậy.",
+                                text = if (uiState.statistics?.isLocked == true) "Đang giới hạn nhận đơn đến ${formatServerTimestamp(uiState.statistics?.lockedUntil)}"
+                                    else "Bạn đã từ chối ${uiState.rejectedCount} đơn. Hãy kiểm tra lý do trước khi từ chối.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = UthOnSurfaceVariant,
                                 fontSize = 12.sp
@@ -190,10 +220,13 @@ fun DriverHomeScreen(
             }
 
             if (selectedTab == 0) {
+                uiState.activeOrders.firstOrNull()?.let { order ->
+                    com.mob10.deliveryapp.ui.components.CurrentTripCard(order, onOpen = { selectedTab = 2 })
+                }
                 // ── Hero thu nhập ────────────────────────────────────
                 DashboardHeroCard(
                     eyebrow = "Thu nhập hôm nay",
-                    value = "${String.format("%,.0f", uiState.todayEarnings)}đ",
+                    value = "${String.format(java.util.Locale.forLanguageTag("vi-VN"), "%,.0f", uiState.todayEarnings)}đ",
                     supportingText = "${uiState.deliveredTodayCount} chuyến hoàn thành • ${uiState.reliabilityScore}/100 tin cậy",
                     icon = Icons.Default.AccountBalanceWallet,
                     actionLabel = "Lịch sử",
@@ -213,7 +246,7 @@ fun DriverHomeScreen(
                     MetricCard(
                         modifier = Modifier.weight(1f),
                         label = "Đơn đang chờ",
-                        value = "%02d".format(uiState.pendingCount),
+                        value = String.format(java.util.Locale.forLanguageTag("vi-VN"), "%02d", uiState.pendingCount),
                         helper = if (uiState.pendingCount > 0) "Có thể nhận ngay" else "Không có đơn mới",
                         icon = Icons.Default.Inventory,
                         highlighted = uiState.pendingCount > 0
@@ -221,7 +254,7 @@ fun DriverHomeScreen(
                     MetricCard(
                         modifier = Modifier.weight(1f),
                         label = "Đã giao hôm nay",
-                        value = "%02d".format(uiState.deliveredTodayCount),
+                        value = String.format(java.util.Locale.forLanguageTag("vi-VN"), "%02d", uiState.deliveredTodayCount),
                         helper = "Hoàn thành trong ngày",
                         icon = Icons.Default.CheckCircle
                     )
@@ -235,17 +268,11 @@ fun DriverHomeScreen(
                 )
 
                 // ── Đơn đang thực hiện ───────────────────────────────
-                SectionTitle(title = "Đơn đang thực hiện")
                 val firstActiveOrder = uiState.activeOrders.firstOrNull()
-                if (firstActiveOrder != null) {
-                    ActiveDeliveryCard(
-                        order = firstActiveOrder,
-                        onClick = { selectedTab = 2 }
-                    )
-                } else {
+                if (firstActiveOrder == null) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(18.dp),
+                        shape = MaterialTheme.shapes.medium,
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -268,19 +295,19 @@ fun DriverHomeScreen(
                 // ── Thao tác nhanh ───────────────────────────────────
                 SectionTitle(title = "Thao tác nhanh")
                 QuickActionCard(
-                    title = "Đơn đang chờ (Open Pool)",
+                    title = "Đơn đang chờ",
                     subtitle = "Xem ${uiState.newOrders.size} đơn trong khu vực của bạn",
-                    icon = Icons.Default.ListAlt,
+                    icon = Icons.AutoMirrored.Filled.ListAlt,
                     onClick = { selectedTab = 1 }
                 )
                 QuickActionCard(
                     title = "Đơn của tôi (${uiState.activeOrders.size})",
                     subtitle = "Quản lý và cập nhật tiến trình đơn đang giao",
-                    icon = Icons.Default.Assignment,
+                    icon = Icons.AutoMirrored.Filled.Assignment,
                     onClick = { selectedTab = 2 }
                 )
                 QuickActionCard(
-                    title = "Lịch sử giao hàng & Thu nhập",
+                    title = "Lịch sử giao hàng và thu nhập",
                     subtitle = "Xem lại tổng thu nhập và ${uiState.completedCount} đơn đã giao",
                     icon = Icons.Default.History,
                     onClick = { selectedTab = 4 }
@@ -289,12 +316,20 @@ fun DriverHomeScreen(
                 if (uiState.isLoading) {
                     DriverLoadingState()
                 } else {
+                    notificationOrderId?.let { id ->
+                        Text("Đơn từ thông báo #GD-$id", style = MaterialTheme.typography.titleSmall)
+                        if (uiState.newOrders.none { it.id == id }) Text("Đơn này không còn chờ nhận. Có thể đã được tài xế khác tiếp nhận.", style = MaterialTheme.typography.bodySmall)
+                        androidx.compose.material3.TextButton(onClick = { notificationOrderId = null }) { Text("Xem tất cả đơn chờ") }
+                    }
                     NewOrdersTab(
-                        newOrders = uiState.newOrders,
+                        newOrders = uiState.newOrders.filter { notificationOrderId == null || it.id == notificationOrderId },
                         rejectionReasons = uiState.rejectionReasons,
                         onAcceptOrder = { orderId -> viewModel.acceptOrder(orderId) },
                         onRejectOrder = { orderId, reason, note -> viewModel.rejectOrder(orderId, reason, note) },
-                        driverStatus = uiState.driverStatus
+                        driverStatus = uiState.driverStatus,
+                        actionInProgress = uiState.actionInProgress,
+                        rejectedOrderId = uiState.rejectedOrderId,
+                        errorMessage = uiState.errorMessage
                     )
                 }
             } else if (selectedTab == 2) {
@@ -303,6 +338,8 @@ fun DriverHomeScreen(
                 } else {
                     ActiveOrderTab(
                         activeOrders = uiState.activeOrders,
+                        actionInProgress = uiState.actionInProgress,
+                        onDelivered = viewModel::refreshData,
                         onUpdateStatus = { orderId, newStatus ->
                             viewModel.updateOrderStatus(orderId, newStatus)
                         }
@@ -316,8 +353,7 @@ fun DriverHomeScreen(
                     reliabilityScore = uiState.reliabilityScore.toInt(),
                     completedCount = uiState.completedCount,
                     rejectedCount = uiState.rejectedCount,
-                    onLogout = onLogout,
-                    onUpdateProfile = onUpdateProfile
+                    onLogout = onLogout
                 )
             } else if (selectedTab == 4) {
                 DeliveryHistoryTab(
@@ -330,6 +366,13 @@ fun DriverHomeScreen(
                 )
             }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 16.dp, vertical = 92.dp)
+        )
 
         // Overlay animation chào mừng khi login thành công
         LottieOverlay(
@@ -348,17 +391,12 @@ private fun ActiveDeliveryCard(
     history: StatusHistory? = null,
     onClick: () -> Unit = {}
 ) {
-    val statusText = when (order.status) {
-        DeliveryStatus.DA_CHAP_NHAN -> "Đã nhận đơn"
-        DeliveryStatus.DA_DEN_NHA_HANG -> "Đã đến điểm lấy"
-        DeliveryStatus.DA_LAY_HANG -> "Đang giao hàng"
-        DeliveryStatus.DA_DEN_KHACH_HANG -> "Đã đến điểm giao"
-        else -> order.status.name
-    }
+    val statusText = driverStatusLabel(order.status)
     val statusColor = when (order.status) {
         DeliveryStatus.DA_CHAP_NHAN -> UthPrimary
         DeliveryStatus.DA_DEN_NHA_HANG -> UthWarning
         DeliveryStatus.DA_LAY_HANG -> UthPrimary
+        DeliveryStatus.DANG_VAN_CHUYEN -> UthPrimary
         DeliveryStatus.DA_DEN_KHACH_HANG -> UthWarning
         else -> UthOnSurfaceVariant
     }
@@ -366,6 +404,7 @@ private fun ActiveDeliveryCard(
         DeliveryStatus.DA_CHAP_NHAN -> UthPrimaryContainer
         DeliveryStatus.DA_DEN_NHA_HANG -> UthWarningContainer
         DeliveryStatus.DA_LAY_HANG -> UthPrimaryContainer
+        DeliveryStatus.DANG_VAN_CHUYEN -> UthPrimaryContainer
         DeliveryStatus.DA_DEN_KHACH_HANG -> UthWarningContainer
         else -> UthOnSurfaceVariant
     }
@@ -374,7 +413,7 @@ private fun ActiveDeliveryCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(18.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -439,7 +478,6 @@ private fun ActiveDeliveryCard(
             }
             if (history != null) {
                 Spacer(modifier = Modifier.size(14.dp))
-                val timeString = history.timestamp ?: ""
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.History,
@@ -449,7 +487,7 @@ private fun ActiveDeliveryCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Cập nhật: ${history.note ?: "Chuyển sang ${history.toStatus?.name ?: ""}"}",
+                        text = "Cập nhật: ${history.note ?: history.toStatus?.let(::driverStatusLabel).orEmpty()}",
                         color = UthOnSurfaceVariant,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
@@ -460,8 +498,24 @@ private fun ActiveDeliveryCard(
     }
 }
 
+private fun driverStatusLabel(status: DeliveryStatus): String = when (status) {
+    DeliveryStatus.CHO_TIEP_NHAN -> "Chờ tiếp nhận"
+    DeliveryStatus.DA_CHAP_NHAN -> "Đã nhận đơn"
+    DeliveryStatus.DA_DEN_NHA_HANG -> "Đã đến điểm lấy"
+    DeliveryStatus.DA_LAY_HANG -> "Đã lấy hàng"
+    DeliveryStatus.DANG_VAN_CHUYEN -> "Đang vận chuyển"
+    DeliveryStatus.DA_DEN_KHACH_HANG -> "Đã đến điểm giao"
+    DeliveryStatus.DA_GIAO -> "Đã giao"
+    DeliveryStatus.DA_HUY -> "Đã hủy"
+}
+
 @Composable
 private fun DriverLoadingState() {
+    com.mob10.deliveryapp.ui.components.OrderLoadingSkeleton()
+}
+
+@Composable
+private fun LegacyDriverLoadingState() {
     Box(
         modifier = Modifier
             .fillMaxWidth()

@@ -1,101 +1,137 @@
 package com.mob10.deliveryapp.ui.customer
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.launch
-import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
 import com.mob10.deliveryapp.data.model.DeliveryStatus
-import com.mob10.deliveryapp.data.repository.DeliveryRepository
+import com.mob10.deliveryapp.data.model.Order
+import com.mob10.deliveryapp.data.remote.RetrofitClient
+import com.mob10.deliveryapp.data.repository.ClientOrderRepository
+import com.mob10.deliveryapp.data.util.NetworkResult
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
+/**
+ * CustomerViewModel — quản lý danh sách đơn và hủy đơn của Client qua REST API.
+ *
+ * Thay đổi từ phiên bản cũ:
+ * - Dùng ClientOrderRepository (REST) thay cho DeliveryRepository (Room)
+ * - Data dùng domain model `Order` thay vì `DeliveryRequestEntity`
+ * - Load data bằng API call thay vì Room Flow reactive
+ * - Xử lý NetworkResult (Success/Error/Empty) ở mọi thao tác
+ */
 class CustomerViewModel(
-    private val deliveryRepository: DeliveryRepository,
-    val clientId: Int
+    private val repository: ClientOrderRepository
 ) : ViewModel() {
 
-    /** Tất cả đơn của khách */
-    private val myRequests: StateFlow<List<DeliveryRequestEntity>> = deliveryRepository
-        .getRequestsForClient(clientId)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    private val _myRequests = MutableStateFlow<List<Order>>(emptyList())
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     /** Số đơn đang xử lý (không phải DELIVERED hay CANCELLED) */
-    val activeOrderCount: StateFlow<Int> = myRequests
+    val activeOrderCount: StateFlow<Int> = _myRequests
         .map { list ->
             list.count { it.status !in listOf(DeliveryStatus.DA_GIAO, DeliveryStatus.DA_HUY) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     /** Số đơn đã hoàn tất */
-    val completedOrderCount: StateFlow<Int> = myRequests
+    val completedOrderCount: StateFlow<Int> = _myRequests
         .map { list -> list.count { it.status == DeliveryStatus.DA_GIAO } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     /** Đơn gần đây nhất */
-    val recentOrder: StateFlow<DeliveryRequestEntity?> = myRequests
+    val recentOrder: StateFlow<Order?> = _myRequests
         .map { it.firstOrNull() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Danh sách đơn đang hoạt động (để hiển thị danh sách) */
-    val activeOrders: StateFlow<List<DeliveryRequestEntity>> = myRequests
+    val activeOrders: StateFlow<List<Order>> = _myRequests
         .map { list ->
             list.filter { it.status !in listOf(DeliveryStatus.DA_GIAO, DeliveryStatus.DA_HUY) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Toàn bộ đơn (cho màn danh sách đầy đủ, không lọc trạng thái) */
-    val allMyOrders: StateFlow<List<DeliveryRequestEntity>> = myRequests
+    val allMyOrders: StateFlow<List<Order>> = _myRequests
 
-    /** Lấy 1 đơn theo id, có ownership check — dùng cho màn Detail/Current Status */
-    suspend fun getOrderDetail(requestId: Int): DeliveryRequestEntity? {
-        return deliveryRepository.getRequestByIdForClient(requestId, clientId)
+    init {
+        loadOrders()
     }
 
-    private val _cancelResult = kotlinx.coroutines.flow.MutableSharedFlow<CancelUiResult>()
-    val cancelResult: kotlinx.coroutines.flow.SharedFlow<CancelUiResult> = _cancelResult
-
-    /** Client huỷ đơn — ownership check + conditional update đã xử lý ở Repository */
-    fun cancelOrder(requestId: Int) {
+    /** Load danh sách đơn từ REST API. */
+    fun loadOrders() {
         viewModelScope.launch {
-            val result = deliveryRepository.cancelRequestByClient(requestId, clientId)
-            _cancelResult.emit(
-                when (result) {
-                    is com.mob10.deliveryapp.data.repository.CancelResult.Success ->
-                        CancelUiResult.Success
-                    is com.mob10.deliveryapp.data.repository.CancelResult.NotOwnerOrNotFound ->
-                        CancelUiResult.Error("Không tìm thấy đơn hàng hoặc bạn không có quyền huỷ đơn này.")
-                    is com.mob10.deliveryapp.data.repository.CancelResult.StatusChanged ->
-                        CancelUiResult.Error("Đơn hàng vừa được cập nhật, không thể huỷ vào lúc này.")
+            _isLoading.value = true
+            when (val result = repository.getMyOrders()) {
+                is NetworkResult.Success -> _myRequests.value = result.data
+                is NetworkResult.Empty -> _myRequests.value = emptyList()
+                is NetworkResult.Error -> {
+                    // Giữ dữ liệu cũ nếu có, hiển thị lỗi qua cancelResult
                 }
-            )
+                is NetworkResult.Loading -> Unit
+            }
+            _isLoading.value = false
         }
     }
+
+    /** Lấy 1 đơn theo id từ REST API — dùng cho màn Detail/Current Status */
+    suspend fun getOrderDetail(orderId: Long): Order? {
+        return when (val result = repository.getOrderById(orderId)) {
+            is NetworkResult.Success -> result.data
+            else -> null
+        }
+    }
+
+    private val _cancelResult = MutableSharedFlow<CancelUiResult>()
+    val cancelResult: SharedFlow<CancelUiResult> = _cancelResult
+
+    /** Client huỷ đơn qua REST API — backend kiểm tra ownership + status */
+    fun cancelOrder(orderId: Long) {
+        viewModelScope.launch {
+            when (val result = repository.cancelOrder(orderId)) {
+                is NetworkResult.Success -> {
+                    _cancelResult.emit(CancelUiResult.Success)
+                    // Làm mới danh sách đơn sau khi hủy thành công
+                    loadOrders()
+                }
+                is NetworkResult.Error -> {
+                    _cancelResult.emit(CancelUiResult.Error(result.message))
+                }
+                is NetworkResult.Empty -> {
+                    _cancelResult.emit(CancelUiResult.Error("Máy chủ không phản hồi."))
+                }
+                is NetworkResult.Loading -> Unit
+            }
+        }
+    }
+
     sealed class CancelUiResult {
         data object Success : CancelUiResult()
         data class Error(val message: String) : CancelUiResult()
     }
 
     class CustomerViewModelFactory(
-        context: android.content.Context,
-        private val clientId: Int
-    ) : androidx.lifecycle.ViewModelProvider.Factory {
+        context: Context
+    ) : ViewModelProvider.Factory {
         private val applicationContext = context.applicationContext
 
         @Suppress("UNCHECKED_CAST")
-        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(CustomerViewModel::class.java)) {
-                val database = com.mob10.deliveryapp.data.local.AppDatabase.getDatabase(applicationContext)
-                val deliveryRepository = com.mob10.deliveryapp.data.repository.DeliveryRepository(
-                    database,
-                    database.deliveryRequestDao(),
-                    database.packageDao(),
-                    database.statusHistoryDao()
-                )
+                RetrofitClient.init(applicationContext)
+                val repository = ClientOrderRepository(RetrofitClient.orderApi)
                 return CustomerViewModel(
-                    deliveryRepository = deliveryRepository,
-                    clientId = clientId
+                    repository = repository
                 ) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

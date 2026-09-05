@@ -17,8 +17,8 @@ import com.mob10.deliveryapp.data.local.entity.*
         StatusHistoryEntity::class,
         FeeRuleEntity::class
     ],
-    version = 5,
-    exportSchema = false
+    version = 6,
+    exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -32,6 +32,13 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        // Version 5 used a local demo login. Keep the structured data, discard its plaintext credentials.
+        val MIGRATION_5_6 = object : androidx.room.migration.Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("UPDATE users SET password = ''")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -39,7 +46,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "delivery_database"
                 )
-                .fallbackToDestructiveMigration()
+                .addMigrations(MIGRATION_5_6)
                 .addCallback(object : Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {
                         super.onOpen(db)
@@ -54,4 +61,3 @@ abstract class AppDatabase : RoomDatabase() {
         }
     }
 }
-

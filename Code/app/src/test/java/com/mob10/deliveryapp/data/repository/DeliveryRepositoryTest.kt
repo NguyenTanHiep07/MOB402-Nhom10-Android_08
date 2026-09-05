@@ -336,6 +336,7 @@ class DeliveryRepositoryTest {
             repository.acceptRequest(deliveredId, testDriverId)
             repository.updateRequestStatus(deliveredId, DeliveryStatus.DA_DEN_NHA_HANG, testDriverId)
             repository.updateRequestStatus(deliveredId, DeliveryStatus.DA_LAY_HANG, testDriverId)
+            repository.updateRequestStatus(deliveredId, DeliveryStatus.DANG_VAN_CHUYEN, testDriverId)
             repository.updateRequestStatus(deliveredId, DeliveryStatus.DA_DEN_KHACH_HANG, testDriverId)
             repository.updateRequestStatus(deliveredId, DeliveryStatus.DA_GIAO, testDriverId)
 
@@ -361,6 +362,7 @@ class DeliveryRepositoryTest {
 
             // 3. DA_LAY_HANG
             assertTrue(repository.updateRequestStatus(requestId, DeliveryStatus.DA_LAY_HANG, updatedBy = testDriverId))
+            assertTrue(repository.updateRequestStatus(requestId, DeliveryStatus.DANG_VAN_CHUYEN, updatedBy = testDriverId))
 
             // 4. DA_DEN_KHACH_HANG
             assertTrue(repository.updateRequestStatus(requestId, DeliveryStatus.DA_DEN_KHACH_HANG, updatedBy = testDriverId))
@@ -375,7 +377,7 @@ class DeliveryRepositoryTest {
 
             // Verify full history: 6 entries (create + accept + 4 updates)
             val history = repository.getRequestHistory(requestId)
-            assertEquals(6, history.size)
+            assertEquals(7, history.size)
 
             // Verify mỗi entry history đều có updatedBy và timestamp
             history.forEach { entry ->
@@ -391,6 +393,7 @@ class DeliveryRepositoryTest {
                     DeliveryStatus.DA_CHAP_NHAN,
                     DeliveryStatus.DA_DEN_NHA_HANG,
                     DeliveryStatus.DA_LAY_HANG,
+                    DeliveryStatus.DANG_VAN_CHUYEN,
                     DeliveryStatus.DA_DEN_KHACH_HANG,
                     DeliveryStatus.DA_GIAO
                 ),

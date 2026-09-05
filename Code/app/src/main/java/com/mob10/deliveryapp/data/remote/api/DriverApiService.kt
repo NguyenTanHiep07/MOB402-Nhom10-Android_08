@@ -5,14 +5,13 @@ import retrofit2.Response
 import retrofit2.http.*
 
 /**
- * Driver/Shipper API Service — 8 endpoints theo API Contract.
+ * API tài xế — 8 endpoint theo hợp đồng API.
  *
  * Tất cả đều cần Authorization header (AuthInterceptor tự gắn).
  * Server xác định driver từ token, không cần truyền driverId.
  */
 interface DriverApiService {
-
-    /** Đơn chờ chưa bị Reject bởi tài xế hiện tại (Open Pool). */
+    /** Đơn chờ mà tài xế hiện tại chưa từ chối. */
     @GET("driver/orders/open")
     suspend fun getOpenOrders(): Response<List<OrderResponseDto>>
 
@@ -24,7 +23,7 @@ interface DriverApiService {
     @POST("driver/orders/{id}/accept")
     suspend fun acceptOrder(@Path("id") orderId: Long): Response<OrderResponseDto>
 
-    /** Từ chối đơn (không xóa khỏi Open Pool chung). */
+    /** Từ chối đơn nhưng vẫn giữ đơn trong danh sách chờ chung. */
     @POST("driver/orders/{id}/reject")
     suspend fun rejectOrder(
         @Path("id") orderId: Long,
@@ -42,7 +41,7 @@ interface DriverApiService {
     @GET("driver/rejection-reasons")
     suspend fun getRejectionReasons(): Response<List<RejectionReasonResponseDto>>
 
-    /** Reliability Score và trạng thái khóa của tài xế hiện tại. */
+    /** Điểm tin cậy và trạng thái giới hạn của tài xế hiện tại. */
     @GET("driver/statistics/me")
     suspend fun getMyStatistics(): Response<DriverStatisticsResponseDto>
 
@@ -51,4 +50,15 @@ interface DriverApiService {
     suspend fun updateAvailability(
         @Body request: UpdateAvailabilityRequestDto
     ): Response<String>  // Backend trả về enum string
+}
+
+data class DeliveryPhoto(val image: String?)
+
+interface DeliveryPhotoApi {
+    @GET("orders/{id}/driver-avatar")
+    suspend fun driverAvatar(@Path("id") id: Long): Response<DeliveryPhoto>
+    @POST("driver/orders/{id}/complete-with-photo")
+    suspend fun completeWithPhoto(@Path("id") id: Long, @Body photo: DeliveryPhoto): Response<OrderResponseDto>
+    @GET("orders/{id}/delivery-photo")
+    suspend fun deliveryPhoto(@Path("id") id: Long): Response<DeliveryPhoto>
 }

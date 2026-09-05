@@ -1,6 +1,8 @@
 // LEGACY / UNUSED
 package com.mob10.deliveryapp.ui.customer
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -9,7 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -19,8 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
 import com.mob10.deliveryapp.data.model.DeliveryStatus
+import com.mob10.deliveryapp.data.model.Order
 import com.mob10.deliveryapp.ui.rating.RatingDialog
 import com.mob10.deliveryapp.ui.rating.RatingViewModel
 import com.mob10.deliveryapp.ui.rating.RatingViewModelFactory
@@ -30,11 +32,11 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomerOrderDetailScreen(
-    orderId: Int,
+    orderId: Long,
     viewModel: CustomerViewModel,
     onBack: () -> Unit
 ) {
-    var order by remember { mutableStateOf<DeliveryRequestEntity?>(null) }
+    var order by remember { mutableStateOf<Order?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -70,7 +72,7 @@ fun CustomerOrderDetailScreen(
 
     // --- Rating: ViewModel riêng cho luồng đánh giá ---
     val ratingViewModel: RatingViewModel = viewModel(factory = RatingViewModelFactory())
-    val ratingUiState by ratingViewModel.uiState.collectAsState()
+    val ratingUiState by ratingViewModel.uiState.collectAsStateWithLifecycle()
     var showRatingDialog by remember { mutableStateOf(false) }
 
     // Khi đơn đã tải xong và đã DA_GIAO, kiểm tra xem đã đánh giá chưa
@@ -130,11 +132,11 @@ fun CustomerOrderDetailScreen(
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
                             .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(22.dp),
+                            shape = MaterialTheme.shapes.large,
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
                             elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
                         ) {
@@ -160,7 +162,7 @@ fun CustomerOrderDetailScreen(
 
                         DetailCard(title = "Hành trình") {
                             DetailRow(Icons.Default.LocationOn, "Điểm lấy hàng", currentOrder.pickupAddress)
-                            DetailRow(Icons.Default.LocalShipping, "Điểm giao hàng", currentOrder.deliveryAddress)
+                            DetailRow(Icons.Default.TwoWheeler, "Điểm giao hàng", currentOrder.deliveryAddress)
                         }
 
                         DetailCard(title = "Người nhận") {
@@ -179,7 +181,7 @@ fun CustomerOrderDetailScreen(
 
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(20.dp),
+                            shape = MaterialTheme.shapes.medium,
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                         ) {
@@ -215,8 +217,8 @@ fun CustomerOrderDetailScreen(
                         }
 
                         // --- Nút Đánh giá: chỉ hiện khi đơn đã giao xong và có tài xế ---
-                        val driverId = currentOrder.deliveryPersonId
-                        if (currentOrder.status == DeliveryStatus.DA_GIAO && driverId != null) {
+                        val driverPerson = currentOrder.deliveryPerson
+                        if (currentOrder.status == DeliveryStatus.DA_GIAO && driverPerson != null) {
                             if (ratingUiState.alreadyRated) {
                                 Text(
                                     "Bạn đã đánh giá đơn này. Cảm ơn bạn!",
@@ -242,20 +244,23 @@ fun CustomerOrderDetailScreen(
             }
 
             // --- Dialog đánh giá ---
-            if (showRatingDialog && order != null && order!!.deliveryPersonId != null) {
+            val currentOrder = order
+            val driverPerson = currentOrder?.deliveryPerson
+            val clientPerson = currentOrder?.client
+            if (showRatingDialog && currentOrder != null && driverPerson != null) {
                 RatingDialog(
-                    deliveryRequestId = order!!.id,
-                    clientId = viewModel.clientId,
-                    driverId = order!!.deliveryPersonId!!,
+                    deliveryRequestId = currentOrder.id,
+                    clientId = clientPerson?.id ?: 0L,
+                    driverId = driverPerson.id,
                     onDismiss = {
                         showRatingDialog = false
                         ratingViewModel.clearError()
                     },
                     onSubmit = { stars, comment ->
                         ratingViewModel.submitRating(
-                            deliveryRequestId = order!!.id,
-                            clientId = viewModel.clientId,
-                            driverId = order!!.deliveryPersonId!!,
+                            deliveryRequestId = currentOrder.id,
+                            clientId = clientPerson?.id ?: 0L,
+                            driverId = driverPerson.id,
                             stars = stars,
                             comment = comment.ifBlank { null }
                         )
@@ -272,7 +277,7 @@ fun CustomerOrderDetailScreen(
 private fun DetailCard(title: String, content: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -300,6 +305,7 @@ private fun DeliveryStatus.detailLabel(): String = when (this) {
     DeliveryStatus.DA_CHAP_NHAN -> "Tài xế đã nhận đơn"
     DeliveryStatus.DA_DEN_NHA_HANG -> "Tài xế đã đến điểm lấy"
     DeliveryStatus.DA_LAY_HANG -> "Đã lấy hàng"
+    DeliveryStatus.DANG_VAN_CHUYEN -> "Đang vận chuyển"
     DeliveryStatus.DA_DEN_KHACH_HANG -> "Đã đến điểm giao"
     DeliveryStatus.DA_GIAO -> "Giao hàng thành công"
     DeliveryStatus.DA_HUY -> "Đơn hàng đã hủy"

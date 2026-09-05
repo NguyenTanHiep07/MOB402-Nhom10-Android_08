@@ -70,7 +70,8 @@ data class DriverStatistics(
     val reliabilityScore: Double,
     val lockedUntil: String?,
     val isLocked: Boolean,
-    val isWarning: Boolean
+    val isWarning: Boolean,
+    val availability: String? = null
 )
 
 data class RejectionReason(
