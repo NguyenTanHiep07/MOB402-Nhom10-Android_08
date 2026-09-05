@@ -95,13 +95,14 @@ public class OrderService {
         if (!order.getClient().getId().equals(principal.id())) {
             throw new ApiException(HttpStatus.FORBIDDEN, "NOT_ORDER_OWNER", "Bạn không phải chủ của đơn hàng này");
         }
-        if (order.getStatus() != DeliveryStatus.CHO_TIEP_NHAN && order.getStatus() != DeliveryStatus.DA_CHAP_NHAN) {
+        if (order.getStatus() != DeliveryStatus.CHO_TIEP_NHAN && order.getStatus() != DeliveryStatus.DA_CHAP_NHAN
+                && order.getStatus() != DeliveryStatus.DA_DEN_NHA_HANG) {
             throw new ApiException(HttpStatus.CONFLICT, "ORDER_CANNOT_BE_CANCELLED", "Đơn hàng không còn ở trạng thái có thể hủy");
         }
         DeliveryStatus previous = order.getStatus();
         order.changeStatus(DeliveryStatus.DA_HUY);
         if (order.getDeliveryPerson() != null) {
-            order.getDeliveryPerson().setDriverAvailability(DriverAvailability.AVAILABLE);
+            users.findByIdForUpdate(order.getDeliveryPerson().getId()).orElseThrow().setDriverAvailability(DriverAvailability.AVAILABLE);
         }
         histories.save(new StatusHistory(order, previous, DeliveryStatus.DA_HUY, getUser(principal.id()), "Khách hàng hủy đơn"));
         return mapper.toOrderResponse(order);

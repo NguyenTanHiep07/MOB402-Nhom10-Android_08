@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">GoDrop</string>
-    <string name="welcome_title">Delivery</string>
+    <string name="welcome_title">Giao hàng</string>
     <string name="project_code">Android_08</string>
     <string name="login_logo_description">Biểu tượng giao hàng</string>
     <string name="login_title">GoDrop</string>
@@ -14,8 +14,8 @@
     <string name="login_initializing">Đang khởi tạo…</string>
     <string name="login_validation_error">Vui lòng nhập tên đăng nhập và mật khẩu</string>
     <string name="login_copyright">© 2026 GoDrop · Giao hàng nhanh, quản lý dễ dàng</string>
-    <string name="demo_accounts">Tài khoản Demo</string>
+    <string name="demo_accounts">Tài khoản dùng thử</string>
     <string name="demo_client">Khách hàng</string>
     <string name="demo_delivery">Giao hàng</string>
-    <string name="demo_admin">Admin</string>
+    <string name="demo_admin">Quản trị viên</string>
 </resources>

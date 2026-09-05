@@ -10,7 +10,10 @@ import com.mob10.deliveryapp.data.remote.dto.RouteEstimateResponseDto
  */
 object LocationMapper {
 
-    fun AddressSuggestionResponseDto.toDomain(): AddressSuggestion = AddressSuggestion(
+    fun AddressSuggestionResponseDto.toDomain(): AddressSuggestion {
+        require(formattedAddress.isNotBlank() && latitude.isFinite() && longitude.isFinite()
+            && latitude in -90.0..90.0 && longitude in -180.0..180.0)
+        return AddressSuggestion(
         placeId = placeId,
         formattedAddress = formattedAddress,
         primaryText = primaryText,
@@ -21,9 +24,14 @@ object LocationMapper {
         country = country,
         latitude = latitude,
         longitude = longitude
-    )
+        )
+    }
 
-    fun RouteEstimateResponseDto.toDomain(): RouteEstimate = RouteEstimate(
+    fun RouteEstimateResponseDto.toDomain(): RouteEstimate {
+        require(distanceKm.isFinite() && distanceKm > 0 && estimatedDurationMinutes >= 0)
+        require(listOf(baseFee, distanceFee, weightFee, serviceFee, totalFee).all { it.isFinite() && it >= 0 })
+        require(kotlin.math.abs(totalFee - (baseFee + distanceFee + weightFee + serviceFee)) < 0.1)
+        return RouteEstimate(
         distanceKm = distanceKm,
         estimatedDurationMinutes = estimatedDurationMinutes,
         baseFee = baseFee,
@@ -31,7 +39,8 @@ object LocationMapper {
         weightFee = weightFee,
         serviceFee = serviceFee,
         totalFee = totalFee
-    )
+        )
+    }
 
     fun List<AddressSuggestionResponseDto>.toDomainSuggestionList(): List<AddressSuggestion> =
         map { it.toDomain() }

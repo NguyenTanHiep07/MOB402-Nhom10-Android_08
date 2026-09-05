@@ -2,7 +2,7 @@
 
 Base URL local: `http://localhost:8080/api`
 
-Trừ endpoint đăng nhập, mọi request phải gửi:
+Trừ endpoint đăng nhập và `/auth/recovery/*`, mọi request phải gửi:
 
 ```http
 Authorization: Bearer <accessToken>
@@ -16,7 +16,7 @@ Content-Type: application/json
 ```json
 {
   "username": "shipper2",
-  "password": "123456"
+  "password": "<DEMO_PASSWORD từ cấu hình local>"
 }
 ```
 
@@ -30,7 +30,7 @@ Response chứa `accessToken`, `expiresInMs` và thông tin user. Role luôn đ�
 | GET | `/orders` | CLIENT/DELIVERY/ADMIN | Danh sách theo phạm vi quyền hiện tại |
 | GET | `/orders/{id}` | Có quyền xem đơn | Chi tiết đơn |
 | GET | `/orders/{id}/history` | Có quyền xem đơn | Lịch sử trạng thái |
-| POST | `/orders/{id}/cancel` | CLIENT chủ đơn | Hủy khi `CHO_TIEP_NHAN` hoặc `DA_CHAP_NHAN` |
+| POST | `/orders/{id}/cancel` | CLIENT chủ đơn | Hủy khi `CHO_TIEP_NHAN`, `DA_CHAP_NHAN` hoặc `DA_DEN_NHA_HANG`; chặn từ lúc lấy hàng |
 
 Body tạo đơn:
 
@@ -188,6 +188,7 @@ CHO_TIEP_NHAN
   -> DA_CHAP_NHAN
   -> DA_DEN_NHA_HANG
   -> DA_LAY_HANG
+  -> DANG_VAN_CHUYEN
   -> DA_DEN_KHACH_HANG
   -> DA_GIAO
 ```

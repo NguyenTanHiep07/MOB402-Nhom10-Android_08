@@ -20,12 +20,16 @@ data class RatingUiState(
 )
 
 class RatingViewModel(private val repository: RatingRepository) : ViewModel() {
+    private var checkJob: kotlinx.coroutines.Job? = null
+    private var currentOrderId: Long? = null
     private val _uiState = MutableStateFlow(RatingUiState())
     val uiState: StateFlow<RatingUiState> = _uiState.asStateFlow()
 
     fun checkExistingRating(deliveryRequestId: Long) {
-        _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-        viewModelScope.launch {
+        checkJob?.cancel()
+        currentOrderId = deliveryRequestId
+        _uiState.value = RatingUiState(isLoading = true)
+        checkJob = viewModelScope.launch {
             when (val result = repository.getExistingRating(deliveryRequestId)) {
                 is NetworkResult.Success -> _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -61,14 +65,17 @@ class RatingViewModel(private val repository: RatingRepository) : ViewModel() {
         stars: Int,
         comment: String?
     ) {
+        if (_uiState.value.isSubmitting || currentOrderId != deliveryRequestId) return
         if (stars !in 1..5) {
             _uiState.value = _uiState.value.copy(errorMessage = "Vui lòng chọn từ 1 đến 5 sao.")
             return
         }
         _uiState.value = _uiState.value.copy(isSubmitting = true, errorMessage = null)
         viewModelScope.launch {
-            when (val result = repository.submitRating(deliveryRequestId, clientId, driverId, stars, comment)) {
-                is NetworkResult.Success -> _uiState.value = _uiState.value.copy(
+            val result = repository.submitRating(deliveryRequestId, clientId, driverId, stars, comment)
+            if (currentOrderId != deliveryRequestId) return@launch
+            when (result) {
+                is NetworkResult.Success -> if (currentOrderId == deliveryRequestId) _uiState.value = _uiState.value.copy(
                     isSubmitting = false,
                     submitSuccess = true,
                     alreadyRated = true

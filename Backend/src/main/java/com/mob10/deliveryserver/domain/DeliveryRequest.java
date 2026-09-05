@@ -64,6 +64,10 @@ public class DeliveryRequest {
     private String recipientPhone;
     @Column(length = 1000)
     private String note;
+    @Column(name = "delivery_photo", columnDefinition = "text")
+    private String deliveryPhoto;
+    public String getDeliveryPhoto() { return deliveryPhoto; }
+    public void setDeliveryPhoto(String value) { deliveryPhoto = value; }
     @Column(name = "scheduled_pickup_time")
     private Instant scheduledPickupTime;
     @Column(name = "actual_delivery_time")

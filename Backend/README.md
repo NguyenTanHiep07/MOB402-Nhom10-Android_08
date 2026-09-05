@@ -29,29 +29,29 @@ Auto Assignment và FCM là P1 nên chưa triển khai.
 Tại thư mục `Backend`:
 
 ```bash
-cp .env.example .env
+./setup-local.sh
 docker compose up -d
-../Code/gradlew clean bootRun
+../Code/gradlew bootRun
 ```
 
 Swagger: `http://localhost:8080/swagger-ui.html`
 
 OpenAPI JSON để import vào Postman: `http://localhost:8080/v3/api-docs`
 
-Android Emulator dùng base URL: `http://10.0.2.2:8080/`. Điện thoại thật phải dùng địa chỉ IP LAN của máy chạy server và hai thiết bị phải cùng mạng.
+Android Emulator dùng base URL: `http://10.0.2.2:8080/api/`. Điện thoại thật phải dùng địa chỉ IP LAN của máy chạy server và hai thiết bị phải cùng mạng. Swagger chỉ là công cụ thử API; không cần mở tab web để Android hoạt động.
 
 ## Tài khoản mẫu
 
+Mật khẩu của tài khoản seed **mới** lấy từ `DEMO_PASSWORD` trong `.env`; tài khoản đã có giữ mật khẩu cũ. Script không ghi đè `.env` và không reset tài khoản/database hiện có.
+
 | Username | Password | Role |
 |---|---|---|
-| `client1` | `123456` | CLIENT |
-| `client2` | `123456` | CLIENT |
-| `client3` - `client5` | `123456` | CLIENT |
-| `shipper1` - `shipper4` | `123456` | DELIVERY, `BUSY`, đang có đơn mẫu |
-| `shipper5` | `123456` | DELIVERY, Reliability 60 và đang bị khóa nhận đơn mẫu |
-| `shipper6` | `123456` | DELIVERY, `OFFLINE` |
-| `shipper7` | `123456` | DELIVERY, `AVAILABLE`, dùng để thử Accept |
-| `admin` | `123456` | ADMIN |
+| `client1` - `client5` | Theo `.env` khi seed mới | CLIENT |
+| `shipper1` - `shipper4` | Theo `.env` khi seed mới | DELIVERY, `BUSY`, đang có đơn mẫu |
+| `shipper5` | Theo `.env` khi seed mới | DELIVERY, Reliability 60 và đang bị khóa nhận đơn mẫu |
+| `shipper6` | Theo `.env` khi seed mới | DELIVERY, `OFFLINE` |
+| `shipper7` | Theo `.env` khi seed mới | DELIVERY, `AVAILABLE`, dùng để thử Accept |
+| `admin` | Theo `.env` khi seed mới | ADMIN |
 
 Seeder tạo 15 đơn mẫu có tọa độ quanh TP.HCM, gồm Open Pool, đơn đang giao ở nhiều trạng thái,
 đơn đã giao và đơn đã hủy. Thời gian được phân bổ trong nhiều ngày để thử lịch sử/thu nhập.
@@ -65,8 +65,10 @@ Một số đơn có dữ liệu Reject để kiểm tra việc ẩn đơn theo 
 |---|---|---|
 | `DB_URL` | `jdbc:postgresql://localhost:5432/delivery_db` | JDBC URL |
 | `DB_USERNAME` | `delivery_user` | User PostgreSQL |
-| `DB_PASSWORD` | `delivery_password` | Password PostgreSQL |
-| `JWT_SECRET` | Chuỗi demo trong `application.yml` | Khóa ký JWT, tối thiểu 32 ký tự |
+| `DB_PASSWORD` | Lấy từ `POSTGRES_PASSWORD` nếu không đặt riêng | Password PostgreSQL |
+| `JWT_SECRET` | Bắt buộc, script tự sinh | Khóa ký JWT, tối thiểu 32 ký tự |
+| `DEMO_ENABLED` | `false` | Bật seed dữ liệu giả cho demo; setup-local đặt true |
+| `DEMO_PASSWORD` | Bắt buộc khi bật seed | Mật khẩu cho tài khoản mẫu chưa tồn tại |
 | `JWT_EXPIRATION_MS` | `86400000` | Thời hạn token, mặc định 24 giờ |
 | `CORS_ALLOWED_ORIGINS` | `*` | Origin được phép gọi API |
 | `SERVER_PORT` | `8080` | Port server |
@@ -81,6 +83,10 @@ không phụ thuộc trực tiếp vào provider bên ngoài.
 
 Chi tiết endpoint xem tại [docs/API_CONTRACT.md](docs/API_CONTRACT.md) và Swagger.
 
+## Dữ liệu demo đa trạng thái
+
+Khi `app.demo.enabled=true`, `DatabaseSeeder` giữ dữ liệu đang có và thêm đúng một lần lô 20 đơn được đánh dấu `Lô dữ liệu demo đa trạng thái 04/09`. Dữ liệu có Pending, Accepted, At Pickup, Picked Up, In Transit, At Customer, Delivered và Cancelled; các đơn hoàn tất được phân bố trên 7 shipper. `shipper7` có bốn lần từ chối bị phạt trong lô, còn 60 điểm và bị khóa tạm thời để Admin có cảnh báo thật. Seeder kiểm tra marker nên restart backend không tạo thêm lô thứ hai.
+
 ## Kiểm thử
 
 Chạy toàn bộ test backend từ thư mục `Backend`:
@@ -92,3 +98,5 @@ Chạy toàn bộ test backend từ thư mục `Backend`:
 Bộ test P0 bao phủ phân quyền/JSON 401-403, hai tài xế cùng nhận một đơn (chỉ một người thắng),
 Reject không làm mất đơn khỏi Open Pool chung, Reliability Score, quyền sở hữu khi cập nhật trạng thái
 và quyền xem lịch sử đơn.
+
+Đợt rà soát 04/09 chạy thêm ca đồng thời trên PostgreSQL thật trong môi trường tạm, không dùng database demo. Script và source kiểm tra bổ sung được đặt ngoài repository theo yêu cầu, không có `run-db-tests.sh` đi kèm. Lệnh trên chỉ chạy bộ test gốc của nhóm. Bản 04/09 bổ sung `DANG_VAN_CHUYEN` sau `DA_LAY_HANG`, Flyway V4 nâng constraint giữ dữ liệu; cần restart backend và dùng Android cùng bản. Luồng hủy cho phép cả `DA_DEN_NHA_HANG`, nhưng chặn từ `DA_LAY_HANG` trở đi.

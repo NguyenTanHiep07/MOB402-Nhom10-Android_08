@@ -14,7 +14,7 @@ public final class OrderDtos {
     public record PackageInput(
             @NotBlank @Size(max = 150) String name,
             @Size(max = 50) String packageType,
-            @NotNull @DecimalMin("0.01") BigDecimal weightKg,
+            @NotNull @DecimalMin("0.01") @Digits(integer = 8, fraction = 2) BigDecimal weightKg,
             @Min(1) int quantity,
             @Size(max = 500) String notes,
             boolean fragile,
@@ -28,9 +28,9 @@ public final class OrderDtos {
             @NotNull @DecimalMin("-90.0") @DecimalMax("90.0") BigDecimal deliveryLatitude,
             @NotNull @DecimalMin("-180.0") @DecimalMax("180.0") BigDecimal deliveryLongitude,
             @NotBlank @Size(max = 120) String senderName,
-            @NotBlank @Pattern(regexp = "^[0-9+]{9,15}$") String senderPhone,
+            @NotBlank @Pattern(regexp = "^(0[0-9]{9}|\\+84[0-9]{9})$") String senderPhone,
             @NotBlank @Size(max = 120) String recipientName,
-            @NotBlank @Pattern(regexp = "^[0-9+]{9,15}$") String recipientPhone,
+            @NotBlank @Pattern(regexp = "^(0[0-9]{9}|\\+84[0-9]{9})$") String recipientPhone,
             @NotNull @DecimalMin("0.01") BigDecimal distanceKm,
             @NotEmpty List<@Valid PackageInput> packages,
             Instant scheduledPickupTime,
@@ -58,6 +58,6 @@ public final class OrderDtos {
                                           int penaltyPoints, boolean requiresNote) {}
     public record DriverStatisticsResponse(Long driverId, int totalAccepted, int totalRejected,
                                            int penalizedRejections, BigDecimal reliabilityScore,
-                                           Instant lockedUntil, boolean locked, boolean warning) {}
+                                           Instant lockedUntil, boolean locked, boolean warning, DriverAvailability availability) {}
     public record RejectResult(String message, boolean penaltyApplied, DriverStatisticsResponse statistics) {}
 }

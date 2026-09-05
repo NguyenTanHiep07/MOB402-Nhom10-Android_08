@@ -17,11 +17,11 @@ interface AdminApiService {
     @GET("admin/users")
     suspend fun getUsers(): Response<List<AdminUserResponseDto>>
 
-    /** Danh sách tài xế kèm thống kê Reliability Score. */
+    /** Danh sách tài xế kèm thống kê điểm tin cậy. */
     @GET("admin/drivers")
     suspend fun getDrivers(): Response<List<AdminDriverResponseDto>>
 
-    /** Tài xế có Reliability Score dưới 70 — cần cảnh báo. */
+    /** Tài xế có điểm tin cậy dưới 70 — cần cảnh báo. */
     @GET("admin/drivers/alerts")
     suspend fun getDriverAlerts(): Response<List<AdminDriverResponseDto>>
 

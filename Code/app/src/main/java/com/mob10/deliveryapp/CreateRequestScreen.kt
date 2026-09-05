@@ -41,7 +41,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,7 +72,7 @@ fun CreateRequestScreen(
     onBack: () -> Unit,
     onContinueToConfirmation: () -> Unit
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -98,7 +98,7 @@ fun CreateRequestScreen(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Spacer(modifier = Modifier.height(4.dp))
             
@@ -106,17 +106,24 @@ fun CreateRequestScreen(
                 CustomTextField(state.senderName, viewModel::onSenderNameChanged, "Họ tên người gửi", icon = Icons.Default.Person)
                 CustomTextField(state.senderPhone, viewModel::onSenderPhoneChanged, "Số điện thoại", KeyboardType.Phone, icon = Icons.Default.Phone)
                 CustomTextField(state.pickupAddress, viewModel::onPickupAddressChanged, "Địa chỉ lấy hàng", icon = Icons.Default.LocationOn)
+                AddressResults(state.searchingPickup, state.pickupError, state.pickupSuggestions,
+                    state.pickup != null, { viewModel.retryAddress(true) }) { viewModel.selectAddress(true, it) }
             }
             
             CardSection("Thông tin người nhận") {
                 CustomTextField(state.receiverName, viewModel::onReceiverNameChanged, "Họ tên người nhận", icon = Icons.Default.Person)
                 CustomTextField(state.receiverPhone, viewModel::onReceiverPhoneChanged, "Số điện thoại", KeyboardType.Phone, icon = Icons.Default.Phone)
                 CustomTextField(state.deliveryAddress, viewModel::onDeliveryAddressChanged, "Địa chỉ giao hàng", icon = Icons.Default.LocationOn)
+                AddressResults(state.searchingDelivery, state.deliveryError, state.deliverySuggestions,
+                    state.delivery != null, { viewModel.retryAddress(false) }) { viewModel.selectAddress(false, it) }
             }
             
             CardSection("Chi tiết hàng hóa") {
+                CustomTextField(state.packageName, viewModel::onPackageNameChanged, "Tên / mô tả hàng hóa")
                 CustomTextField(state.weight, viewModel::onWeightChanged, "Trọng lượng (kg)", KeyboardType.Decimal, icon = Icons.Default.Scale)
-                CustomTextField(state.distanceKm, viewModel::onDistanceChanged, "Khoảng cách dự kiến (km)", KeyboardType.Decimal, icon = Icons.Default.Route)
+                if (state.isEstimating) androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
+                if (state.distanceKm.isNotBlank()) Text("Quãng đường: ${state.distanceKm} km • Khoảng ${state.durationMinutes} phút")
+                state.routeError?.let { Text(it, color = UthError); TextButton(onClick = viewModel::estimate) { Text("Thử lấy báo giá lại") } }
                 
                 Text(
                     text = "Loại dịch vụ",
@@ -151,7 +158,7 @@ fun CreateRequestScreen(
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Tổng cộng", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Text(String.format("%,.0fđ", state.feeQuote.totalFee.toDouble()), color = UthPrimary, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+                        Text(String.format(java.util.Locale.forLanguageTag("vi-VN"), "%,.0fđ", state.feeQuote.totalFee.toDouble()), color = UthPrimary, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
                     }
                 }
             }
@@ -184,6 +191,7 @@ fun CreateRequestScreen(
             
             Button(
                 onClick = { if (viewModel.validateForm()) onContinueToConfirmation() },
+                enabled = !state.isEstimating,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
@@ -204,8 +212,20 @@ fun CreateRequestScreen(
 private fun FeeRow(label: String, amount: Long) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(label, color = TextSecondary, fontSize = 14.sp)
-        Text(String.format("%,.0fđ", amount.toDouble()), color = TextPrimary, fontWeight = FontWeight.Medium)
+        Text(String.format(java.util.Locale.forLanguageTag("vi-VN"), "%,.0fđ", amount.toDouble()), color = TextPrimary, fontWeight = FontWeight.Medium)
     }
+}
+
+@Composable
+private fun AddressResults(loading: Boolean, error: String?, suggestions: List<com.mob10.deliveryapp.data.model.AddressSuggestion>,
+                           selected: Boolean, retry: () -> Unit, choose: (com.mob10.deliveryapp.data.model.AddressSuggestion) -> Unit) {
+    if (loading) androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
+    if (selected) Text("Đã chọn địa chỉ", color = UthPrimary, fontSize = 12.sp)
+    else if (!loading && error == null && suggestions.isEmpty()) Text("Nhập ít nhất 3 ký tự rồi chọn địa chỉ gợi ý.", fontSize = 12.sp)
+    error?.let { Text(it, color = UthError, fontSize = 12.sp); TextButton(onClick = retry) { Text("Thử lại") } }
+    suggestions.forEach { address -> TextButton(onClick = { choose(address) }, modifier = Modifier.fillMaxWidth()) {
+        Text(address.formattedAddress, modifier = Modifier.fillMaxWidth())
+    } }
 }
 
 @Composable
@@ -213,7 +233,7 @@ fun CardSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = CardBackground),
-        shape = RoundedCornerShape(20.dp),
+        shape = MaterialTheme.shapes.medium,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {

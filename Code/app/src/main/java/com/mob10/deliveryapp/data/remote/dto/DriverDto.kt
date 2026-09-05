@@ -1,7 +1,7 @@
 package com.mob10.deliveryapp.data.remote.dto
 
 /**
- * DTOs cho Driver/Shipper API.
+ * DTO cho API tài xế.
  * Map trực tiếp với backend OrderDtos.java — phần driver-specific:
  * RejectOrderRequest, UpdateStatusRequest, UpdateAvailabilityRequest,
  * RejectionReasonResponse, DriverStatisticsResponse, RejectResult.
@@ -41,7 +41,8 @@ data class DriverStatisticsResponseDto(
     val reliabilityScore: Double,
     val lockedUntil: String?,
     val locked: Boolean,
-    val warning: Boolean
+    val warning: Boolean,
+    val availability: String? = null
 )
 
 data class RejectResultDto(

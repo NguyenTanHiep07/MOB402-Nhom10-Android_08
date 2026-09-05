@@ -17,12 +17,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material.icons.filled.NearMe
-import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -40,7 +40,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -76,6 +76,8 @@ import com.mob10.deliveryapp.ui.theme.UthWarning
 import com.mob10.deliveryapp.ui.theme.UthWarningContainer
 import com.mob10.deliveryapp.ui.theme.UthSurface
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -92,19 +94,26 @@ fun OrderTrackingScreen(
     selectedTab: Int? = null,
     onTabSelected: ((Int) -> Unit)? = null
 ) {
-    val orders by orderViewModel.orderHistory.collectAsState()
+    val orders by orderViewModel.orderHistory.collectAsStateWithLifecycle()
     val visibleOrders = if (activeOnly) {
         orders.filter { it.status !in listOf(DeliveryStatus.DA_GIAO, DeliveryStatus.DA_HUY) }
     } else {
         orders
     }
-    val selectedOrder by orderViewModel.selectedOrder.collectAsState()
-    val history by orderViewModel.selectedHistory.collectAsState()
+    val selectedOrder by orderViewModel.selectedOrder.collectAsStateWithLifecycle()
+    val history by orderViewModel.selectedHistory.collectAsStateWithLifecycle()
+    val loading by orderViewModel.isLoading.collectAsStateWithLifecycle()
+    val error by orderViewModel.errorMessage.collectAsStateWithLifecycle()
+    val detailError by orderViewModel.detailError.collectAsStateWithLifecycle()
+    val detailLoading by orderViewModel.detailLoading.collectAsStateWithLifecycle()
+    val cancelling by orderViewModel.isCancelling.collectAsStateWithLifecycle()
+    var confirmCancel by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { orderViewModel.loadOrders() }
 
     // --- Rating: ViewModel + state riêng cho luồng đánh giá ---
     val ratingViewModel: RatingViewModel = viewModel(factory = RatingViewModelFactory())
-    val ratingUiState by ratingViewModel.uiState.collectAsState()
-    var showRatingDialog by remember { mutableStateOf(false) }
+    val ratingUiState by ratingViewModel.uiState.collectAsStateWithLifecycle()
+    var showRatingDialog by androidx.compose.runtime.saveable.rememberSaveable(selectedOrder?.id) { mutableStateOf(false) }
 
     LaunchedEffect(selectedOrder?.id, selectedOrder?.status) {
         val order = selectedOrder
@@ -124,6 +133,7 @@ fun OrderTrackingScreen(
             TopAppBar(
                 title = { Text(title, color = UthOnSurface, fontWeight = FontWeight.ExtraBold) },
                 navigationIcon = { IconButton(onClick = onBackToHome) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Trở về trang chủ", tint = UthOnSurface) } },
+                actions = { TextButton(onClick = orderViewModel::loadOrders, enabled = !loading) { Text("Tải lại") } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         },
@@ -146,7 +156,14 @@ fun OrderTrackingScreen(
         }
     ) { paddingValues ->
         Box(Modifier.fillMaxSize().padding(paddingValues)) {
-            if (visibleOrders.isEmpty()) {
+            if (loading && orders.isEmpty()) {
+                Box(Modifier.padding(20.dp)) { com.mob10.deliveryapp.ui.components.OrderLoadingSkeleton() }
+            } else if (error != null) {
+                Column(Modifier.align(Alignment.Center).padding(24.dp)) {
+                    Text(error.orEmpty(), color = UthError)
+                    TextButton(onClick = orderViewModel::loadOrders) { Text("Thử lại") }
+                }
+            } else if (visibleOrders.isEmpty()) {
                 Column(
                     modifier = Modifier.align(Alignment.Center).padding(horizontal = 32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -159,7 +176,7 @@ fun OrderTrackingScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ReceiptLong,
+                            imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
                             contentDescription = null,
                             tint = UthOnSurfaceVariant,
                             modifier = Modifier.size(36.dp)
@@ -183,7 +200,7 @@ fun OrderTrackingScreen(
             } else {
                 LazyColumn(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 88.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(visibleOrders, key = { it.id }) { order -> 
                         OrderCard(order) { orderViewModel.selectOrder(order) } 
@@ -196,10 +213,18 @@ fun OrderTrackingScreen(
     selectedOrder?.let { order ->
         AlertDialog(
             onDismissRequest = orderViewModel::clearSelectedOrder,
-            title = { Text("Lịch sử #GD-${order.id}", fontWeight = FontWeight.Bold) },
+            title = { Text("Hành trình #GD-${order.id}", fontWeight = FontWeight.Bold) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Trạng thái hiện tại: ${order.status.label()}", fontWeight = FontWeight.Bold, color = UthPrimary)
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    com.mob10.deliveryapp.ui.components.OrderJourney(order, history)
+                    if (order.status == DeliveryStatus.DA_GIAO) com.mob10.deliveryapp.ui.driver.DeliveryPhotoPanel(order.id)
+                    Text("Lấy hàng: ${order.pickupAddress}\nGiao hàng: ${order.deliveryAddress}")
+                    order.packages.forEach { Text("${it.name} • ${it.weightKg} kg × ${it.quantity}") }
+                    if (detailLoading) androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
+                    detailError?.let { Text(it, color = UthError); TextButton(onClick = { orderViewModel.selectOrder(order) }) { Text("Thử lại") } }
+                    if (order.status in listOf(DeliveryStatus.CHO_TIEP_NHAN, DeliveryStatus.DA_CHAP_NHAN, DeliveryStatus.DA_DEN_NHA_HANG)) {
+                        TextButton(onClick = { confirmCancel = true }, enabled = !cancelling) { Text(if (cancelling) "Đang hủy..." else "Hủy đơn hàng", color = UthError) }
+                    }
                     
                     if (history.isEmpty()) {
                         Text("Chưa có mốc lịch sử chi tiết.", color = UthOnSurfaceVariant)
@@ -273,6 +298,13 @@ fun OrderTrackingScreen(
 
     // --- Dialog đánh giá, hiển thị đè lên khi bấm nút ---
     val currentSelectedOrder = selectedOrder
+    if (confirmCancel && currentSelectedOrder != null) AlertDialog(
+        onDismissRequest = { confirmCancel = false },
+        title = { Text("Hủy đơn #${currentSelectedOrder.id}?") },
+        text = { Text("Đơn sẽ dừng giao và không thể khôi phục. Bạn vẫn có thể tạo đơn mới.") },
+        confirmButton = { TextButton(onClick = { confirmCancel = false; orderViewModel.cancelSelectedOrder() }) { Text("Xác nhận hủy") } },
+        dismissButton = { TextButton(onClick = { confirmCancel = false }) { Text("Giữ đơn") } }
+    )
     val currentDriverId = currentSelectedOrder?.deliveryPerson?.id
     if (showRatingDialog && currentSelectedOrder != null && currentDriverId != null) {
         RatingDialog(
@@ -303,7 +335,7 @@ private fun OrderCard(order: Order, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(20.dp),
+        shape = MaterialTheme.shapes.medium,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -340,7 +372,7 @@ private fun OrderCard(order: Order, onClick: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             
             Row(verticalAlignment = Alignment.Top) {
-                Icon(Icons.Default.LocalShipping, null, tint = UthSecondary, modifier = Modifier.size(18.dp).padding(top = 2.dp))
+                Icon(Icons.Default.TwoWheeler, null, tint = UthSecondary, modifier = Modifier.size(18.dp).padding(top = 2.dp))
                 Column(Modifier.padding(start = 10.dp)) {
                     Text(
                         text = order.deliveryAddress, 
@@ -364,7 +396,7 @@ private fun OrderCard(order: Order, onClick: () -> Unit) {
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("${order.distanceKm} km", color = UthOnSurfaceVariant, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 }
-                Text(String.format("%,.0fđ", order.totalCost), color = UthOnSurface, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                Text(String.format(java.util.Locale.forLanguageTag("vi-VN"), "%,.0fđ", order.totalCost), color = UthOnSurface, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
             }
             
             Spacer(Modifier.height(12.dp))
@@ -373,11 +405,12 @@ private fun OrderCard(order: Order, onClick: () -> Unit) {
     }
 }
 
-private fun DeliveryStatus.label(): String = when (this) {
+fun DeliveryStatus.label(): String = when (this) {
     DeliveryStatus.CHO_TIEP_NHAN -> "Chờ tiếp nhận"
     DeliveryStatus.DA_CHAP_NHAN -> "Đã chấp nhận"
     DeliveryStatus.DA_DEN_NHA_HANG -> "Đã đến điểm lấy"
-    DeliveryStatus.DA_LAY_HANG -> "Đang giao hàng"
+    DeliveryStatus.DA_LAY_HANG -> "Đã lấy hàng"
+    DeliveryStatus.DANG_VAN_CHUYEN -> "Đang vận chuyển"
     DeliveryStatus.DA_DEN_KHACH_HANG -> "Đã tới điểm giao"
     DeliveryStatus.DA_GIAO -> "Đã giao"
     DeliveryStatus.DA_HUY -> "Đã hủy"
@@ -385,7 +418,7 @@ private fun DeliveryStatus.label(): String = when (this) {
 
 private fun DeliveryStatus.pillColors(): Pair<Color, Color> = when (this) {
     DeliveryStatus.CHO_TIEP_NHAN -> Pair(Color(0xFFE2E8F0), UthOnSurfaceVariant)
-    DeliveryStatus.DA_CHAP_NHAN, DeliveryStatus.DA_LAY_HANG -> Pair(UthPrimaryContainer, UthPrimary)
+    DeliveryStatus.DA_CHAP_NHAN, DeliveryStatus.DA_LAY_HANG, DeliveryStatus.DANG_VAN_CHUYEN -> Pair(UthPrimaryContainer, UthPrimary)
     DeliveryStatus.DA_DEN_NHA_HANG, DeliveryStatus.DA_DEN_KHACH_HANG -> Pair(UthWarningContainer, UthWarning)
     DeliveryStatus.DA_GIAO -> Pair(UthSuccessContainer, UthSuccess)
     DeliveryStatus.DA_HUY -> Pair(UthErrorContainer, UthError)

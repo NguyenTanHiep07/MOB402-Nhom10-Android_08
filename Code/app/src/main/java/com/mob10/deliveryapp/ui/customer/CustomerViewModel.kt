@@ -101,7 +101,7 @@ class CustomerViewModel(
             when (val result = repository.cancelOrder(orderId)) {
                 is NetworkResult.Success -> {
                     _cancelResult.emit(CancelUiResult.Success)
-                    // Refresh danh sách đơn sau khi hủy thành công
+                    // Làm mới danh sách đơn sau khi hủy thành công
                     loadOrders()
                 }
                 is NetworkResult.Error -> {

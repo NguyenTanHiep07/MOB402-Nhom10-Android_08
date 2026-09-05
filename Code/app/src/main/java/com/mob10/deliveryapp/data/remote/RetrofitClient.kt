@@ -44,11 +44,8 @@ object RetrofitClient {
         tokenManager = TokenManager(context.applicationContext)
 
         val loggingInterceptor = HttpLoggingInterceptor().apply {
-            level = if (BuildConfig.DEBUG) {
-                HttpLoggingInterceptor.Level.BASIC
-            } else {
-                HttpLoggingInterceptor.Level.NONE
-            }
+            // Even BASIC logs full URLs, including address searches. Keep customer input out of logcat.
+            level = HttpLoggingInterceptor.Level.NONE
         }
 
         val authInterceptor = AuthInterceptor(tokenManager)
@@ -59,6 +56,7 @@ object RetrofitClient {
             .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)
             .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)
             .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)
+            .callTimeout(45, TimeUnit.SECONDS)
             .build()
 
         retrofit = Retrofit.Builder()
@@ -80,9 +78,12 @@ object RetrofitClient {
         retrofit.create(AuthApiService::class.java)
     }
 
-    /** Driver/Shipper API — Open Pool, Accept, Reject, Status, Statistics, v.v. */
+    /** API tài xế — đơn chờ, nhận đơn, từ chối, trạng thái và thống kê. */
     val driverApi: DriverApiService by lazy {
         retrofit.create(DriverApiService::class.java)
+    }
+    val deliveryPhotoApi: com.mob10.deliveryapp.data.remote.api.DeliveryPhotoApi by lazy {
+        retrofit.create(com.mob10.deliveryapp.data.remote.api.DeliveryPhotoApi::class.java)
     }
 
     /** Order API chung — danh sách đơn, chi tiết, lịch sử, hủy đơn. */
@@ -98,6 +99,10 @@ object RetrofitClient {
     /** Admin API — quản lý tài khoản, tài xế, đơn hàng. */
     val adminApi: AdminApiService by lazy {
         retrofit.create(AdminApiService::class.java)
+    }
+
+    val recoveryApi: com.mob10.deliveryapp.data.remote.api.RecoveryApiService by lazy {
+        retrofit.create(com.mob10.deliveryapp.data.remote.api.RecoveryApiService::class.java)
     }
 
     /** Rating API — đánh giá tài xế. */

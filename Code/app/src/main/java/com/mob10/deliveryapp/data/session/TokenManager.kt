@@ -2,6 +2,7 @@ package com.mob10.deliveryapp.data.session
 
 import android.content.Context
 import android.content.SharedPreferences
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Lưu trữ access token bằng SharedPreferences (đọc đồng bộ).
@@ -11,6 +12,8 @@ import android.content.SharedPreferences
  * trong khi DataStore (async) vẫn được dùng cho session userId.
  */
 class TokenManager(context: Context) {
+    private val _expired = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val expired = _expired.asStateFlow()
     private val prefs: SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -37,7 +40,10 @@ class TokenManager(context: Context) {
         }
 
     /** Lưu toàn bộ thông tin token sau login thành công. */
+    @Synchronized
     fun saveToken(token: String, type: String = "Bearer", expiresInMs: Long = 0L) {
+        require(token.isNotBlank() && type.equals("Bearer", ignoreCase = true))
+        _expired.value = false
         prefs.edit()
             .putString(KEY_ACCESS_TOKEN, token)
             .putString(KEY_TOKEN_TYPE, type)
@@ -46,12 +52,21 @@ class TokenManager(context: Context) {
     }
 
     /** Xóa toàn bộ token (logout). */
+    @Synchronized
     fun clearToken() {
         prefs.edit()
             .remove(KEY_ACCESS_TOKEN)
             .remove(KEY_TOKEN_TYPE)
             .remove(KEY_EXPIRES_AT)
             .apply()
+    }
+
+    @Synchronized
+    fun invalidateIfCurrent(rejectedToken: String) {
+        if (accessToken == rejectedToken) {
+            clearToken()
+            _expired.value = true
+        }
     }
 
     companion object {

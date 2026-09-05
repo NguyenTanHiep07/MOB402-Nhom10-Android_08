@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface DeliveryRequestRepository extends JpaRepository<DeliveryRequest, Long> {
+    boolean existsByNote(String note);
+
     @EntityGraph(attributePaths = {"client", "deliveryPerson", "packages"})
     List<DeliveryRequest> findAllByClientIdOrderByCreatedAtDesc(Long clientId);
 
@@ -26,7 +28,7 @@ public interface DeliveryRequestRepository extends JpaRepository<DeliveryRequest
     List<DeliveryRequest> findAllDetailed();
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select d from DeliveryRequest d join fetch d.client left join fetch d.deliveryPerson where d.id = :id")
+    @Query("select d from DeliveryRequest d where d.id = :id")
     Optional<DeliveryRequest> findByIdForUpdate(@Param("id") Long id);
 
     // Không clear persistence context tại đây: User/DriverStatistics đang được quản lý

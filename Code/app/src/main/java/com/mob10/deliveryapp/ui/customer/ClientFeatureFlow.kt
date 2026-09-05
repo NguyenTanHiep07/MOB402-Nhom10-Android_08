@@ -8,6 +8,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.repeatOnLifecycle
 import com.mob10.deliveryapp.ClientHomeScreen
 import com.mob10.deliveryapp.CreateRequestScreen
 import com.mob10.deliveryapp.CreateRequestViewModel
@@ -31,10 +32,19 @@ fun ClientFeatureFlow(currentUser: UserEntity, onLogout: () -> Unit) {
         factory = orderFactory
     )
     val requestViewModel: CreateRequestViewModel = viewModel(
-        key = "client_request_${currentUser.id}"
+        key = "client_request_${currentUser.id}", factory = com.mob10.deliveryapp.CreateRequestViewModelFactory()
     )
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    androidx.compose.runtime.LaunchedEffect(orderViewModel, lifecycle) {
+        lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+            while (true) { orderViewModel.loadOrders(); kotlinx.coroutines.delay(10_000) }
+        }
+    }
     var destinationName by rememberSaveable(currentUser.id) { mutableStateOf(ClientScreen.HOME.name) }
     val destination = ClientScreen.valueOf(destinationName)
+    androidx.activity.compose.BackHandler(destination != ClientScreen.HOME) {
+        destinationName = if (destination == ClientScreen.CONFIRMATION) ClientScreen.CREATE_REQUEST.name else ClientScreen.HOME.name
+    }
 
     when (destination) {
         ClientScreen.HOME -> ClientHomeScreen(

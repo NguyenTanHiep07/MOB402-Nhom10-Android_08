@@ -75,6 +75,8 @@ sealed class NetworkResult<out T> {
 fun <T, R> NetworkResult<T>.mapData(transform: (T) -> R): NetworkResult<R> = when (this) {
     is NetworkResult.Success -> try {
         NetworkResult.Success(transform(data))
+    } catch (cancelled: kotlinx.coroutines.CancellationException) {
+        throw cancelled
     } catch (_: RuntimeException) {
         NetworkResult.Error(
             code = "INVALID_SERVER_RESPONSE",

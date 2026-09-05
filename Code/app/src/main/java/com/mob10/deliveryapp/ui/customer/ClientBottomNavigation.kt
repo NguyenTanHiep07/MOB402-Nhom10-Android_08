@@ -1,11 +1,15 @@
 package com.mob10.deliveryapp.ui.customer
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.ListAlt
-import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -29,19 +33,26 @@ import com.mob10.deliveryapp.ui.theme.UthSurface
 fun ClientBottomNavigation(selectedTab: Int, onTabSelected: (Int) -> Unit) {
     val items = listOf(
         "Trang chủ" to Icons.Default.Home,
-        "Đơn hàng" to Icons.Default.ListAlt,
-        "Theo dõi" to Icons.Default.LocalShipping,
+        "Đơn hàng" to Icons.AutoMirrored.Filled.ListAlt,
+        "Theo dõi" to Icons.Default.TwoWheeler,
         "Hồ sơ" to Icons.Default.Person
     )
-    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
         Surface(
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(20.dp),
             color = UthSurface,
             shadowElevation = 8.dp
         ) {
             NavigationBar(
+                modifier = Modifier.height(68.dp),
                 containerColor = Color.Transparent,
-                tonalElevation = 0.dp
+                tonalElevation = 0.dp,
+                windowInsets = WindowInsets(0, 0, 0, 0)
             ) {
                 items.forEachIndexed { index, (label, icon) ->
                     NavigationBarItem(

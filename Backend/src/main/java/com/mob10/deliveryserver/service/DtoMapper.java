@@ -40,7 +40,7 @@ public class DtoMapper {
     public DriverStatisticsResponse toStatistics(DriverStatistics stats) {
         return new DriverStatisticsResponse(stats.getDriverId(), stats.getTotalAccepted(), stats.getTotalRejected(),
                 stats.getPenalizedRejections(), stats.getReliabilityScore(), stats.getLockedUntil(), stats.isLocked(),
-                stats.getReliabilityScore().doubleValue() < alertScoreThreshold);
+                stats.getReliabilityScore().doubleValue() < alertScoreThreshold, stats.getAvailability());
     }
 
     private PersonResponse toPerson(User user) {

@@ -28,7 +28,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Inventory2
-import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Schedule
@@ -56,6 +56,7 @@ import com.mob10.deliveryapp.data.model.Order
 import com.mob10.deliveryapp.data.model.OrderPackage
 import com.mob10.deliveryapp.data.model.StatusHistory
 import com.mob10.deliveryapp.data.model.DeliveryStatus
+import com.mob10.deliveryapp.formatServerTimestamp
 import com.mob10.deliveryapp.ui.components.MetricCard
 import com.mob10.deliveryapp.ui.components.SectionTitle
 import com.mob10.deliveryapp.ui.components.StatusPill
@@ -98,7 +99,7 @@ fun DeliveryHistoryTab(
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Summary Header Cards
         SectionTitle(title = "Tổng quan thu nhập")
@@ -109,7 +110,7 @@ fun DeliveryHistoryTab(
             MetricCard(
                 modifier = Modifier.weight(1f),
                 label = "Tổng thu nhập",
-                value = String.format("%,.0fđ", totalEarnings),
+                value = String.format(java.util.Locale.forLanguageTag("vi-VN"), "%,.0fđ", totalEarnings),
                 helper = "Từ $completedCount đơn hoàn thành",
                 icon = Icons.Default.Payments,
                 highlighted = totalEarnings > 0
@@ -117,7 +118,7 @@ fun DeliveryHistoryTab(
             MetricCard(
                 modifier = Modifier.weight(1f),
                 label = "Thu nhập hôm nay",
-                value = String.format("%,.0fđ", todayEarnings),
+                value = String.format(java.util.Locale.forLanguageTag("vi-VN"), "%,.0fđ", todayEarnings),
                 helper = "$deliveredTodayCount đơn trong ngày",
                 icon = Icons.Default.CheckCircle
             )
@@ -163,8 +164,8 @@ fun DeliveryHistoryTab(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 24.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = MaterialTheme.shapes.medium,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Column(
@@ -224,17 +225,17 @@ private fun HistoryOrderCard(
 ) {
     var isExpanded by remember { mutableStateOf(false) }
 
-    val displayTime = order.actualDeliveryTime ?: order.createdAt ?: "Giao hoàn tất"
+    val displayTime = formatServerTimestamp(order.actualDeliveryTime ?: order.createdAt, "Giao hoàn tất")
 
     val isCompleted = order.status == DeliveryStatus.DA_GIAO
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(MaterialTheme.shapes.medium)
             .clickable { isExpanded = !isExpanded },
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -290,7 +291,7 @@ private fun HistoryOrderCard(
             )
             Spacer(modifier = Modifier.height(10.dp))
             AddressRow(
-                icon = Icons.Default.LocalShipping,
+                icon = Icons.Default.TwoWheeler,
                 iconTint = UthSecondary,
                 label = "Giao hàng: ",
                 address = order.deliveryAddress.ifEmpty { "Địa chỉ giao hàng" },
@@ -309,7 +310,7 @@ private fun HistoryOrderCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Kiện hàng: " + packages.joinToString { "${it.quantity}x ${it.name}" },
+                        text = "Kiện hàng: " + packages.joinToString { "${it.quantity} × ${it.name}" },
                         color = UthOnSurfaceVariant,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
@@ -333,7 +334,7 @@ private fun HistoryOrderCard(
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        text = String.format("%,.0fđ", order.totalCost),
+                        text = String.format(java.util.Locale.forLanguageTag("vi-VN"), "%,.0fđ", order.totalCost),
                         fontWeight = FontWeight.ExtraBold,
                         color = if (isCompleted) UthSuccess else UthOnSurfaceVariant,
                         fontSize = 16.sp
@@ -393,7 +394,7 @@ private fun HistoryOrderCard(
                         val sortedHistories = histories.sortedBy { it.timestamp }
                         sortedHistories.forEachIndexed { index, history ->
                             val isLast = index == sortedHistories.size - 1
-                            val statusTime = history.timestamp ?: ""
+                            val statusTime = formatServerTimestamp(history.timestamp, "")
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -456,6 +457,7 @@ private fun getStatusLabel(status: DeliveryStatus): String = when (status) {
     DeliveryStatus.DA_CHAP_NHAN -> "Tài xế nhận đơn"
     DeliveryStatus.DA_DEN_NHA_HANG -> "Tài xế tới điểm lấy hàng"
     DeliveryStatus.DA_LAY_HANG -> "Đã lấy hàng"
+    DeliveryStatus.DANG_VAN_CHUYEN -> "Đang vận chuyển"
     DeliveryStatus.DA_DEN_KHACH_HANG -> "Đã tới điểm giao"
     DeliveryStatus.DA_GIAO -> "Giao hàng thành công"
     DeliveryStatus.DA_HUY -> "Đã hủy đơn"

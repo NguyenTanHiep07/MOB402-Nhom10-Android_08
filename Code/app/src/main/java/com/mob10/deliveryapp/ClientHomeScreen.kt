@@ -11,10 +11,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.ListAlt
-import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.TwoWheeler
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.RocketLaunch
@@ -24,7 +25,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,7 +53,8 @@ fun ClientHomeScreen(
     onProfileClick: () -> Unit,
     onLogout: () -> Unit
 ) {
-    val orderList by orderViewModel.orderHistory.collectAsState()
+    val orderList by orderViewModel.orderHistory.collectAsStateWithLifecycle()
+    val notifications by orderViewModel.notifications.collectAsStateWithLifecycle()
     val pendingCount = orderList.count { it.status !in listOf(DeliveryStatus.DA_GIAO, DeliveryStatus.DA_HUY) }
     val completedCount = orderList.count { it.status == DeliveryStatus.DA_GIAO }
 
@@ -67,8 +69,8 @@ fun ClientHomeScreen(
         },
         navItems = listOf(
             DashboardNavItem("Trang chủ", Icons.Default.Home),
-            DashboardNavItem("Đơn hàng", Icons.Default.ListAlt),
-            DashboardNavItem("Theo dõi", Icons.Default.LocalShipping),
+            DashboardNavItem("Đơn hàng", Icons.AutoMirrored.Filled.ListAlt),
+            DashboardNavItem("Theo dõi", Icons.Default.TwoWheeler),
             DashboardNavItem("Hồ sơ", Icons.Default.Person)
         ),
         header = {
@@ -76,11 +78,23 @@ fun ClientHomeScreen(
                 roleLabel = "Khu vực khách hàng",
                 name = customerName,
                 subtitle = "Quản lý giao hàng của bạn hôm nay",
+                showNotifications = true,
+                notifications = notifications,
+                onNotificationsOpened = orderViewModel::markNotificationsRead,
+                onNotificationClick = { orderViewModel.openNotification(it); onOrderListClick() },
                 onProfileClick = onProfileClick,
                 onLogout = onLogout
             )
         }
     ) {
+        notifications.firstOrNull { !it.isRead }?.let { notification ->
+            QuickActionCard(
+                title = notification.title,
+                subtitle = notification.message,
+                icon = Icons.Default.Notifications,
+                onClick = { orderViewModel.openNotification(notification); onOrderListClick() }
+            )
+        }
         // Hero Card
         DashboardHeroCard(
             eyebrow = "Gửi hàng nội thành",
@@ -98,7 +112,7 @@ fun ClientHomeScreen(
         if (orderList.isEmpty()) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
+                shape = MaterialTheme.shapes.medium,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -121,7 +135,7 @@ fun ClientHomeScreen(
                 MetricCard(
                     modifier = Modifier.weight(1f),
                     label = "Đang xử lý",
-                    value = "%02d".format(pendingCount),
+                    value = String.format(java.util.Locale.forLanguageTag("vi-VN"), "%02d", pendingCount),
                     helper = if (pendingCount > 0) "Đang giao/chuẩn bị" else "Không có đơn chờ",
                     icon = Icons.Default.PendingActions,
                     highlighted = pendingCount > 0
@@ -129,7 +143,7 @@ fun ClientHomeScreen(
                 MetricCard(
                     modifier = Modifier.weight(1f),
                     label = "Đã hoàn tất",
-                    value = "%02d".format(completedCount),
+                    value = String.format(java.util.Locale.forLanguageTag("vi-VN"), "%02d", completedCount),
                     helper = "Tổng số đơn đã giao",
                     icon = Icons.Default.TaskAlt
                 )
@@ -143,14 +157,14 @@ fun ClientHomeScreen(
         QuickActionCard(
             title = "Danh sách đơn của tôi",
             subtitle = "Xem lại tất cả yêu cầu giao hàng",
-            icon = Icons.Default.ListAlt,
+            icon = Icons.AutoMirrored.Filled.ListAlt,
             onClick = onOrderListClick
         )
         if (pendingCount > 0) {
             QuickActionCard(
                 title = "Theo dõi đơn hàng ($pendingCount)",
                 subtitle = "Kiểm tra tiến độ đơn hàng đang giao trực tiếp",
-                icon = Icons.Default.LocalShipping,
+                icon = Icons.Default.TwoWheeler,
                 onClick = onTrackingClick
             )
         }

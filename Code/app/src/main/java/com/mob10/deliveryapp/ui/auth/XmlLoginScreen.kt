@@ -20,7 +20,8 @@ import com.mob10.deliveryapp.R
 fun XmlLoginScreen(
     onLogin: (username: String, password: String) -> Unit,
     onForgotPassword: () -> Unit = {},
-    isLoading: Boolean = false
+    isLoading: Boolean = false,
+    errorMessage: String? = null
 ) {
     AndroidView(
         modifier = Modifier.fillMaxSize(),
@@ -35,6 +36,8 @@ fun XmlLoginScreen(
             val validationError = root.findViewById<TextView>(R.id.loginValidationError)
             val loginButton = root.findViewById<MaterialButton>(R.id.loginButton)
             val forgotPassword = root.findViewById<TextView>(R.id.forgotPasswordAction)
+            validationError.text = errorMessage ?: contextString(root, R.string.login_validation_error)
+            validationError.visibility = if (errorMessage != null) View.VISIBLE else View.GONE
 
             loginButton.isEnabled = !isLoading
             loginButton.setText(
@@ -44,13 +47,17 @@ fun XmlLoginScreen(
                 val username = usernameInput.text?.toString()?.trim().orEmpty()
                 val password = passwordInput.text?.toString().orEmpty()
                 if (username.isBlank() || password.isBlank()) {
+                    validationError.setText(R.string.login_validation_error)
                     validationError.visibility = View.VISIBLE
                 } else {
                     validationError.visibility = View.GONE
                     onLogin(username, password)
                 }
             }
+            forgotPassword.isEnabled = !isLoading
             forgotPassword.setOnClickListener { onForgotPassword() }
         }
     )
 }
+
+private fun contextString(view: View, id: Int) = view.context.getString(id)

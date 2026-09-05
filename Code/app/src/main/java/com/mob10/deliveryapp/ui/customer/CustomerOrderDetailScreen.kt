@@ -1,6 +1,8 @@
 // LEGACY / UNUSED
 package com.mob10.deliveryapp.ui.customer
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -9,7 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -70,7 +72,7 @@ fun CustomerOrderDetailScreen(
 
     // --- Rating: ViewModel riêng cho luồng đánh giá ---
     val ratingViewModel: RatingViewModel = viewModel(factory = RatingViewModelFactory())
-    val ratingUiState by ratingViewModel.uiState.collectAsState()
+    val ratingUiState by ratingViewModel.uiState.collectAsStateWithLifecycle()
     var showRatingDialog by remember { mutableStateOf(false) }
 
     // Khi đơn đã tải xong và đã DA_GIAO, kiểm tra xem đã đánh giá chưa
@@ -130,11 +132,11 @@ fun CustomerOrderDetailScreen(
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
                             .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(22.dp),
+                            shape = MaterialTheme.shapes.large,
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
                             elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
                         ) {
@@ -160,7 +162,7 @@ fun CustomerOrderDetailScreen(
 
                         DetailCard(title = "Hành trình") {
                             DetailRow(Icons.Default.LocationOn, "Điểm lấy hàng", currentOrder.pickupAddress)
-                            DetailRow(Icons.Default.LocalShipping, "Điểm giao hàng", currentOrder.deliveryAddress)
+                            DetailRow(Icons.Default.TwoWheeler, "Điểm giao hàng", currentOrder.deliveryAddress)
                         }
 
                         DetailCard(title = "Người nhận") {
@@ -179,7 +181,7 @@ fun CustomerOrderDetailScreen(
 
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(20.dp),
+                            shape = MaterialTheme.shapes.medium,
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                         ) {
@@ -275,7 +277,7 @@ fun CustomerOrderDetailScreen(
 private fun DetailCard(title: String, content: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -303,6 +305,7 @@ private fun DeliveryStatus.detailLabel(): String = when (this) {
     DeliveryStatus.DA_CHAP_NHAN -> "Tài xế đã nhận đơn"
     DeliveryStatus.DA_DEN_NHA_HANG -> "Tài xế đã đến điểm lấy"
     DeliveryStatus.DA_LAY_HANG -> "Đã lấy hàng"
+    DeliveryStatus.DANG_VAN_CHUYEN -> "Đang vận chuyển"
     DeliveryStatus.DA_DEN_KHACH_HANG -> "Đã đến điểm giao"
     DeliveryStatus.DA_GIAO -> "Giao hàng thành công"
     DeliveryStatus.DA_HUY -> "Đơn hàng đã hủy"

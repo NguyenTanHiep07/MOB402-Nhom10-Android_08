@@ -26,13 +26,13 @@ class AdminRepository(
             adminApi.getUsers()
         }.mapData { it.toDomainUserList() }
 
-    /** Danh sách tài xế kèm thống kê Reliability Score. */
+    /** Danh sách tài xế kèm thống kê điểm tin cậy. */
     suspend fun getDrivers(): NetworkResult<List<AdminDriver>> =
         RemoteDataSource.safeApiCall {
             adminApi.getDrivers()
         }.mapData { it.toDomainDriverList() }
 
-    /** Tài xế có Reliability Score dưới 70 — cần cảnh báo. */
+    /** Tài xế có điểm tin cậy dưới 70 — cần cảnh báo. */
     suspend fun getDriverAlerts(): NetworkResult<List<AdminDriver>> =
         RemoteDataSource.safeApiCall {
             adminApi.getDriverAlerts()

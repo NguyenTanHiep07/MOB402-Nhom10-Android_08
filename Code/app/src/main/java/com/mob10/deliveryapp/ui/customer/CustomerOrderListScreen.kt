@@ -1,6 +1,8 @@
 // LEGACY / UNUSED
 package com.mob10.deliveryapp.ui.customer
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,7 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Inbox
-import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,7 +34,7 @@ fun CustomerOrderListScreen(
     onOrderClick: (Long) -> Unit,
     onBack: () -> Unit
 ) {
-    val orders by viewModel.allMyOrders.collectAsState()
+    val orders by viewModel.allMyOrders.collectAsStateWithLifecycle()
     var hasLoadedOnce by remember { mutableStateOf(false) }
 
     LaunchedEffect(orders) {
@@ -106,7 +108,7 @@ private fun OrderListItem(order: Order, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -130,7 +132,7 @@ private fun OrderListItem(order: Order, onClick: () -> Unit) {
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.LocalShipping, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
+                Icon(Icons.Default.TwoWheeler, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
                     order.deliveryAddress,
@@ -157,6 +159,7 @@ private fun DeliveryStatus.customerLabel(): String = when (this) {
     DeliveryStatus.DA_CHAP_NHAN -> "Đã chấp nhận"
     DeliveryStatus.DA_DEN_NHA_HANG -> "Đến điểm lấy"
     DeliveryStatus.DA_LAY_HANG -> "Đã lấy hàng"
+    DeliveryStatus.DANG_VAN_CHUYEN -> "Đang vận chuyển"
     DeliveryStatus.DA_DEN_KHACH_HANG -> "Đến điểm giao"
     DeliveryStatus.DA_GIAO -> "Đã giao"
     DeliveryStatus.DA_HUY -> "Đã hủy"

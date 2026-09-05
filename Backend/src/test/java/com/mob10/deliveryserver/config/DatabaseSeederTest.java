@@ -17,6 +17,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -35,24 +39,42 @@ class DatabaseSeederTest {
 
     @BeforeEach
     void setUp() {
-        seeder = new DatabaseSeeder(users, orders, histories, reasons, rejections, statistics, passwordEncoder);
+        seeder = new DatabaseSeeder(users, orders, histories, reasons, rejections, statistics, passwordEncoder, "123456");
         when(passwordEncoder.encode("123456")).thenReturn("encoded-password");
-        when(users.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        AtomicLong userIds = new AtomicLong(1);
+        when(users.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            ReflectionTestUtils.setField(user, "id", userIds.getAndIncrement());
+            return user;
+        });
         when(reasons.save(any(RejectionReason.class))).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
-    void emptyDatabaseGetsFifteenConsistentDemoOrders() throws Exception {
+    void emptyDatabaseGetsBaseAndTwentyShowcaseOrders() throws Exception {
+        var savedOrders = new ArrayList<DeliveryRequest>();
         when(orders.count()).thenReturn(0L);
+        when(orders.existsByNote(anyString())).thenReturn(false);
+        when(orders.save(any(DeliveryRequest.class))).thenAnswer(invocation -> {
+            DeliveryRequest order = invocation.getArgument(0);
+            savedOrders.add(order);
+            return order;
+        });
+        when(orders.findAllDetailed()).thenAnswer(invocation -> new ArrayList<>(savedOrders));
+        when(orders.findAllByDeliveryPersonIdOrderByCreatedAtDesc(anyLong())).thenAnswer(invocation -> {
+            Long driverId = invocation.getArgument(0);
+            return savedOrders.stream().filter(order -> order.getDeliveryPerson() != null
+                    && order.getDeliveryPerson().getId().equals(driverId)).toList();
+        });
         when(rejections.save(any(OrderRejection.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(statistics.save(any(DriverStatistics.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         seeder.run(new DefaultApplicationArguments(new String[0]));
 
         ArgumentCaptor<DeliveryRequest> orderCaptor = ArgumentCaptor.forClass(DeliveryRequest.class);
-        verify(orders, times(15)).save(orderCaptor.capture());
-        verify(histories, times(43)).save(any(StatusHistory.class));
-        verify(rejections, times(5)).save(any(OrderRejection.class));
+        verify(orders, times(35)).save(orderCaptor.capture());
+        verify(histories, times(117)).save(any(StatusHistory.class));
+        verify(rejections, times(9)).save(any(OrderRejection.class));
 
         assertTrue(orderCaptor.getAllValues().stream().allMatch(order ->
                 order.getPickupLatitude() != null && order.getPickupLongitude() != null
@@ -62,9 +84,9 @@ class DatabaseSeederTest {
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(users, times(13)).save(userCaptor.capture());
         var drivers = userCaptor.getAllValues().stream().filter(user -> user.getRole() == Role.DELIVERY).toList();
-        assertEquals(4, drivers.stream().filter(user -> user.getDriverAvailability() == DriverAvailability.BUSY).count());
+        assertEquals(5, drivers.stream().filter(user -> user.getDriverAvailability() == DriverAvailability.BUSY).count());
         assertEquals(2, drivers.stream().filter(user -> user.getDriverAvailability() == DriverAvailability.AVAILABLE).count());
-        assertEquals(1, drivers.stream().filter(user -> user.getDriverAvailability() == DriverAvailability.OFFLINE).count());
+        assertEquals(0, drivers.stream().filter(user -> user.getDriverAvailability() == DriverAvailability.OFFLINE).count());
 
         ArgumentCaptor<DriverStatistics> statisticsCaptor = ArgumentCaptor.forClass(DriverStatistics.class);
         verify(statistics, times(7)).save(statisticsCaptor.capture());
@@ -75,6 +97,7 @@ class DatabaseSeederTest {
     @Test
     void existingOrdersAreNotDuplicated() throws Exception {
         when(orders.count()).thenReturn(15L);
+        when(orders.existsByNote(anyString())).thenReturn(true);
 
         seeder.run(new DefaultApplicationArguments(new String[0]));
 

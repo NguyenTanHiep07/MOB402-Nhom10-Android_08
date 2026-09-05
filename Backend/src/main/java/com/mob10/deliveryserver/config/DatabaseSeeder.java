@@ -13,7 +13,9 @@ import java.time.Duration;
 import java.time.Instant;
 
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.demo.enabled", havingValue = "true")
 public class DatabaseSeeder implements ApplicationRunner {
+    private static final String SHOWCASE_MARKER = "Lô dữ liệu demo đa trạng thái 04/09";
     private static final String[][] DEMO_ROUTES = {
             {"10.7768890", "106.7008060", "10.7826810", "106.6957540"},
             {"10.7814720", "106.6994600", "10.7756580", "106.6872960"},
@@ -39,12 +41,16 @@ public class DatabaseSeeder implements ApplicationRunner {
     private final OrderRejectionRepository rejections;
     private final DriverStatisticsRepository statistics;
     private final PasswordEncoder passwordEncoder;
+    private final String demoPassword;
 
     public DatabaseSeeder(UserRepository users, DeliveryRequestRepository orders, StatusHistoryRepository histories,
                           RejectionReasonRepository reasons, OrderRejectionRepository rejections,
-                          DriverStatisticsRepository statistics, PasswordEncoder passwordEncoder) {
+                          DriverStatisticsRepository statistics, PasswordEncoder passwordEncoder,
+                          @org.springframework.beans.factory.annotation.Value("${app.demo.password}") String demoPassword) {
         this.users = users; this.orders = orders; this.histories = histories; this.reasons = reasons;
         this.rejections = rejections; this.statistics = statistics; this.passwordEncoder = passwordEncoder;
+        if (demoPassword == null || demoPassword.length() < 6) throw new IllegalArgumentException("Set DEMO_PASSWORD (at least 6 characters) for demo seed");
+        this.demoPassword = demoPassword;
     }
 
     @Override
@@ -78,7 +84,7 @@ public class DatabaseSeeder implements ApplicationRunner {
         DriverStatistics stats4 = seedStatistics(shipper4);
         DriverStatistics stats5 = seedStatistics(shipper5);
         DriverStatistics stats6 = seedStatistics(shipper6);
-        seedStatistics(shipper7);
+        DriverStatistics stats7 = seedStatistics(shipper7);
 
         if (orders.count() == 0) {
             DeliveryRequest order1 = seedOrder(client1, "Nhà hàng ABC", "123 Nguyễn Văn A, Quận 1",
@@ -121,6 +127,7 @@ public class DatabaseSeeder implements ApplicationRunner {
             accept(order9, shipper4, stats4);
             advance(order9, shipper4, DeliveryStatus.DA_DEN_NHA_HANG, "Tài xế đã đến cửa hàng");
             advance(order9, shipper4, DeliveryStatus.DA_LAY_HANG, "Tài xế đã lấy hàng");
+            advance(order9, shipper4, DeliveryStatus.DANG_VAN_CHUYEN, "Tài xế đang vận chuyển");
             advance(order9, shipper4, DeliveryStatus.DA_DEN_KHACH_HANG, "Tài xế đã đến địa chỉ người nhận");
 
             DeliveryRequest order10 = seedOrder(client5, "Cà phê Ban Mai", "25 Hồ Tùng Mậu, Quận 1",
@@ -167,11 +174,113 @@ public class DatabaseSeeder implements ApplicationRunner {
             shipper6.setDriverAvailability(DriverAvailability.OFFLINE);
 
         }
+
+        // Add one idempotent showcase batch even when the database already contains user-created orders.
+        // It gives every role useful data without deleting or changing the user's existing records.
+        if (!orders.existsByNote(SHOWCASE_MARKER)) {
+            seedShowcaseBatch(
+                    new User[]{client1, client2, client3, client4, client5},
+                    new User[]{shipper1, shipper2, shipper3, shipper4, shipper5, shipper6, shipper7},
+                    new DriverStatistics[]{stats1, stats2, stats3, stats4, stats5, stats6, stats7},
+                    busy);
+        }
+    }
+
+    private void seedShowcaseBatch(User[] clients, User[] drivers, DriverStatistics[] driverStats,
+                                   RejectionReason penalizedReason) {
+        String[] senders = {"Bếp Việt", "Nhà sách Thành Công", "Hoa Tươi Ban Mai", "Siêu thị Gia Đình",
+                "Tech Store", "Nhà thuốc An Tâm", "Cà phê Sài Gòn", "Pet House", "Mộc Fashion", "Bánh Ngọt 24h"};
+        String[] recipients = {"Minh Anh", "Thu Trang", "Quốc Huy", "Mai Lan", "Thanh Tùng",
+                "Khánh Linh", "Gia Bảo", "Hải Yến", "Đức Phúc", "Ngọc Hà"};
+        String[] packages = {"Cơm trưa văn phòng", "Tài liệu học tập", "Hoa chúc mừng", "Nhu yếu phẩm",
+                "Tai nghe Bluetooth", "Thuốc và vitamin", "Cà phê rang xay", "Thức ăn thú cưng",
+                "Áo khoác", "Bánh sinh nhật"};
+        String[] types = {"FOOD", "DOCUMENT", "FLOWER", "GROCERY", "ELECTRONIC",
+                "MEDICAL", "BEVERAGE", "PET", "FASHION", "FOOD"};
+
+        DeliveryRequest[] batch = new DeliveryRequest[20];
+        for (int i = 0; i < batch.length; i++) {
+            int route = i % DEMO_ROUTES.length;
+            batch[i] = seedOrder(
+                    clients[i % clients.length],
+                    senders[i % senders.length],
+                    (12 + i) + " Nguyễn Huệ, TP.HCM",
+                    recipients[i % recipients.length],
+                    (35 + i) + " Lê Lợi, TP.HCM",
+                    packages[i % packages.length] + " #" + (i + 1),
+                    types[i % types.length],
+                    String.format(java.util.Locale.US, "%.2f", 1.8 + (i % 8) * 0.75),
+                    String.format(java.util.Locale.US, "%.2f", 0.5 + (i % 6) * 0.45),
+                    1 + (i % 3), i % 5 == 2, i % 4 == 1, SHOWCASE_MARKER,
+                    route, i % 8);
+        }
+
+        // Fill missing active stages, using only drivers that do not already have an active order.
+        // On an existing sparse database this produces all five stages; on a fresh database it
+        // complements the original seed without violating the one-active-order-per-driver rule.
+        DeliveryStatus[] activeStages = {DeliveryStatus.DA_CHAP_NHAN, DeliveryStatus.DA_DEN_NHA_HANG,
+                DeliveryStatus.DA_LAY_HANG, DeliveryStatus.DANG_VAN_CHUYEN, DeliveryStatus.DA_DEN_KHACH_HANG};
+        java.util.Set<DeliveryStatus> existingStages = orders.findAllDetailed().stream()
+                .map(DeliveryRequest::getStatus).collect(java.util.stream.Collectors.toSet());
+        int activeOrderIndex = 4;
+        int driverIndex = 0;
+        for (DeliveryStatus stage : activeStages) {
+            if (existingStages.contains(stage)) continue;
+            while (driverIndex < drivers.length && hasActiveOrder(drivers[driverIndex])) driverIndex++;
+            if (driverIndex == drivers.length) break;
+            moveTo(batch[activeOrderIndex++], drivers[driverIndex], driverStats[driverIndex], stage);
+            driverIndex++;
+        }
+
+        // Completed orders are distributed across every shipper and several days.
+        for (int i = 9; i <= 15; i++) {
+            deliver(batch[i], drivers[(i - 9) % drivers.length], driverStats[(i - 9) % drivers.length]);
+        }
+
+        cancel(batch[16], clients[16 % clients.length], "Khách thay đổi thời gian nhận");
+        accept(batch[17], drivers[5], driverStats[5]);
+        cancel(batch[17], clients[17 % clients.length], "Khách hủy trước khi lấy hàng");
+        drivers[5].setDriverAvailability(DriverAvailability.AVAILABLE);
+        cancel(batch[18], clients[18 % clients.length], "Địa chỉ nhận cần điều chỉnh");
+
+        // Shipper 7 rejects four open orders with a penalized reason: score 60 and a visible admin alert.
+        reject(batch[0], drivers[6], penalizedReason, driverStats[6], "Đang bận tuyến khác");
+        reject(batch[1], drivers[6], penalizedReason, driverStats[6], "Không kịp thời gian giao");
+        reject(batch[2], drivers[6], penalizedReason, driverStats[6], "Khoảng cách vượt tuyến đăng ký");
+        reject(batch[3], drivers[6], penalizedReason, driverStats[6], "Phí giao hàng không phù hợp");
+        driverStats[6].lockUntil(Instant.now().plus(Duration.ofMinutes(45)));
+
+        for (User driver : drivers) {
+            boolean active = hasActiveOrder(driver);
+            if (active) driver.setDriverAvailability(DriverAvailability.BUSY);
+            else if (driver.getDriverAvailability() == DriverAvailability.BUSY) {
+                driver.setDriverAvailability(DriverAvailability.AVAILABLE);
+            }
+        }
+    }
+
+    private void moveTo(DeliveryRequest order, User driver, DriverStatistics stats, DeliveryStatus target) {
+        accept(order, driver, stats);
+        if (target == DeliveryStatus.DA_CHAP_NHAN) return;
+        advance(order, driver, DeliveryStatus.DA_DEN_NHA_HANG, "Tài xế đã đến điểm lấy hàng");
+        if (target == DeliveryStatus.DA_DEN_NHA_HANG) return;
+        advance(order, driver, DeliveryStatus.DA_LAY_HANG, "Tài xế đã nhận đủ hàng");
+        if (target == DeliveryStatus.DA_LAY_HANG) return;
+        advance(order, driver, DeliveryStatus.DANG_VAN_CHUYEN, "Tài xế bắt đầu vận chuyển");
+        if (target == DeliveryStatus.DANG_VAN_CHUYEN) return;
+        advance(order, driver, DeliveryStatus.DA_DEN_KHACH_HANG, "Tài xế đã đến điểm giao");
+    }
+
+    private boolean hasActiveOrder(User driver) {
+        if (driver.getId() == null) return false;
+        return orders.findAllByDeliveryPersonIdOrderByCreatedAtDesc(driver.getId()).stream()
+                .anyMatch(order -> order.getStatus() != DeliveryStatus.DA_GIAO
+                        && order.getStatus() != DeliveryStatus.DA_HUY);
     }
 
     private User seedUser(String username, String fullName, String phone, Role role, String plate) {
         return users.findByUsername(username).orElseGet(() -> users.save(
-                new User(username, passwordEncoder.encode("123456"), fullName, phone, role, plate)));
+                new User(username, passwordEncoder.encode(demoPassword), fullName, phone, role, plate)));
     }
 
     private RejectionReason seedReason(String code, String label, boolean valid, int points, boolean noteRequired) {
@@ -229,12 +338,9 @@ public class DatabaseSeeder implements ApplicationRunner {
     }
 
     private void deliver(DeliveryRequest order, User driver, DriverStatistics driverStats) {
-        accept(order, driver, driverStats);
-        advance(order, driver, DeliveryStatus.DA_DEN_NHA_HANG, "Tài xế đã đến điểm lấy hàng");
-        advance(order, driver, DeliveryStatus.DA_LAY_HANG, "Tài xế đã lấy hàng");
-        advance(order, driver, DeliveryStatus.DA_DEN_KHACH_HANG, "Tài xế đã đến địa chỉ người nhận");
+        moveTo(order, driver, driverStats, DeliveryStatus.DA_DEN_KHACH_HANG);
         advance(order, driver, DeliveryStatus.DA_GIAO, "Đơn hàng đã giao thành công");
-        driver.setDriverAvailability(DriverAvailability.AVAILABLE);
+        driver.setDriverAvailability(hasActiveOrder(driver) ? DriverAvailability.BUSY : DriverAvailability.AVAILABLE);
     }
 
     private void cancel(DeliveryRequest order, User client, String note) {

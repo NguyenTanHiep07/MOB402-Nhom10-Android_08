@@ -38,6 +38,15 @@ class AuthViewModel(
 
     init {
         viewModelScope.launch {
+            authRepository.sessionExpired.collect { expired ->
+                if (expired) {
+                    userRepository.logout()
+                    _uiState.value = AuthUiState(isInitializing = false,
+                        errorMessage = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.")
+                }
+            }
+        }
+        viewModelScope.launch {
             val databaseResult = runCatching { initializeDatabase() }
             if (databaseResult.isFailure) {
                 _uiState.value = _uiState.value.copy(
@@ -124,21 +133,17 @@ class AuthViewModel(
         }
     }
 
-    fun updateProfile(fullName: String, phoneNumber: String, username: String, licensePlate: String) {
-        val currentUser = _uiState.value.currentUser ?: return
-        val updatedUser = currentUser.copy(
-            fullName = fullName,
-            phoneNumber = phoneNumber,
-            username = username,
-            licensePlate = licensePlate
-        )
+    fun syncProfile(profile: com.mob10.deliveryapp.data.remote.api.AccountProfile) {
+        val user = _uiState.value.currentUser ?: return
+        if (user.id.toLong() != profile.id) return
+        val updated = user.copy(username = profile.username, fullName = profile.fullName,
+            phoneNumber = profile.phoneNumber, licensePlate = profile.licensePlate)
+        if (updated == user) return
+        _uiState.value = _uiState.value.copy(currentUser = updated)
         viewModelScope.launch {
-            try {
-                userRepository.updateUser(updatedUser)
-                _uiState.value = _uiState.value.copy(currentUser = updatedUser, errorMessage = null)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(errorMessage = "Không thể cập nhật hồ sơ. Tên đăng nhập hoặc SĐT có thể đã tồn tại.")
-            }
+            try { userRepository.updateUser(updated) }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { /* Server remains authoritative; the next login refreshes the cache. */ }
         }
     }
 

@@ -80,7 +80,8 @@ object OrderMapper {
         reliabilityScore = reliabilityScore,
         lockedUntil = lockedUntil,
         isLocked = locked,
-        isWarning = warning
+        isWarning = warning,
+        availability = availability
     )
 
     fun RejectionReasonResponseDto.toDomain(): RejectionReason = RejectionReason(

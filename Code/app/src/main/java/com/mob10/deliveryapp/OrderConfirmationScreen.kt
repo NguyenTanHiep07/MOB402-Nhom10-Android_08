@@ -30,7 +30,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,8 +56,8 @@ fun OrderConfirmationScreen(
     onBackToEdit: () -> Unit,
     onConfirmSuccess: () -> Unit
 ) {
-    val pendingOrder by orderViewModel.pendingOrder.collectAsState()
-    val submission by orderViewModel.submissionState.collectAsState()
+    val pendingOrder by orderViewModel.pendingOrder.collectAsStateWithLifecycle()
+    val submission by orderViewModel.submissionState.collectAsStateWithLifecycle()
     
     LaunchedEffect(submission.createdRequestId) {
         if (submission.createdRequestId != null) {
@@ -91,7 +91,7 @@ fun OrderConfirmationScreen(
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Spacer(modifier = Modifier.height(4.dp))
                 
@@ -164,7 +164,7 @@ fun OrderConfirmationScreen(
                     }
                 }
                 
-                CardSection("Chi tiết hàng hóa & dịch vụ") {
+                CardSection("Chi tiết hàng hóa và dịch vụ") {
                     ConfirmationDetailRow("Khoảng cách", "${pendingOrder.distanceKm} km")
                     ConfirmationDetailRow("Trọng lượng", "${pendingOrder.weightKg} kg")
                     ConfirmationDetailRow("Dịch vụ", pendingOrder.packageType.displayName)
@@ -184,7 +184,7 @@ fun OrderConfirmationScreen(
                     
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("Tổng cộng", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        Text(String.format("%,.0fđ", pendingOrder.feeQuote.totalFee.toDouble()), color = PrimaryBlue, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+                        Text(String.format(java.util.Locale.forLanguageTag("vi-VN"), "%,.0fđ", pendingOrder.feeQuote.totalFee.toDouble()), color = PrimaryBlue, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
                     }
                 }
                 
@@ -282,6 +282,6 @@ private fun ConfirmationDetailRow(label: String, value: String) {
 private fun ConfirmationFeeRow(label: String, amount: Long) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(label, color = TextSecondary, fontSize = 14.sp)
-        Text(String.format("%,.0fđ", amount.toDouble()), color = TextPrimary, fontWeight = FontWeight.Medium)
+        Text(String.format(java.util.Locale.forLanguageTag("vi-VN"), "%,.0fđ", amount.toDouble()), color = TextPrimary, fontWeight = FontWeight.Medium)
     }
 }

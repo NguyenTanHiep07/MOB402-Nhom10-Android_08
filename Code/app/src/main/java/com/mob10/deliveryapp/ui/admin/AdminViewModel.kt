@@ -41,6 +41,10 @@ class AdminViewModel(
 
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+    val users = _users.asStateFlow()
+    val drivers = _drivers.asStateFlow()
+    val driverAlerts = _driverAlerts.asStateFlow()
+    val orders = _orders.asStateFlow()
 
     /** Tổng số đơn hàng */
     val totalRequestCount: StateFlow<Int> = _orders
@@ -73,6 +77,7 @@ class AdminViewModel(
 
     /** Load toàn bộ dữ liệu dashboard từ REST API. */
     fun loadDashboardData() {
+        if (_isLoading.value) return
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
@@ -81,6 +86,12 @@ class AdminViewModel(
             loadUsers()
             loadDrivers()
             loadOrders()
+            when (val result = adminRepository.getDriverAlerts()) {
+                is NetworkResult.Success -> _driverAlerts.value = result.data
+                is NetworkResult.Empty -> _driverAlerts.value = emptyList()
+                is NetworkResult.Error -> _errorMessage.value = result.message
+                else -> Unit
+            }
 
             _isLoading.value = false
         }
