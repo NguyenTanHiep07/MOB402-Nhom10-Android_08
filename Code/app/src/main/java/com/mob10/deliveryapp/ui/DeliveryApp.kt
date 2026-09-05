@@ -18,6 +18,7 @@ import com.mob10.deliveryapp.ui.auth.LoginScreen
 import com.mob10.deliveryapp.ui.auth.XmlLoginScreen
 import com.mob10.deliveryapp.ui.customer.CustomerHomeScreen
 import com.mob10.deliveryapp.ui.customer.CustomerViewModel
+import com.mob10.deliveryapp.ui.driver.DriverHomeScreen
 import com.mob10.deliveryapp.ui.navigation.AppDestination
 import com.mob10.deliveryapp.ui.navigation.destinationFor
 import com.mob10.deliveryapp.ui.theme.Android08Theme

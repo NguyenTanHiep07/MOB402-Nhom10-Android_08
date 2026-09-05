@@ -19,8 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
 import com.mob10.deliveryapp.data.model.DeliveryStatus
-import com.mob10.deliveryapp.data.model.Order
 import com.mob10.deliveryapp.ui.components.StatusPill
 import java.text.NumberFormat
 import java.util.Locale
@@ -29,7 +29,7 @@ import java.util.Locale
 @Composable
 fun CustomerOrderListScreen(
     viewModel: CustomerViewModel,
-    onOrderClick: (Long) -> Unit,
+    onOrderClick: (Int) -> Unit,
     onBack: () -> Unit
 ) {
     val orders by viewModel.allMyOrders.collectAsState()
@@ -101,7 +101,7 @@ fun CustomerOrderListScreen(
 }
 
 @Composable
-private fun OrderListItem(order: Order, onClick: () -> Unit) {
+private fun OrderListItem(order: DeliveryRequestEntity, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()

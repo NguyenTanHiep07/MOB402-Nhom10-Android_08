@@ -2,12 +2,9 @@ package com.mob10.deliveryapp.data.remote
 
 import android.content.Context
 import com.mob10.deliveryapp.BuildConfig
-import com.mob10.deliveryapp.data.remote.api.AdminApiService
 import com.mob10.deliveryapp.data.remote.api.AuthApiService
 import com.mob10.deliveryapp.data.remote.api.DriverApiService
-import com.mob10.deliveryapp.data.remote.api.LocationApiService
 import com.mob10.deliveryapp.data.remote.api.OrderApiService
-import com.mob10.deliveryapp.data.remote.api.RatingApiService as RatingApi
 import com.mob10.deliveryapp.data.remote.interceptor.AuthInterceptor
 import com.mob10.deliveryapp.data.session.TokenManager
 import okhttp3.OkHttpClient
@@ -90,18 +87,8 @@ object RetrofitClient {
         retrofit.create(OrderApiService::class.java)
     }
 
-    /** Location API — autocomplete địa chỉ và ước lượng tuyến đường. */
-    val locationApi: LocationApiService by lazy {
-        retrofit.create(LocationApiService::class.java)
-    }
-
-    /** Admin API — quản lý tài khoản, tài xế, đơn hàng. */
-    val adminApi: AdminApiService by lazy {
-        retrofit.create(AdminApiService::class.java)
-    }
-
-    /** Rating API — đánh giá tài xế. */
-    val ratingApi: RatingApi by lazy {
-        retrofit.create(RatingApi::class.java)
+    /** Rating API — giữ tương thích với code cũ. */
+    val ratingApi: RatingApiService by lazy {
+        retrofit.create(RatingApiService::class.java)
     }
 }
