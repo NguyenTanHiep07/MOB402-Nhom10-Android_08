@@ -24,44 +24,36 @@ public class MongoIndexConfig {
 
     @EventListener(ApplicationReadyEvent.class)
     public void ensureIndexes() {
+        // Drop all existing indexes (except _id_) on all relevant collections first.
+        // This is needed because Atlas may have stale indexes from previous runs
+        // (e.g., embedded-user unique indexes, or differently-named indexes).
+        for (String col : new String[]{"users", "delivery_requests", "status_histories",
+                "order_rejections", "ratings", "driver_statistics"}) {
+            try {
+                mongoTemplate.indexOps(col).dropAllIndexes();
+            } catch (Exception ignored) {}
+        }
+
         // users collection: unique username and phoneNumber
         mongoTemplate.indexOps("users")
-                .ensureIndex(new Index().on("username", Sort.Direction.ASC).unique().named("idx_users_username"));
+                .ensureIndex(new Index().on("username", Sort.Direction.ASC).unique());
         mongoTemplate.indexOps("users")
-                .ensureIndex(new Index().on("phoneNumber", Sort.Direction.ASC).unique().named("idx_users_phone"));
+                .ensureIndex(new Index().on("phoneNumber", Sort.Direction.ASC).unique());
         mongoTemplate.indexOps("users")
-                .ensureIndex(new Index().on("role", Sort.Direction.ASC).named("idx_users_role"));
+                .ensureIndex(new Index().on("role", Sort.Direction.ASC));
 
-        // delivery_requests: only non-unique indexes — drop any stale embedded ones first
-        dropEmbeddedUserIndexes();
+        // delivery_requests: only non-unique indexes
         mongoTemplate.indexOps("delivery_requests")
-                .ensureIndex(new Index().on("status", Sort.Direction.ASC).named("idx_orders_status"));
+                .ensureIndex(new Index().on("status", Sort.Direction.ASC));
         mongoTemplate.indexOps("delivery_requests")
-                .ensureIndex(new Index().on("createdAt", Sort.Direction.DESC).named("idx_orders_created"));
+                .ensureIndex(new Index().on("createdAt", Sort.Direction.DESC));
 
         // status_histories
         mongoTemplate.indexOps("status_histories")
-                .ensureIndex(new Index().on("deliveryRequestId", Sort.Direction.ASC).named("idx_history_order"));
+                .ensureIndex(new Index().on("deliveryRequestId", Sort.Direction.ASC));
 
         // ratings
         mongoTemplate.indexOps("ratings")
-                .ensureIndex(new Index().on("driverId", Sort.Direction.ASC).named("idx_ratings_driver"));
-    }
-
-    private void dropEmbeddedUserIndexes() {
-        // Drop any leftover embedded-user indexes that were created before @DocumentReference
-        for (String col : new String[]{"delivery_requests", "status_histories", "order_rejections", "ratings", "driver_statistics"}) {
-            try {
-                var indexOps = mongoTemplate.indexOps(col);
-                indexOps.getIndexInfo().forEach(info -> {
-                    String name = info.getName();
-                    // Drop any index whose name contains an embedded field path (has a dot in the field name)
-                    if (!name.equals("_id_") && (name.contains(".username") || name.contains(".phoneNumber")
-                            || name.contains(".role") || name.contains("deliveryPerson") || name.contains("client."))) {
-                        try { indexOps.dropIndex(name); } catch (Exception ignored) {}
-                    }
-                });
-            } catch (Exception ignored) {}
-        }
+                .ensureIndex(new Index().on("driverId", Sort.Direction.ASC));
     }
 }
