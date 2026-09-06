@@ -2,16 +2,19 @@ package com.mob10.deliveryserver.domain;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.DocumentReference;
 import java.time.Instant;
 
 @Document(collection = "status_histories")
 public class StatusHistory {
     @Id
     private Long id;
+    @DocumentReference(lazy = false)
     private DeliveryRequest deliveryRequest;
     private Long deliveryRequestId;
     private DeliveryStatus fromStatus;
     private DeliveryStatus toStatus;
+    @DocumentReference(lazy = false)
     private User updatedBy;
     private Long updatedById;
     private Instant timestamp = Instant.now();

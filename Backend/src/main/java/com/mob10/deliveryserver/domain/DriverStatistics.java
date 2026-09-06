@@ -2,6 +2,7 @@ package com.mob10.deliveryserver.domain;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.DocumentReference;
 import java.math.BigDecimal;
 import java.time.Instant;
 
@@ -9,6 +10,7 @@ import java.time.Instant;
 public class DriverStatistics {
     @Id
     private Long driverId;
+    @DocumentReference(lazy = false)
     private User driver;
     private int totalAccepted;
     private int totalRejected;

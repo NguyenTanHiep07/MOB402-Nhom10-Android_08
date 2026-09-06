@@ -3,6 +3,7 @@ package com.mob10.deliveryserver.domain;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.DocumentReference;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -14,7 +15,9 @@ public class DeliveryRequest {
     @Id
     private Long id;
 
+    @DocumentReference(lazy = false)
     private User client;
+    @DocumentReference(lazy = false)
     private User deliveryPerson;
 
     private BigDecimal distanceKm;

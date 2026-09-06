@@ -2,16 +2,20 @@ package com.mob10.deliveryserver.domain;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.DocumentReference;
 import java.time.Instant;
 
 @Document(collection = "ratings")
 public class Rating {
     @Id
     private Long id;
+    @DocumentReference(lazy = false)
     private DeliveryRequest deliveryRequest;
     private Long deliveryRequestId;
+    @DocumentReference(lazy = false)
     private User client;
     private Long clientId;
+    @DocumentReference(lazy = false)
     private User driver;
     private Long driverId;
     private short stars;

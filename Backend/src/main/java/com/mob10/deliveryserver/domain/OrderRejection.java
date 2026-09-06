@@ -2,16 +2,20 @@ package com.mob10.deliveryserver.domain;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.DocumentReference;
 import java.time.Instant;
 
 @Document(collection = "order_rejections")
 public class OrderRejection {
     @Id
     private Long id;
+    @DocumentReference(lazy = false)
     private DeliveryRequest deliveryRequest;
+    @DocumentReference(lazy = false)
     private User driver;
     private Long deliveryRequestId;
     private Long driverId;
+    @DocumentReference(lazy = false)
     private RejectionReason reason;
     private String note;
     private boolean penaltyApplied;

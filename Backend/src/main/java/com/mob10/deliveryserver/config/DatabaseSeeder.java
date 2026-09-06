@@ -43,6 +43,7 @@ public class DatabaseSeeder implements ApplicationRunner {
     private final DriverStatisticsRepository statistics;
     private final PasswordEncoder passwordEncoder;
     private final SequenceGeneratorService sequences;
+    private final org.springframework.data.mongodb.core.MongoOperations mongoOperations;
     private final String demoPassword;
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -50,10 +51,12 @@ public class DatabaseSeeder implements ApplicationRunner {
                           RejectionReasonRepository reasons, OrderRejectionRepository rejections,
                           DriverStatisticsRepository statistics, PasswordEncoder passwordEncoder,
                           SequenceGeneratorService sequences,
+                          @org.springframework.beans.factory.annotation.Autowired(required = false) org.springframework.data.mongodb.core.MongoOperations mongoOperations,
                           @org.springframework.beans.factory.annotation.Value("${app.demo.password}") String demoPassword) {
         this.users = users; this.orders = orders; this.histories = histories; this.reasons = reasons;
         this.rejections = rejections; this.statistics = statistics; this.passwordEncoder = passwordEncoder;
         this.sequences = sequences;
+        this.mongoOperations = mongoOperations;
         if (demoPassword == null || demoPassword.length() < 6) throw new IllegalArgumentException("Set DEMO_PASSWORD (at least 6 characters) for demo seed");
         this.demoPassword = demoPassword;
     }
@@ -62,7 +65,7 @@ public class DatabaseSeeder implements ApplicationRunner {
                           RejectionReasonRepository reasons, OrderRejectionRepository rejections,
                           DriverStatisticsRepository statistics, PasswordEncoder passwordEncoder,
                           String demoPassword) {
-        this(users, orders, histories, reasons, rejections, statistics, passwordEncoder, null, demoPassword);
+        this(users, orders, histories, reasons, rejections, statistics, passwordEncoder, null, null, demoPassword);
     }
 
     @Override
@@ -98,6 +101,11 @@ public class DatabaseSeeder implements ApplicationRunner {
         DriverStatistics stats7 = seedStatistics(shipper7);
 
         if (orders.count() == 0) {
+            if (mongoOperations != null) {
+                try {
+                    mongoOperations.indexOps("delivery_requests").dropAllIndexes();
+                } catch (Exception ignored) {}
+            }
             DeliveryRequest order1 = seedOrder(client1, "Nhà hàng ABC", "123 Nguyễn Văn A, Quận 1",
                     "Nguyễn Văn B", "456 Lê Văn B, Quận 3", "Cơm gà", "FOOD", "2.50", "0.50", 1,
                     false, false, "Nhiều cơm", 0, 0);
