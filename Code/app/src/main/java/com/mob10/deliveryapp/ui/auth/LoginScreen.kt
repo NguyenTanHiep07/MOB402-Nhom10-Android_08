@@ -65,11 +65,11 @@ import com.mob10.deliveryapp.ui.theme.UthSecondaryContainer
 
 @Composable
 fun LoginScreen(
-    onLogin: (username: String, password: String) -> Unit = { _, _ -> },
+    onLogin: (phoneNumber: String, password: String) -> Unit = { _, _ -> },
     onForgotPassword: () -> Unit = {},
     isLoading: Boolean = false
 ) {
-    var username by rememberSaveable { mutableStateOf("") }
+    var phoneNumber by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var showValidationError by rememberSaveable { mutableStateOf(false) }
@@ -142,13 +142,13 @@ fun LoginScreen(
                     Spacer(modifier = Modifier.height(26.dp))
 
                     LoginTextField(
-                        value = username,
+                        value = phoneNumber,
                         onValueChange = {
-                            username = it
+                            phoneNumber = it
                             showValidationError = false
                         },
-                        label = stringResource(R.string.email_label),
-                        keyboardType = KeyboardType.Text,
+                        label = "Số điện thoại",
+                        keyboardType = KeyboardType.Phone,
                         leadingIcon = Icons.Default.Person
                     )
                     Spacer(modifier = Modifier.height(14.dp))
@@ -201,10 +201,10 @@ fun LoginScreen(
                     }
                     Button(
                         onClick = {
-                            if (username.isBlank() || password.isBlank()) {
+                            if (phoneNumber.isBlank() || password.isBlank()) {
                                 showValidationError = true
                             } else {
-                                onLogin(username.trim(), password)
+                                onLogin(phoneNumber.trim(), password)
                             }
                         },
                         modifier = Modifier

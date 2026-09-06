@@ -6,7 +6,7 @@ package com.mob10.deliveryapp.data.remote.dto
  */
 
 data class LoginRequest(
-    val username: String,
+    val phoneNumber: String,
     val password: String
 )
 

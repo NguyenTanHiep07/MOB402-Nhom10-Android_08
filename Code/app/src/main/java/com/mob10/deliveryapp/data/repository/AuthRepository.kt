@@ -24,12 +24,12 @@ class AuthRepository(
     val sessionExpired = tokenManager.expired
 
     /**
-     * Đăng nhập bằng username/password.
+     * Đăng nhập bằng số điện thoại/mật khẩu.
      * @return NetworkResult.Success chứa LoginResponse (có accessToken và user info)
      */
-    suspend fun login(username: String, password: String): NetworkResult<LoginResponse> {
+    suspend fun login(phoneNumber: String, password: String): NetworkResult<LoginResponse> {
         val result = RemoteDataSource.safeApiCall {
-            authApi.login(LoginRequest(username = username, password = password))
+            authApi.login(LoginRequest(phoneNumber = phoneNumber, password = password))
         }
 
         // Session/current user chỉ được lưu sau khi AuthViewModel ánh xạ user thành công.

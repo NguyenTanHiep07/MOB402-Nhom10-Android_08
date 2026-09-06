@@ -18,7 +18,7 @@ import com.mob10.deliveryapp.R
  */
 @Composable
 fun XmlLoginScreen(
-    onLogin: (username: String, password: String) -> Unit,
+    onLogin: (phoneNumber: String, password: String) -> Unit,
     onForgotPassword: () -> Unit = {},
     isLoading: Boolean = false,
     errorMessage: String? = null
@@ -44,14 +44,14 @@ fun XmlLoginScreen(
                 if (isLoading) R.string.login_initializing else R.string.login_button
             )
             loginButton.setOnClickListener {
-                val username = usernameInput.text?.toString()?.trim().orEmpty()
+                val phoneNumber = usernameInput.text?.toString()?.trim().orEmpty()
                 val password = passwordInput.text?.toString().orEmpty()
-                if (username.isBlank() || password.isBlank()) {
+                if (phoneNumber.isBlank() || password.isBlank()) {
                     validationError.setText(R.string.login_validation_error)
                     validationError.visibility = View.VISIBLE
                 } else {
                     validationError.visibility = View.GONE
-                    onLogin(username, password)
+                    onLogin(phoneNumber, password)
                 }
             }
             forgotPassword.isEnabled = !isLoading
