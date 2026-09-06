@@ -71,8 +71,10 @@ fun Android08Theme(
                 ctx = ctx.baseContext
             }
             (ctx as? Activity)?.window?.let { window ->
-                window.statusBarColor = colorScheme.surface.toArgb()
-                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+                WindowCompat.getInsetsController(window, view).apply {
+                    isAppearanceLightStatusBars = !darkTheme
+                    isAppearanceLightNavigationBars = !darkTheme
+                }
             }
         }
     }

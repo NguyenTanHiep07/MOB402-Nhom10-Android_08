@@ -75,7 +75,7 @@ fun LoginScreen(
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var showValidationError by rememberSaveable { mutableStateOf(false) }
 
-    BoxWithConstraints(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
@@ -100,8 +100,7 @@ fun LoginScreen(
 
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = (maxHeight - 48.dp).coerceAtLeast(0.dp))
+                .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

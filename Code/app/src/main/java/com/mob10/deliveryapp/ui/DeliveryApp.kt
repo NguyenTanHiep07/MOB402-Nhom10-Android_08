@@ -1,10 +1,12 @@
 package com.mob10.deliveryapp.ui
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -32,43 +34,48 @@ fun DeliveryApp(authViewModel: AuthViewModel) {
         androidx.compose.runtime.CompositionLocalProvider(
             LocalAccountUpdated provides authViewModel::syncProfile
         ) {
-            when {
-                currentUser != null -> {
-                    when (currentUser.role) {
-                        Role.ADMIN -> {
-                            val adminViewModel: AdminViewModel = viewModel(
-                                factory = AdminViewModelFactory(context.applicationContext)
-                            )
-                            AdminHomeScreen(
-                                adminName = currentUser.fullName,
-                                viewModel = adminViewModel,
-                                onLogout = authViewModel::logout
-                            )
-                        }
-                        Role.DELIVERY -> {
-                            DriverHomeScreen(
-                                currentUser = currentUser,
-                                onLogout = authViewModel::logout
-                            )
-                        }
-                        Role.CLIENT -> {
-                            ClientFeatureFlow(
-                                currentUser = currentUser,
-                                onLogout = authViewModel::logout
-                            )
+            androidx.compose.material3.Surface(
+                modifier = androidx.compose.ui.Modifier.fillMaxSize(),
+                color = androidx.compose.material3.MaterialTheme.colorScheme.background
+            ) {
+                when {
+                    currentUser != null -> {
+                        when (currentUser.role) {
+                            Role.ADMIN -> {
+                                val adminViewModel: AdminViewModel = viewModel(
+                                    factory = AdminViewModelFactory(context.applicationContext)
+                                )
+                                AdminHomeScreen(
+                                    adminName = currentUser.fullName,
+                                    viewModel = adminViewModel,
+                                    onLogout = authViewModel::logout
+                                )
+                            }
+                            Role.DELIVERY -> {
+                                DriverHomeScreen(
+                                    currentUser = currentUser,
+                                    onLogout = authViewModel::logout
+                                )
+                            }
+                            Role.CLIENT -> {
+                                ClientFeatureFlow(
+                                    currentUser = currentUser,
+                                    onLogout = authViewModel::logout
+                                )
+                            }
                         }
                     }
-                }
-                showRecovery -> {
-                    RecoveryScreen(onBack = { showRecovery = false })
-                }
-                else -> {
-                    LoginScreen(
-                        onLogin = authViewModel::login,
-                        onForgotPassword = { showRecovery = true },
-                        isLoading = authState.isInitializing || authState.isAuthenticating,
-                        errorMessage = authState.errorMessage
-                    )
+                    showRecovery -> {
+                        RecoveryScreen(onBack = { showRecovery = false })
+                    }
+                    else -> {
+                        LoginScreen(
+                            onLogin = authViewModel::login,
+                            onForgotPassword = { showRecovery = true },
+                            isLoading = authState.isInitializing || authState.isAuthenticating,
+                            errorMessage = authState.errorMessage
+                        )
+                    }
                 }
             }
         }
