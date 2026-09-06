@@ -67,7 +67,8 @@ import com.mob10.deliveryapp.ui.theme.UthSecondaryContainer
 fun LoginScreen(
     onLogin: (phoneNumber: String, password: String) -> Unit = { _, _ -> },
     onForgotPassword: () -> Unit = {},
-    isLoading: Boolean = false
+    isLoading: Boolean = false,
+    errorMessage: String? = null
 ) {
     var phoneNumber by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
@@ -178,9 +179,9 @@ fun LoginScreen(
                             }
                         }
                     )
-                    if (showValidationError) {
+                    if (errorMessage != null || showValidationError) {
                         Text(
-                            text = stringResource(R.string.login_validation_error),
+                            text = errorMessage ?: stringResource(R.string.login_validation_error),
                             color = MaterialTheme.colorScheme.error,
                             fontSize = 12.sp,
                             modifier = Modifier

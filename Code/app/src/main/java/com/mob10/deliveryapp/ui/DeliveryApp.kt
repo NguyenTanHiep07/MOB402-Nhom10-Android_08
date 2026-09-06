@@ -75,7 +75,7 @@ fun DeliveryApp(authViewModel: AuthViewModel) {
                 com.mob10.deliveryapp.ui.auth.RecoveryScreen(onBack = { navigation.popBackStack() })
             }
             composable(AppDestination.LOGIN.name) {
-                XmlLoginScreen(
+                LoginScreen(
                     onLogin = authViewModel::login,
                     onForgotPassword = { navigation.navigate("ACCOUNT_RECOVERY") },
                     isLoading = authState.isInitializing || authState.isAuthenticating,

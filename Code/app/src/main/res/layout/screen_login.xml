@@ -97,7 +97,7 @@
                     app:hintTextColor="@color/godrop_primary"
                     app:boxBackgroundColor="@color/white"
                     app:endIconMode="password_toggle"
-                    app:startIconDrawable="@android:drawable/ic_lock_lock"
+                    app:startIconDrawable="@drawable/ic_lock_outline"
                     app:startIconTint="@color/godrop_on_surface_variant">
 
                     <com.google.android.material.textfield.TextInputEditText
