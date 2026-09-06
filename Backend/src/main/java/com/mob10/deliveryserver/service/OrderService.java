@@ -22,15 +22,17 @@ public class OrderService {
     private final DtoMapper mapper;
     private final LocationService locationService;
     private final PricingService pricingService;
+    private final SequenceGeneratorService sequences;
 
     public OrderService(DeliveryRequestRepository orders, UserRepository users, StatusHistoryRepository histories,
                         OrderRejectionRepository rejections, DtoMapper mapper,
-                        LocationService locationService, PricingService pricingService) {
+                        LocationService locationService, PricingService pricingService,
+                        SequenceGeneratorService sequences) {
         this.orders = orders; this.users = users; this.histories = histories; this.rejections = rejections; this.mapper = mapper;
         this.locationService = locationService; this.pricingService = pricingService;
+        this.sequences = sequences;
     }
 
-    @Transactional
     public OrderResponse create(AuthenticatedUser principal, CreateOrderRequest input) {
         requireRole(principal, Role.CLIENT);
         User client = getUser(principal.id());
@@ -43,26 +45,30 @@ public class OrderService {
                 coordinate(input.deliveryLatitude()), coordinate(input.deliveryLongitude()),
                 input.senderName().trim(), input.senderPhone().trim(),
                 input.recipientName().trim(), input.recipientPhone().trim(), clean(input.note()), input.scheduledPickupTime());
+        order.setId(sequences.generateSequence("delivery_requests"));
 
         BigDecimal totalWeight = BigDecimal.ZERO;
         boolean fragile = false;
         boolean express = false;
+        long pkgId = 1L;
         for (PackageInput item : input.packages()) {
             BigDecimal itemWeight = money(item.weightKg());
             totalWeight = totalWeight.add(itemWeight.multiply(BigDecimal.valueOf(item.quantity())));
             fragile |= item.fragile();
             express |= item.express();
-            order.addPackage(new PackageItem(item.name().trim(), clean(item.packageType()), itemWeight,
+            order.addPackage(new PackageItem(pkgId++, item.name().trim(), clean(item.packageType()), itemWeight,
                     item.quantity(), clean(item.notes()), item.fragile(), item.express()));
         }
         PricingService.PricingQuote quote = pricingService.quote(route.distanceKm(), totalWeight, fragile, express);
         order.applyFees(quote.baseFee(), quote.distanceFee(), quote.weightFee(), quote.serviceFee(), quote.totalFee());
         orders.save(order);
-        histories.save(new StatusHistory(order, null, DeliveryStatus.CHO_TIEP_NHAN, client, "Đơn hàng được tạo"));
+
+        StatusHistory history = new StatusHistory(order, null, DeliveryStatus.CHO_TIEP_NHAN, client, "Đơn hàng được tạo");
+        history.setId(sequences.generateSequence("status_histories"));
+        histories.save(history);
         return mapper.toOrderResponse(order);
     }
 
-    @Transactional(readOnly = true)
     public List<OrderResponse> list(AuthenticatedUser principal) {
         List<DeliveryRequest> result = switch (principal.role()) {
             case CLIENT -> orders.findAllByClientIdOrderByCreatedAtDesc(principal.id());
@@ -72,7 +78,6 @@ public class OrderService {
         return result.stream().map(mapper::toOrderResponse).toList();
     }
 
-    @Transactional(readOnly = true)
     public OrderResponse detail(AuthenticatedUser principal, Long id) {
         DeliveryRequest order = orders.findById(id).orElseThrow(() -> notFound(id));
         assertCanView(principal, order);
@@ -80,7 +85,6 @@ public class OrderService {
         return mapper.toOrderResponse(order);
     }
 
-    @Transactional(readOnly = true)
     public List<HistoryResponse> history(AuthenticatedUser principal, Long id) {
         DeliveryRequest order = orders.findById(id).orElseThrow(() -> notFound(id));
         assertCanView(principal, order);
@@ -88,7 +92,6 @@ public class OrderService {
                 .map(mapper::toHistoryResponse).toList();
     }
 
-    @Transactional
     public OrderResponse cancel(AuthenticatedUser principal, Long id) {
         requireRole(principal, Role.CLIENT);
         DeliveryRequest order = orders.findByIdForUpdate(id).orElseThrow(() -> notFound(id));
@@ -101,10 +104,15 @@ public class OrderService {
         }
         DeliveryStatus previous = order.getStatus();
         order.changeStatus(DeliveryStatus.DA_HUY);
+        orders.save(order);
         if (order.getDeliveryPerson() != null) {
-            users.findByIdForUpdate(order.getDeliveryPerson().getId()).orElseThrow().setDriverAvailability(DriverAvailability.AVAILABLE);
+            User driver = users.findByIdForUpdate(order.getDeliveryPerson().getId()).orElseThrow();
+            driver.setDriverAvailability(DriverAvailability.AVAILABLE);
+            users.save(driver);
         }
-        histories.save(new StatusHistory(order, previous, DeliveryStatus.DA_HUY, getUser(principal.id()), "Khách hàng hủy đơn"));
+        StatusHistory history = new StatusHistory(order, previous, DeliveryStatus.DA_HUY, getUser(principal.id()), "Khách hàng hủy đơn");
+        history.setId(sequences.generateSequence("status_histories"));
+        histories.save(history);
         return mapper.toOrderResponse(order);
     }
 

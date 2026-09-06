@@ -37,10 +37,9 @@ public class AdminService {
                         .orElseGet(() -> new DriverStatistics(driver))))).toList();
     }
 
-    @Transactional(readOnly = true)
     public List<DriverResponse> alerts() {
         return statistics.findAllByReliabilityScoreLessThanOrderByReliabilityScoreAsc(alertThreshold).stream()
-                .map(stats -> new DriverResponse(toUser(users.getReferenceById(stats.getDriverId())), mapper.toStatistics(stats)))
+                .map(stats -> new DriverResponse(toUser(users.findById(stats.getDriverId()).orElse(null)), mapper.toStatistics(stats)))
                 .toList();
     }
 

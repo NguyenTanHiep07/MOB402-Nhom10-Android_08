@@ -2,41 +2,28 @@ package com.mob10.deliveryserver.repository;
 
 import com.mob10.deliveryserver.domain.DeliveryRequest;
 import com.mob10.deliveryserver.domain.DeliveryStatus;
-import jakarta.persistence.LockModeType;
-import org.springframework.data.jpa.repository.*;
-import org.springframework.data.repository.query.Param;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 import java.util.List;
 import java.util.Optional;
 
-public interface DeliveryRequestRepository extends JpaRepository<DeliveryRequest, Long> {
+public interface DeliveryRequestRepository extends MongoRepository<DeliveryRequest, Long> {
     boolean existsByNote(String note);
 
-    @EntityGraph(attributePaths = {"client", "deliveryPerson", "packages"})
+    @Query(value = "{'client.id': ?0}", sort = "{'createdAt': -1}")
     List<DeliveryRequest> findAllByClientIdOrderByCreatedAtDesc(Long clientId);
 
-    @EntityGraph(attributePaths = {"client", "deliveryPerson", "packages"})
+    @Query(value = "{'deliveryPerson.id': ?0}", sort = "{'createdAt': -1}")
     List<DeliveryRequest> findAllByDeliveryPersonIdOrderByCreatedAtDesc(Long driverId);
 
-    @EntityGraph(attributePaths = {"client", "deliveryPerson", "packages"})
-    @Query("select distinct d from DeliveryRequest d where d.status = :status and d.id not in " +
-           "(select r.deliveryRequest.id from OrderRejection r where r.driver.id = :driverId) order by d.createdAt desc")
-    List<DeliveryRequest> findOpenForDriver(@Param("driverId") Long driverId, @Param("status") DeliveryStatus status);
+    @Query(value = "{'status': ?1, 'deliveryPerson': null, '_id': {'$nin': ?2}}", sort = "{'createdAt': -1}")
+    List<DeliveryRequest> findOpenForDriverNotIn(Long driverId, DeliveryStatus status, List<Long> rejectedIds);
 
-    @EntityGraph(attributePaths = {"client", "deliveryPerson", "packages"})
-    @Query("select distinct d from DeliveryRequest d order by d.createdAt desc")
+    @Query(value = "{'status': ?0, 'deliveryPerson': null}", sort = "{'createdAt': -1}")
+    List<DeliveryRequest> findAllByStatusAndDeliveryPersonIsNullOrderByCreatedAtDesc(DeliveryStatus status);
+
+    @Query(value = "{}", sort = "{'createdAt': -1}")
     List<DeliveryRequest> findAllDetailed();
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select d from DeliveryRequest d where d.id = :id")
-    Optional<DeliveryRequest> findByIdForUpdate(@Param("id") Long id);
-
-    // Không clear persistence context tại đây: User/DriverStatistics đang được quản lý
-    // trong cùng transaction và phải tiếp tục ghi availability/điểm thống kê sau Accept.
-    @Modifying(flushAutomatically = true)
-    @Transactional
-    @Query("update DeliveryRequest d set d.deliveryPerson = :driver, d.status = :acceptedStatus, d.updatedAt = CURRENT_TIMESTAMP " +
-           "where d.id = :requestId and d.deliveryPerson is null and d.status = :waitingStatus")
-    int assignAtomically(@Param("requestId") Long requestId, @Param("driver") com.mob10.deliveryserver.domain.User driver,
-                         @Param("waitingStatus") DeliveryStatus waitingStatus, @Param("acceptedStatus") DeliveryStatus acceptedStatus);
+    default Optional<DeliveryRequest> findByIdForUpdate(Long id) { return findById(id); }
 }

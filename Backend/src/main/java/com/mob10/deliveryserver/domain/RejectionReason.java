@@ -1,33 +1,38 @@
 package com.mob10.deliveryserver.domain;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-@Entity
-@Table(name = "rejection_reasons")
+@Document(collection = "rejection_reasons")
 public class RejectionReason {
     @Id
-    @Column(length = 50)
     private String code;
-    @Column(nullable = false, length = 200)
     private String label;
-    @Column(name = "is_valid", nullable = false)
     private boolean valid;
-    @Column(name = "penalty_points", nullable = false)
     private int penaltyPoints;
-    @Column(name = "requires_note", nullable = false)
     private boolean requiresNote;
-    @Column(nullable = false)
     private boolean active = true;
 
-    protected RejectionReason() {}
+    public RejectionReason() {}
+
     public RejectionReason(String code, String label, boolean valid, int penaltyPoints, boolean requiresNote) {
-        this.code = code; this.label = label; this.valid = valid;
-        this.penaltyPoints = penaltyPoints; this.requiresNote = requiresNote;
+        this.code = code;
+        this.label = label;
+        this.valid = valid;
+        this.penaltyPoints = penaltyPoints;
+        this.requiresNote = requiresNote;
     }
+
     public String getCode() { return code; }
+    public void setCode(String code) { this.code = code; }
     public String getLabel() { return label; }
+    public void setLabel(String label) { this.label = label; }
     public boolean isValid() { return valid; }
+    public void setValid(boolean valid) { this.valid = valid; }
     public int getPenaltyPoints() { return penaltyPoints; }
+    public void setPenaltyPoints(int penaltyPoints) { this.penaltyPoints = penaltyPoints; }
     public boolean isRequiresNote() { return requiresNote; }
+    public void setRequiresNote(boolean requiresNote) { this.requiresNote = requiresNote; }
     public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
 }

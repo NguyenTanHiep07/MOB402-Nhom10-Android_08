@@ -1,42 +1,46 @@
 package com.mob10.deliveryserver.domain;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 import java.math.BigDecimal;
 import java.time.Instant;
 
-@Entity
-@Table(name = "driver_statistics")
+@Document(collection = "driver_statistics")
 public class DriverStatistics {
     @Id
-    @Column(name = "driver_id")
     private Long driverId;
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @MapsId
-    @JoinColumn(name = "driver_id")
     private User driver;
-    @Column(name = "total_accepted", nullable = false)
     private int totalAccepted;
-    @Column(name = "total_rejected", nullable = false)
     private int totalRejected;
-    @Column(name = "penalized_rejections", nullable = false)
     private int penalizedRejections;
-    @Column(name = "reliability_score", nullable = false, precision = 5, scale = 2)
     private BigDecimal reliabilityScore = new BigDecimal("100.00");
-    @Column(name = "locked_until")
     private Instant lockedUntil;
-    @Column(name = "updated_at", nullable = false)
     private Instant updatedAt = Instant.now();
 
-    protected DriverStatistics() {}
-    public DriverStatistics(User driver) { this.driver = driver; }
+    public DriverStatistics() {}
+
+    public DriverStatistics(User driver) {
+        this.driver = driver;
+        this.driverId = driver != null ? driver.getId() : null;
+    }
+
     public Long getDriverId() { return driverId; }
-    public DriverAvailability getAvailability() { return driver.getDriverAvailability(); }
+    public void setDriverId(Long driverId) { this.driverId = driverId; }
+    public User getDriver() { return driver; }
+    public void setDriver(User driver) { this.driver = driver; if (driver != null) this.driverId = driver.getId(); }
+    public DriverAvailability getAvailability() { return driver != null ? driver.getDriverAvailability() : DriverAvailability.OFFLINE; }
     public int getTotalAccepted() { return totalAccepted; }
+    public void setTotalAccepted(int totalAccepted) { this.totalAccepted = totalAccepted; }
     public int getTotalRejected() { return totalRejected; }
+    public void setTotalRejected(int totalRejected) { this.totalRejected = totalRejected; }
     public int getPenalizedRejections() { return penalizedRejections; }
+    public void setPenalizedRejections(int penalizedRejections) { this.penalizedRejections = penalizedRejections; }
     public BigDecimal getReliabilityScore() { return reliabilityScore; }
+    public void setReliabilityScore(BigDecimal reliabilityScore) { this.reliabilityScore = reliabilityScore; }
     public Instant getLockedUntil() { return lockedUntil; }
+    public void setLockedUntil(Instant lockedUntil) { this.lockedUntil = lockedUntil; }
     public Instant getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
     public boolean isLocked() { return lockedUntil != null && lockedUntil.isAfter(Instant.now()); }
     public void recordAcceptance() { totalAccepted++; updatedAt = Instant.now(); }
     public void recordRejection(int penaltyPoints, boolean penalized) {

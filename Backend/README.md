@@ -1,6 +1,6 @@
 # GoDrop Delivery Backend
 
-Backend REST dùng chung cho ứng dụng Client, Delivery và Admin. Server sử dụng Spring Boot 3, Java 21, PostgreSQL, Flyway, JWT và Swagger/OpenAPI.
+Backend REST dùng chung cho ứng dụng Client, Delivery và Admin. Server sử dụng Spring Boot 3, Java 21, MongoDB (Spring Data MongoDB), JWT và Swagger/OpenAPI.
 
 ## Phạm vi đã triển khai
 
@@ -15,24 +15,34 @@ Backend REST dùng chung cho ứng dụng Client, Delivery và Admin. Server s�
 - Khách sở hữu đơn, tài xế đã giao và Admin có thể xem đánh giá; API có thống kê sao trung bình theo tài xế.
 - Client tìm địa chỉ thật trong Việt Nam và nhận ước lượng quãng đường chạy xe/thời gian/phí từ backend.
 - Khi tạo đơn, backend tự tính lại quãng đường và phí, không tin số km do Android gửi lên.
-- Flyway tự tạo schema; seeder chỉ thêm dữ liệu mẫu khi dữ liệu chưa tồn tại.
+- Lưu trữ trên MongoDB với bộ sinh ID `Long` tự tăng tuần tự đảm bảo tương thích 100% với Android app.
+- Seeder tự động thêm dữ liệu mẫu khi hệ thống chưa có dữ liệu.
 
 Auto Assignment và FCM là P1 nên chưa triển khai.
 
 ## Yêu cầu môi trường
 
 - Java 21.
-- Docker Desktop để chạy PostgreSQL, hoặc một PostgreSQL 16 đang hoạt động.
+- MongoDB Atlas (Cloud) hoặc MongoDB Community Server cài trên máy (không bắt buộc dùng Docker).
 
 ## Chạy local
 
 Tại thư mục `Backend`:
 
-```bash
-./setup-local.sh
-docker compose up -d
-../Code/gradlew bootRun
-```
+1. Tạo file `.env` (tham khảo `.env.example`) và điền `MONGODB_URI`:
+   ```bash
+   MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/delivery_db?retryWrites=true&w=majority
+   JWT_SECRET=your_32_characters_long_jwt_secret_key_here
+   DEMO_ENABLED=true
+   DEMO_PASSWORD=123456
+   ```
+
+2. Khởi động server (không cần Docker):
+   ```bash
+   ../Code/gradlew.bat bootRun -p .
+   # hoặc trên Linux/macOS:
+   # ../Code/gradlew bootRun -p .
+   ```
 
 Swagger: `http://localhost:8080/swagger-ui.html`
 
@@ -63,10 +73,8 @@ Một số đơn có dữ liệu Reject để kiểm tra việc ẩn đơn theo 
 
 | Biến | Mặc định | Ý nghĩa |
 |---|---|---|
-| `DB_URL` | `jdbc:postgresql://localhost:5432/delivery_db` | JDBC URL |
-| `DB_USERNAME` | `delivery_user` | User PostgreSQL |
-| `DB_PASSWORD` | Lấy từ `POSTGRES_PASSWORD` nếu không đặt riêng | Password PostgreSQL |
-| `JWT_SECRET` | Bắt buộc, script tự sinh | Khóa ký JWT, tối thiểu 32 ký tự |
+| `MONGODB_URI` | `mongodb://localhost:27017/delivery_db` | Connection URI tới MongoDB (Atlas hoặc Local) |
+| `JWT_SECRET` | Bắt buộc | Khóa ký JWT, tối thiểu 32 ký tự |
 | `DEMO_ENABLED` | `false` | Bật seed dữ liệu giả cho demo; setup-local đặt true |
 | `DEMO_PASSWORD` | Bắt buộc khi bật seed | Mật khẩu cho tài khoản mẫu chưa tồn tại |
 | `JWT_EXPIRATION_MS` | `86400000` | Thời hạn token, mặc định 24 giờ |

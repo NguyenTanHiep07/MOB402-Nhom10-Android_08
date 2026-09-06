@@ -1,44 +1,62 @@
 package com.mob10.deliveryserver.domain;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.Instant;
 
-@Entity
-@Table(name = "status_histories")
+@Document(collection = "status_histories")
 public class StatusHistory {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "delivery_request_id", nullable = false)
     private DeliveryRequest deliveryRequest;
-    @Enumerated(EnumType.STRING)
-    @Column(name = "from_status", length = 30)
+    private Long deliveryRequestId;
     private DeliveryStatus fromStatus;
-    @Enumerated(EnumType.STRING)
-    @Column(name = "to_status", nullable = false, length = 30)
     private DeliveryStatus toStatus;
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "updated_by")
     private User updatedBy;
-    @Column(nullable = false)
+    private Long updatedById;
     private Instant timestamp = Instant.now();
-    @Column(length = 500)
     private String note;
 
-    protected StatusHistory() {}
+    public StatusHistory() {}
+
     public StatusHistory(DeliveryRequest request, DeliveryStatus from, DeliveryStatus to, User updatedBy, String note) {
         this(request, from, to, updatedBy, note, Instant.now());
     }
+
     public StatusHistory(DeliveryRequest request, DeliveryStatus from, DeliveryStatus to, User updatedBy,
                          String note, Instant timestamp) {
-        this.deliveryRequest = request; this.fromStatus = from; this.toStatus = to;
-        this.updatedBy = updatedBy; this.note = note; this.timestamp = timestamp;
+        this.deliveryRequest = request;
+        this.deliveryRequestId = request != null ? request.getId() : null;
+        this.fromStatus = from;
+        this.toStatus = to;
+        this.updatedBy = updatedBy;
+        this.updatedById = updatedBy != null ? updatedBy.getId() : null;
+        this.note = note;
+        this.timestamp = timestamp;
     }
+
     public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public DeliveryRequest getDeliveryRequest() { return deliveryRequest; }
+    public void setDeliveryRequest(DeliveryRequest deliveryRequest) {
+        this.deliveryRequest = deliveryRequest;
+        this.deliveryRequestId = deliveryRequest != null ? deliveryRequest.getId() : null;
+    }
+    public Long getDeliveryRequestId() { return deliveryRequestId; }
+    public void setDeliveryRequestId(Long deliveryRequestId) { this.deliveryRequestId = deliveryRequestId; }
     public DeliveryStatus getFromStatus() { return fromStatus; }
+    public void setFromStatus(DeliveryStatus fromStatus) { this.fromStatus = fromStatus; }
     public DeliveryStatus getToStatus() { return toStatus; }
+    public void setToStatus(DeliveryStatus toStatus) { this.toStatus = toStatus; }
     public User getUpdatedBy() { return updatedBy; }
+    public void setUpdatedBy(User updatedBy) {
+        this.updatedBy = updatedBy;
+        this.updatedById = updatedBy != null ? updatedBy.getId() : null;
+    }
+    public Long getUpdatedById() { return updatedById; }
+    public void setUpdatedById(Long updatedById) { this.updatedById = updatedById; }
     public Instant getTimestamp() { return timestamp; }
+    public void setTimestamp(Instant timestamp) { this.timestamp = timestamp; }
     public String getNote() { return note; }
+    public void setNote(String note) { this.note = note; }
 }

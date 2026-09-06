@@ -1,70 +1,64 @@
 package com.mob10.deliveryserver.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
-
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.Instant;
 
-@Entity
-@Table(name = "ratings",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_ratings_delivery_request",
-                columnNames = "delivery_request_id"),
-        indexes = {
-                @Index(name = "idx_ratings_client_created_at", columnList = "client_id, created_at"),
-                @Index(name = "idx_ratings_driver_created_at", columnList = "driver_id, created_at")
-        })
+@Document(collection = "ratings")
 public class Rating {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "delivery_request_id", nullable = false)
     private DeliveryRequest deliveryRequest;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "client_id", nullable = false)
+    private Long deliveryRequestId;
     private User client;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "driver_id", nullable = false)
+    private Long clientId;
     private User driver;
-
-    @Column(nullable = false)
+    private Long driverId;
     private short stars;
-
-    @Column(length = 1000)
     private String comment;
-
-    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
-    protected Rating() {}
+    public Rating() {}
 
     public Rating(DeliveryRequest deliveryRequest, User client, User driver, int stars, String comment) {
         this.deliveryRequest = deliveryRequest;
+        this.deliveryRequestId = deliveryRequest != null ? deliveryRequest.getId() : null;
         this.client = client;
+        this.clientId = client != null ? client.getId() : null;
         this.driver = driver;
+        this.driverId = driver != null ? driver.getId() : null;
         this.stars = (short) stars;
         this.comment = comment;
+        this.createdAt = Instant.now();
     }
 
     public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
     public DeliveryRequest getDeliveryRequest() { return deliveryRequest; }
+    public void setDeliveryRequest(DeliveryRequest deliveryRequest) {
+        this.deliveryRequest = deliveryRequest;
+        this.deliveryRequestId = deliveryRequest != null ? deliveryRequest.getId() : null;
+    }
+    public Long getDeliveryRequestId() { return deliveryRequestId; }
+    public void setDeliveryRequestId(Long deliveryRequestId) { this.deliveryRequestId = deliveryRequestId; }
     public User getClient() { return client; }
+    public void setClient(User client) {
+        this.client = client;
+        this.clientId = client != null ? client.getId() : null;
+    }
+    public Long getClientId() { return clientId; }
+    public void setClientId(Long clientId) { this.clientId = clientId; }
     public User getDriver() { return driver; }
+    public void setDriver(User driver) {
+        this.driver = driver;
+        this.driverId = driver != null ? driver.getId() : null;
+    }
+    public Long getDriverId() { return driverId; }
+    public void setDriverId(Long driverId) { this.driverId = driverId; }
     public int getStars() { return stars; }
+    public void setStars(int stars) { this.stars = (short) stars; }
     public String getComment() { return comment; }
+    public void setComment(String comment) { this.comment = comment; }
     public Instant getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 }

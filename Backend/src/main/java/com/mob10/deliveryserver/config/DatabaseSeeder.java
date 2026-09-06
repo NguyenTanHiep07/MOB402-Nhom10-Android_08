@@ -2,6 +2,7 @@ package com.mob10.deliveryserver.config;
 
 import com.mob10.deliveryserver.domain.*;
 import com.mob10.deliveryserver.repository.*;
+import com.mob10.deliveryserver.service.SequenceGeneratorService;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -41,20 +42,29 @@ public class DatabaseSeeder implements ApplicationRunner {
     private final OrderRejectionRepository rejections;
     private final DriverStatisticsRepository statistics;
     private final PasswordEncoder passwordEncoder;
+    private final SequenceGeneratorService sequences;
     private final String demoPassword;
 
     public DatabaseSeeder(UserRepository users, DeliveryRequestRepository orders, StatusHistoryRepository histories,
                           RejectionReasonRepository reasons, OrderRejectionRepository rejections,
                           DriverStatisticsRepository statistics, PasswordEncoder passwordEncoder,
+                          SequenceGeneratorService sequences,
                           @org.springframework.beans.factory.annotation.Value("${app.demo.password}") String demoPassword) {
         this.users = users; this.orders = orders; this.histories = histories; this.reasons = reasons;
         this.rejections = rejections; this.statistics = statistics; this.passwordEncoder = passwordEncoder;
+        this.sequences = sequences;
         if (demoPassword == null || demoPassword.length() < 6) throw new IllegalArgumentException("Set DEMO_PASSWORD (at least 6 characters) for demo seed");
         this.demoPassword = demoPassword;
     }
 
+    public DatabaseSeeder(UserRepository users, DeliveryRequestRepository orders, StatusHistoryRepository histories,
+                          RejectionReasonRepository reasons, OrderRejectionRepository rejections,
+                          DriverStatisticsRepository statistics, PasswordEncoder passwordEncoder,
+                          String demoPassword) {
+        this(users, orders, histories, reasons, rejections, statistics, passwordEncoder, null, demoPassword);
+    }
+
     @Override
-    @Transactional
     public void run(ApplicationArguments args) {
         User client1 = seedUser("client1", "Nguyễn Văn A", "0123456789", Role.CLIENT, null);
         User client2 = seedUser("client2", "Trần Thị B", "0987654321", Role.CLIENT, null);
@@ -256,6 +266,7 @@ public class DatabaseSeeder implements ApplicationRunner {
             else if (driver.getDriverAvailability() == DriverAvailability.BUSY) {
                 driver.setDriverAvailability(DriverAvailability.AVAILABLE);
             }
+            users.save(driver);
         }
     }
 
@@ -279,8 +290,13 @@ public class DatabaseSeeder implements ApplicationRunner {
     }
 
     private User seedUser(String username, String fullName, String phone, Role role, String plate) {
-        return users.findByUsername(username).orElseGet(() -> users.save(
-                new User(username, passwordEncoder.encode(demoPassword), fullName, phone, role, plate)));
+        return users.findByUsername(username).orElseGet(() -> {
+            User u = new User(username, passwordEncoder.encode(demoPassword), fullName, phone, role, plate);
+            if (sequences != null) {
+                u.setId(sequences.generateSequence("users"));
+            }
+            return users.save(u);
+        });
     }
 
     private RejectionReason seedReason(String code, String label, boolean valid, int points, boolean noteRequired) {
@@ -304,7 +320,10 @@ public class DatabaseSeeder implements ApplicationRunner {
         DeliveryRequest order = new DeliveryRequest(client, distance, pickup, destination,
                 coordinate(route[0]), coordinate(route[1]), coordinate(route[2]), coordinate(route[3]),
                 sender, "0901234567", recipient, "0987654321", note, null, createdAt);
-        order.addPackage(new PackageItem(packageName, packageType, weight, quantity, note, fragile, express));
+        if (sequences != null) {
+            order.setId(sequences.generateSequence("delivery_requests"));
+        }
+        order.addPackage(new PackageItem(1L, packageName, packageType, weight, quantity, note, fragile, express));
 
         BigDecimal baseFee = money(new BigDecimal("15000"));
         BigDecimal distanceFee = money(distance.multiply(new BigDecimal("5000")));
@@ -316,8 +335,13 @@ public class DatabaseSeeder implements ApplicationRunner {
         order.applyFees(baseFee, distanceFee, weightFee, optionalFee,
                 money(baseFee.add(distanceFee).add(weightFee).add(optionalFee)));
         orders.save(order);
-        histories.save(new StatusHistory(order, null, DeliveryStatus.CHO_TIEP_NHAN, client,
-                "Đơn hàng được tạo", createdAt));
+
+        StatusHistory history = new StatusHistory(order, null, DeliveryStatus.CHO_TIEP_NHAN, client,
+                "Đơn hàng được tạo", createdAt);
+        if (sequences != null) {
+            history.setId(sequences.generateSequence("status_histories"));
+        }
+        histories.save(history);
         return order;
     }
 
@@ -326,35 +350,59 @@ public class DatabaseSeeder implements ApplicationRunner {
         order.assignDriver(driver, occurredAt);
         driver.setDriverAvailability(DriverAvailability.BUSY);
         driverStats.recordAcceptance();
-        histories.save(new StatusHistory(order, DeliveryStatus.CHO_TIEP_NHAN, DeliveryStatus.DA_CHAP_NHAN,
-                driver, "Tài xế đã nhận đơn", occurredAt));
+        orders.save(order);
+        users.save(driver);
+        statistics.save(driverStats);
+        StatusHistory history = new StatusHistory(order, DeliveryStatus.CHO_TIEP_NHAN, DeliveryStatus.DA_CHAP_NHAN,
+                driver, "Tài xế đã nhận đơn", occurredAt);
+        if (sequences != null) {
+            history.setId(sequences.generateSequence("status_histories"));
+        }
+        histories.save(history);
     }
 
     private void advance(DeliveryRequest order, User driver, DeliveryStatus nextStatus, String note) {
         DeliveryStatus previous = order.getStatus();
         Instant occurredAt = order.getUpdatedAt().plus(Duration.ofMinutes(30));
         order.changeStatus(nextStatus, occurredAt);
-        histories.save(new StatusHistory(order, previous, nextStatus, driver, note, occurredAt));
+        orders.save(order);
+        StatusHistory history = new StatusHistory(order, previous, nextStatus, driver, note, occurredAt);
+        if (sequences != null) {
+            history.setId(sequences.generateSequence("status_histories"));
+        }
+        histories.save(history);
     }
 
     private void deliver(DeliveryRequest order, User driver, DriverStatistics driverStats) {
         moveTo(order, driver, driverStats, DeliveryStatus.DA_DEN_KHACH_HANG);
         advance(order, driver, DeliveryStatus.DA_GIAO, "Đơn hàng đã giao thành công");
         driver.setDriverAvailability(hasActiveOrder(driver) ? DriverAvailability.BUSY : DriverAvailability.AVAILABLE);
+        users.save(driver);
+        statistics.save(driverStats);
     }
 
     private void cancel(DeliveryRequest order, User client, String note) {
         DeliveryStatus previous = order.getStatus();
         Instant occurredAt = order.getUpdatedAt().plus(Duration.ofMinutes(10));
         order.changeStatus(DeliveryStatus.DA_HUY, occurredAt);
-        histories.save(new StatusHistory(order, previous, DeliveryStatus.DA_HUY, client, note, occurredAt));
+        orders.save(order);
+        StatusHistory history = new StatusHistory(order, previous, DeliveryStatus.DA_HUY, client, note, occurredAt);
+        if (sequences != null) {
+            history.setId(sequences.generateSequence("status_histories"));
+        }
+        histories.save(history);
     }
 
     private void reject(DeliveryRequest order, User driver, RejectionReason reason,
                         DriverStatistics driverStats, String note) {
         Instant rejectedAt = order.getCreatedAt().plus(Duration.ofMinutes(15));
-        OrderRejection rejection = rejections.save(new OrderRejection(order, driver, reason, note, rejectedAt));
+        OrderRejection rejection = new OrderRejection(order, driver, reason, note, rejectedAt);
+        if (sequences != null) {
+            rejection.setId(sequences.generateSequence("order_rejections"));
+        }
+        rejections.save(rejection);
         driverStats.recordRejection(reason.getPenaltyPoints(), rejection.isPenaltyApplied());
+        statistics.save(driverStats);
     }
 
     private BigDecimal money(BigDecimal value) {
