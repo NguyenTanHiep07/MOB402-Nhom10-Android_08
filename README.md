@@ -119,7 +119,6 @@ cd ../Backend
 
 Giữ bộ test gốc Java/Kotlin của nhóm; các test đã có được cập nhật khi hợp đồng nghiệp vụ thay đổi. Theo yêu cầu không thêm file test vào đồ án, các ca kiểm tra bổ sung và script PostgreSQL/UI của đợt rà soát được đặt ngoài repository, không có `run-db-tests.sh` trong dự án. Không dùng database demo để chạy các ca nhận/hủy đơn kiểm tra. Kết quả kiểm tra bổ sung được ghi riêng trong báo cáo nghiệm thu, không được hiểu là bộ test đi kèm repository.
 
-- [Kết quả kiểm tra hồi quy tuần 3–5](Extra/Testing/W345-01-Regression.md)
 - `Code`: Android Studio project; `Backend`: API; `DOCX`: nơi nộp báo cáo Word/PDF; `Extra`: sơ đồ/bằng chứng; `PPTX`: nơi nộp trình chiếu. **Kiểm tra 04/09: `Report-Android_08.docx`, `Report-Android_08.pdf` và `Presentation-Android_08.pptx` đều là file rỗng 0 byte, chưa phải tài liệu đã hoàn thành.** Các sơ đồ kiến trúc Room tuần trước chỉ là lịch sử; kiến trúc REST hiện tại được mô tả ở trên và trong API_CONTRACT.
 
 ## Video demo
