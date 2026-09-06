@@ -45,6 +45,7 @@ public class DatabaseSeeder implements ApplicationRunner {
     private final SequenceGeneratorService sequences;
     private final String demoPassword;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public DatabaseSeeder(UserRepository users, DeliveryRequestRepository orders, StatusHistoryRepository histories,
                           RejectionReasonRepository reasons, OrderRejectionRepository rejections,
                           DriverStatisticsRepository statistics, PasswordEncoder passwordEncoder,
