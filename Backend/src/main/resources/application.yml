@@ -25,7 +25,7 @@ spring:
   data:
     mongodb:
       uri: ${MONGODB_URI:mongodb://localhost:27017/delivery_db}
-      auto-index-creation: true
+      auto-index-creation: false
 
 app:
   mail:
