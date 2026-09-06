@@ -29,12 +29,25 @@ import com.mob10.deliveryapp.data.remote.api.AccountProfile
 val LocalAccountUpdated = staticCompositionLocalOf<(AccountProfile) -> Unit> { {} }
 
 @Composable
-fun AccountPanel(userId: Int, vm: AccountViewModel = viewModel(key = "account_$userId")) {
-    val state by vm.state.collectAsStateWithLifecycle()
-    val updated = LocalAccountUpdated.current
+fun AccountPanel(
+    userId: Int,
+    onProfileUpdated: ((AccountProfile) -> Unit)? = null
+) {
+    val updatedFromComposition = LocalAccountUpdated.current
+    val combinedUpdated: (AccountProfile) -> Unit = remember(updatedFromComposition, onProfileUpdated) {
+        { profile ->
+            updatedFromComposition(profile)
+            onProfileUpdated?.invoke(profile)
+        }
+    }
     val context = LocalContext.current.applicationContext
+    val factory = remember(userId, context, combinedUpdated) {
+        AccountViewModelFactory(context, combinedUpdated)
+    }
+    val vm: AccountViewModel = viewModel(key = "account_$userId", factory = factory)
+    val state by vm.state.collectAsStateWithLifecycle()
     LaunchedEffect(vm) { vm.load() }
-    LaunchedEffect(state.profile) { state.profile?.let(updated) }
+    LaunchedEffect(state.profile) { state.profile?.let(combinedUpdated) }
     var editing by rememberSaveable { mutableStateOf(false) }
     var linking by rememberSaveable { mutableStateOf(false) }
     var currentPassword by remember { mutableStateOf("") }

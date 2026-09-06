@@ -6,7 +6,9 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import android.util.Base64
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.mob10.deliveryapp.data.local.dao.UserDao
 import com.mob10.deliveryapp.data.remote.api.*
 import com.mob10.deliveryapp.data.repository.AccountRepository
 import com.mob10.deliveryapp.data.util.NetworkResult
@@ -18,16 +20,50 @@ data class AccountState(val profile: AccountProfile? = null, val busy: Boolean =
     val error: String? = null, val message: String? = null, val avatarDraft: String? = null,
     val avatarChanged: Boolean = false, val resendAt: Long = 0L, val emailRequested: Boolean = false)
 
-class AccountViewModel : ViewModel() {
-    private val repo = AccountRepository()
+class AccountViewModel(
+    private val repo: AccountRepository = AccountRepository(),
+    private val userDao: UserDao? = null,
+    private val onProfileUpdated: ((AccountProfile) -> Unit)? = null,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) : ViewModel() {
     private val mutable = MutableStateFlow(AccountState())
     val state = mutable.asStateFlow()
+
+    private suspend fun syncProfileToLocal(profile: AccountProfile) {
+        withContext(ioDispatcher) {
+            userDao?.let { dao ->
+                val existing = dao.getUserById(profile.id.toInt())
+                if (existing != null) {
+                    val updated = existing.copy(
+                        username = profile.username,
+                        fullName = profile.fullName,
+                        phoneNumber = profile.phoneNumber,
+                        licensePlate = profile.licensePlate
+                    )
+                    if (updated != existing) {
+                        dao.update(updated)
+                    }
+                }
+            }
+        }
+        onProfileUpdated?.invoke(profile)
+    }
+
     fun load() {
         if (mutable.value.busy) return
         viewModelScope.launch {
             mutable.value = mutable.value.copy(busy = true, error = null)
             when (val result = repo.profile()) {
-                is NetworkResult.Success -> mutable.value = mutable.value.copy(profile = result.data, busy = false)
+                is NetworkResult.Success -> {
+                    val profile = result.data
+                    mutable.value = mutable.value.copy(profile = profile, busy = false)
+                    try {
+                        syncProfileToLocal(profile)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                    }
+                }
                 is NetworkResult.Error -> mutable.value = mutable.value.copy(busy = false, error = result.message)
                 else -> mutable.value = mutable.value.copy(busy = false, error = "Không tải được hồ sơ.")
             }
@@ -51,7 +87,7 @@ class AccountViewModel : ViewModel() {
         viewModelScope.launch {
             mutable.value = mutable.value.copy(busy = true, error = null)
             try {
-                val encoded = withContext(Dispatchers.IO) {
+                val encoded = withContext(ioDispatcher) {
                     val bitmap = if (android.os.Build.VERSION.SDK_INT >= 28) ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, uri)) { decoder, info, _ ->
                         val ratio = 384.0 / maxOf(info.size.width, info.size.height)
                         if (ratio < 1) decoder.setTargetSize(maxOf(1, (info.size.width * ratio).toInt()), maxOf(1, (info.size.height * ratio).toInt()))
@@ -132,11 +168,44 @@ class AccountViewModel : ViewModel() {
             handleProfile(repo.verify(EmailVerify(code, password)), "Đã xác minh email. Bạn có thể dùng số điện thoại để khôi phục mật khẩu.")
         }
     }
-    private fun handleProfile(result: NetworkResult<AccountProfile>, message: String) {
+    private suspend fun handleProfile(result: NetworkResult<AccountProfile>, message: String) {
         when (result) {
-            is NetworkResult.Success -> mutable.value = mutable.value.copy(profile = result.data, busy = false, message = message, avatarChanged = false, avatarDraft = null)
+            is NetworkResult.Success -> {
+                val profile = result.data
+                mutable.value = mutable.value.copy(
+                    profile = profile,
+                    busy = false,
+                    message = message,
+                    avatarChanged = false,
+                    avatarDraft = null
+                )
+                try {
+                    syncProfileToLocal(profile)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                }
+            }
             is NetworkResult.Error -> mutable.value = mutable.value.copy(busy = false, error = result.message)
             else -> mutable.value = mutable.value.copy(busy = false, error = "Không nhận được phản hồi. Hãy làm mới hồ sơ để kiểm tra.")
         }
+    }
+}
+
+class AccountViewModelFactory(
+    private val context: Context,
+    private val onProfileUpdated: ((AccountProfile) -> Unit)? = null
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(AccountViewModel::class.java)) {
+            val db = com.mob10.deliveryapp.data.local.AppDatabase.getDatabase(context)
+            return AccountViewModel(
+                repo = AccountRepository(),
+                userDao = db.userDao(),
+                onProfileUpdated = onProfileUpdated
+            ) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
 }
