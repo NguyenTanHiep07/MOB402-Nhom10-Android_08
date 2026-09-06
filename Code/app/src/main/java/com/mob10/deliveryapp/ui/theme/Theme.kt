@@ -65,9 +65,15 @@ fun Android08Theme(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.surface.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            var ctx = view.context
+            while (ctx is android.content.ContextWrapper) {
+                if (ctx is Activity) break
+                ctx = ctx.baseContext
+            }
+            (ctx as? Activity)?.window?.let { window ->
+                window.statusBarColor = colorScheme.surface.toArgb()
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            }
         }
     }
 
