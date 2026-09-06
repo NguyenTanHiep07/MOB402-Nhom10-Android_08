@@ -33,7 +33,7 @@ app:
     from: ${MAIL_FROM:}
   demo:
     enabled: ${DEMO_ENABLED:true}
-    password: ${DEMO_PASSWORD:Demo@123456}
+    password: ${DEMO_PASSWORD:123456}
   jwt:
     secret: ${JWT_SECRET:dev_secret_key_change_me_in_production_1234567890123456}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}

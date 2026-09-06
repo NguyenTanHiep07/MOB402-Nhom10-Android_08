@@ -303,7 +303,13 @@ public class DatabaseSeeder implements ApplicationRunner {
     }
 
     private User seedUser(String username, String fullName, String phone, Role role, String plate) {
-        return users.findByUsername(username).orElseGet(() -> {
+        return users.findByUsername(username).map(existing -> {
+            existing.setPasswordHash(passwordEncoder.encode(demoPassword));
+            existing.setPhoneNumber(phone);
+            existing.setFullName(fullName);
+            if (plate != null) existing.setLicensePlate(plate);
+            return users.save(existing);
+        }).orElseGet(() -> {
             User u = new User(username, passwordEncoder.encode(demoPassword), fullName, phone, role, plate);
             if (sequences != null) {
                 u.setId(sequences.generateSequence("users"));
