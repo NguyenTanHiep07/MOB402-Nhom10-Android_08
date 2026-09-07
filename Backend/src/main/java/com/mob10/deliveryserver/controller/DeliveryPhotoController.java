@@ -24,19 +24,18 @@ public class DeliveryPhotoController {
     private final DeliveryRequestRepository orders;
     private final DriverOrderService driver;
     private final OrderService access;
-    private final org.springframework.jdbc.core.JdbcTemplate db;
-    public DeliveryPhotoController(DeliveryRequestRepository orders, DriverOrderService driver, OrderService access, org.springframework.jdbc.core.JdbcTemplate db) {
-        this.orders = orders; this.driver = driver; this.access = access; this.db = db;
+    private final com.mob10.deliveryserver.repository.UserRepository users;
+    public DeliveryPhotoController(DeliveryRequestRepository orders, DriverOrderService driver, OrderService access, com.mob10.deliveryserver.repository.UserRepository users) {
+        this.orders = orders; this.driver = driver; this.access = access; this.users = users;
     }
     public record PhotoRequest(@NotBlank @Size(max = 700000) String image) {}
     public record PhotoResponse(String image) {}
 
     @GetMapping("/orders/{id}/driver-avatar")
-    @Transactional(readOnly = true)
     public PhotoResponse driverAvatar(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable Long id) {
         var order = access.detail(user, id);
         if (order.deliveryPerson() == null) return new PhotoResponse(null);
-        return new PhotoResponse(db.queryForObject("SELECT avatar_base64 FROM users WHERE id=?", String.class, order.deliveryPerson().id()));
+        return new PhotoResponse(users.findById(order.deliveryPerson().id()).map(User::getAvatarBase64).orElse(null));
     }
 
     @GetMapping("/orders/{id}/delivery-photo")

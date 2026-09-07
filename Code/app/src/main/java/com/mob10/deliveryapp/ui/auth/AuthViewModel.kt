@@ -83,7 +83,7 @@ class AuthViewModel(
         }
     }
 
-    fun login(username: String, password: String) {
+    fun login(phoneNumber: String, password: String) {
         if (_uiState.value.isInitializing) {
             _uiState.value = _uiState.value.copy(errorMessage = "Dữ liệu đang được khởi tạo, vui lòng thử lại.")
             return
@@ -95,7 +95,7 @@ class AuthViewModel(
                 isAuthenticating = true,
                 errorMessage = null
             )
-            when (val result = authRepository.login(username.trim(), password)) {
+            when (val result = authRepository.login(phoneNumber.trim(), password)) {
                 is NetworkResult.Success -> {
                     runCatching {
                         result.data.user.toLocalUser().also { userRepository.saveAuthenticatedUser(it) }

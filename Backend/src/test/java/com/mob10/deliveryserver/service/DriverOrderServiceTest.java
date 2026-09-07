@@ -40,11 +40,12 @@ class DriverOrderServiceTest {
     void onlyOneOfTwoDriversCanWinAtomicAccept() {
         User driverOne = availableDriver(11L);
         when(driverOne.getDriverAvailability()).thenReturn(DriverAvailability.AVAILABLE);
+        DriverStatistics statsOne = new DriverStatistics(driverOne);
         DeliveryRequest assigned = mock(DeliveryRequest.class);
         when(assigned.getPackages()).thenReturn(new ArrayList<>());
 
         when(users.findByIdForUpdate(11L)).thenReturn(Optional.of(driverOne));
-        when(statistics.findById(11L)).thenReturn(Optional.of(new DriverStatistics(driverOne)));
+        when(statistics.findById(11L)).thenReturn(Optional.of(statsOne));
         when(rejections.existsByDeliveryRequestIdAndDriverId(99L, 11L)).thenReturn(false);
         when(orders.findByIdForUpdate(99L)).thenReturn(Optional.of(assigned));
         when(assigned.getStatus()).thenReturn(DeliveryStatus.CHO_TIEP_NHAN, DeliveryStatus.DA_CHAP_NHAN);

@@ -238,8 +238,13 @@ fun ActiveOrderCard(
         val cleanPhone = phone.filter { it.isDigit() || it == '+' }
         if (cleanPhone.isNotBlank()) {
             val intent = Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", cleanPhone, null))
-            if (intent.resolveActivity(context.packageManager) != null) context.startActivity(intent)
-            else android.widget.Toast.makeText(context, "Thiết bị không có ứng dụng gọi điện", android.widget.Toast.LENGTH_LONG).show()
+            try {
+                context.startActivity(intent)
+            } catch (e: android.content.ActivityNotFoundException) {
+                android.widget.Toast.makeText(context, "Thiết bị không có ứng dụng gọi điện", android.widget.Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(context, "Không thể mở ứng dụng gọi điện", android.widget.Toast.LENGTH_LONG).show()
+            }
         }
     }
 

@@ -65,16 +65,17 @@ import com.mob10.deliveryapp.ui.theme.UthSecondaryContainer
 
 @Composable
 fun LoginScreen(
-    onLogin: (username: String, password: String) -> Unit = { _, _ -> },
+    onLogin: (phoneNumber: String, password: String) -> Unit = { _, _ -> },
     onForgotPassword: () -> Unit = {},
-    isLoading: Boolean = false
+    isLoading: Boolean = false,
+    errorMessage: String? = null
 ) {
-    var username by rememberSaveable { mutableStateOf("") }
+    var phoneNumber by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var showValidationError by rememberSaveable { mutableStateOf(false) }
 
-    BoxWithConstraints(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
@@ -99,8 +100,7 @@ fun LoginScreen(
 
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = (maxHeight - 48.dp).coerceAtLeast(0.dp))
+                .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -142,13 +142,13 @@ fun LoginScreen(
                     Spacer(modifier = Modifier.height(26.dp))
 
                     LoginTextField(
-                        value = username,
+                        value = phoneNumber,
                         onValueChange = {
-                            username = it
+                            phoneNumber = it
                             showValidationError = false
                         },
-                        label = stringResource(R.string.email_label),
-                        keyboardType = KeyboardType.Text,
+                        label = "Số điện thoại",
+                        keyboardType = KeyboardType.Phone,
                         leadingIcon = Icons.Default.Person
                     )
                     Spacer(modifier = Modifier.height(14.dp))
@@ -178,9 +178,9 @@ fun LoginScreen(
                             }
                         }
                     )
-                    if (showValidationError) {
+                    if (errorMessage != null || showValidationError) {
                         Text(
-                            text = stringResource(R.string.login_validation_error),
+                            text = errorMessage ?: stringResource(R.string.login_validation_error),
                             color = MaterialTheme.colorScheme.error,
                             fontSize = 12.sp,
                             modifier = Modifier
@@ -201,10 +201,10 @@ fun LoginScreen(
                     }
                     Button(
                         onClick = {
-                            if (username.isBlank() || password.isBlank()) {
+                            if (phoneNumber.isBlank() || password.isBlank()) {
                                 showValidationError = true
                             } else {
-                                onLogin(username.trim(), password)
+                                onLogin(phoneNumber.trim(), password)
                             }
                         },
                         modifier = Modifier

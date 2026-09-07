@@ -35,11 +35,12 @@ class OrderServiceTest {
     @Mock DtoMapper mapper;
     @Mock LocationService locationService;
     @Mock PricingService pricingService;
+    @Mock SequenceGeneratorService sequences;
     private OrderService service;
 
     @BeforeEach
     void setUp() {
-        service = new OrderService(orders, users, histories, rejections, mapper, locationService, pricingService);
+        service = new OrderService(orders, users, histories, rejections, mapper, locationService, pricingService, sequences);
     }
 
     @Test

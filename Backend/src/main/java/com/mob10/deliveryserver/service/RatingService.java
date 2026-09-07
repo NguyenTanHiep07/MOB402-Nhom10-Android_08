@@ -25,14 +25,16 @@ public class RatingService {
     private final RatingRepository ratings;
     private final DeliveryRequestRepository orders;
     private final UserRepository users;
+    private final SequenceGeneratorService sequences;
 
-    public RatingService(RatingRepository ratings, DeliveryRequestRepository orders, UserRepository users) {
+    public RatingService(RatingRepository ratings, DeliveryRequestRepository orders, UserRepository users,
+                         SequenceGeneratorService sequences) {
         this.ratings = ratings;
         this.orders = orders;
         this.users = users;
+        this.sequences = sequences;
     }
 
-    @Transactional
     public RatingResponse create(AuthenticatedUser principal, CreateRatingRequest input) {
         requireClient(principal);
         DeliveryRequest order = orders.findByIdForUpdate(input.deliveryRequestId())
@@ -56,12 +58,14 @@ public class RatingService {
                     "Đơn hàng này đã được đánh giá");
         }
 
-        Rating rating = ratings.save(new Rating(
+        Rating rating = new Rating(
                 order,
                 order.getClient(),
                 driver,
                 input.stars(),
-                clean(input.comment())));
+                clean(input.comment()));
+        rating.setId(sequences.generateSequence("ratings"));
+        ratings.save(rating);
         return toResponse(rating);
     }
 

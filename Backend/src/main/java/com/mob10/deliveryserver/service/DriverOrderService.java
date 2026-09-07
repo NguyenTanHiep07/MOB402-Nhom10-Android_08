@@ -35,21 +35,24 @@ public class DriverOrderService {
         this.lockThreshold = lockThreshold; this.lockDurationMinutes = lockDurationMinutes;
     }
 
-    @Transactional(readOnly = true)
     public List<OrderResponse> openOrders(AuthenticatedUser principal) {
         requireDriver(principal);
-        return orders.findOpenForDriver(principal.id(), DeliveryStatus.CHO_TIEP_NHAN).stream()
-                .map(mapper::toOrderResponse).toList();
+        List<Long> rejected = rejections.findAllByDriverId(principal.id()).stream()
+                .map(OrderRejection::getDeliveryRequestId)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        List<DeliveryRequest> openList = rejected.isEmpty()
+                ? orders.findAllByStatusAndDeliveryPersonIsNullOrderByCreatedAtDesc(DeliveryStatus.CHO_TIEP_NHAN)
+                : orders.findOpenForDriverNotIn(principal.id(), DeliveryStatus.CHO_TIEP_NHAN, rejected);
+        return openList.stream().map(mapper::toOrderResponse).toList();
     }
 
-    @Transactional(readOnly = true)
     public List<OrderResponse> myOrders(AuthenticatedUser principal) {
         requireDriver(principal);
         return orders.findAllByDeliveryPersonIdOrderByCreatedAtDesc(principal.id()).stream()
                 .map(mapper::toOrderResponse).toList();
     }
 
-    @Transactional
     public OrderResponse accept(AuthenticatedUser principal, Long requestId) {
         requireDriver(principal);
         // Lock the order first, then the driver, consistently with status/cancel/reject.
@@ -73,13 +76,15 @@ public class DriverOrderService {
         assigned.assignDriver(driver, Instant.now());
         driver.setDriverAvailability(DriverAvailability.BUSY);
         stats.recordAcceptance();
+        orders.save(assigned);
+        users.save(driver);
+        statistics.save(stats);
         histories.save(new StatusHistory(assigned, DeliveryStatus.CHO_TIEP_NHAN, DeliveryStatus.DA_CHAP_NHAN,
                 driver, "Tài xế đã nhận đơn"));
         assigned.getPackages().size();
         return mapper.toOrderResponse(assigned);
     }
 
-    @Transactional
     public RejectResult reject(AuthenticatedUser principal, Long requestId, RejectOrderRequest input) {
         requireDriver(principal);
         DeliveryRequest order = orders.findByIdForUpdate(requestId)
@@ -105,11 +110,11 @@ public class DriverOrderService {
                     driver.getId(), Instant.now().minus(Duration.ofHours(24)));
             if (recentPenalties >= lockThreshold) stats.lockUntil(Instant.now().plus(Duration.ofMinutes(lockDurationMinutes)));
         }
+        statistics.save(stats);
         return new RejectResult("Đã ghi nhận từ chối; đơn vẫn hiển thị cho tài xế khác",
                 rejection.isPenaltyApplied(), mapper.toStatistics(stats));
     }
 
-    @Transactional
     public OrderResponse updateStatus(AuthenticatedUser principal, Long requestId, UpdateStatusRequest input) {
         requireDriver(principal);
         User driver = getDriver(principal.id());
@@ -127,32 +132,31 @@ public class DriverOrderService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "DELIVERY_PHOTO_REQUIRED", "Hãy chụp ảnh kiện hàng để xác nhận giao thành công");
         }
         order.changeStatus(input.status());
+        orders.save(order);
         histories.save(new StatusHistory(order, previous, input.status(), driver, clean(input.note())));
         if (input.status() == DeliveryStatus.DA_GIAO) {
             User lockedDriver = users.findByIdForUpdate(driver.getId()).orElseThrow();
             boolean hasOtherActive = orders.findAllByDeliveryPersonIdOrderByCreatedAtDesc(driver.getId()).stream()
                     .anyMatch(other -> !other.getId().equals(requestId) && other.getStatus() != DeliveryStatus.DA_GIAO && other.getStatus() != DeliveryStatus.DA_HUY);
             lockedDriver.setDriverAvailability(hasOtherActive ? DriverAvailability.BUSY : DriverAvailability.AVAILABLE);
+            users.save(lockedDriver);
         }
         order.getPackages().size();
         return mapper.toOrderResponse(order);
     }
 
-    @Transactional(readOnly = true)
     public List<RejectionReasonResponse> rejectionReasons() {
         return reasons.findAllByActiveTrueOrderByCodeAsc().stream()
                 .map(reason -> new RejectionReasonResponse(reason.getCode(), reason.getLabel(), reason.isValid(),
                         reason.getPenaltyPoints(), reason.isRequiresNote())).toList();
     }
 
-    @Transactional(readOnly = true)
     public DriverStatisticsResponse myStatistics(AuthenticatedUser principal) {
         requireDriver(principal);
         User driver = getDriver(principal.id());
         return mapper.toStatistics(statistics.findById(driver.getId()).orElseGet(() -> new DriverStatistics(driver)));
     }
 
-    @Transactional
     public DriverAvailability updateAvailability(AuthenticatedUser principal, UpdateAvailabilityRequest input) {
         requireDriver(principal);
         User driver = users.findByIdForUpdate(principal.id()).orElseThrow();
@@ -163,6 +167,7 @@ public class DriverOrderService {
                     "Tài xế đang có đơn hoạt động nên trạng thái phải là BUSY");
         }
         driver.setDriverAvailability(input.availability());
+        users.save(driver);
         return driver.getDriverAvailability();
     }
 

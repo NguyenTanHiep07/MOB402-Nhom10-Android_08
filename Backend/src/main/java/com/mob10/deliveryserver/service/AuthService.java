@@ -21,7 +21,7 @@ public class AuthService {
     }
 
     public LoginResponse login(LoginRequest request) {
-        User user = users.findByUsername(request.username().trim())
+        User user = users.findByPhoneNumber(request.phoneNumber().trim())
                 .orElseThrow(() -> invalidCredentials());
         if (!user.isActive() || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw invalidCredentials();
@@ -30,6 +30,6 @@ public class AuthService {
     }
 
     private ApiException invalidCredentials() {
-        return new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "Tên đăng nhập hoặc mật khẩu không đúng");
+        return new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "Số điện thoại hoặc mật khẩu không đúng");
     }
 }

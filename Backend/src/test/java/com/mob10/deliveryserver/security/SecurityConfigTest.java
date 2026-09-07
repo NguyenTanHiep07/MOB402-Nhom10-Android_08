@@ -3,7 +3,6 @@ package com.mob10.deliveryserver.security;
 import com.mob10.deliveryserver.config.SecurityConfig;
 import com.mob10.deliveryserver.controller.OrderController;
 import com.mob10.deliveryserver.dto.OrderDtos.CreateOrderRequest;
-import com.mob10.deliveryserver.repository.UserRepository;
 import com.mob10.deliveryserver.service.OrderService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

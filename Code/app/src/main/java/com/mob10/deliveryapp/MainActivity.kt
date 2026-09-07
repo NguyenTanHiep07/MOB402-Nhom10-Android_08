@@ -3,6 +3,7 @@ package com.mob10.deliveryapp
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.ViewModelProvider
 import com.mob10.deliveryapp.data.local.AppDatabase
 import com.mob10.deliveryapp.data.local.DatabaseInitializer
@@ -16,6 +17,7 @@ import com.mob10.deliveryapp.ui.auth.AuthViewModelFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         val database = AppDatabase.getDatabase(applicationContext)
         val sessionStorage = DataStoreSessionStorage(applicationContext)
