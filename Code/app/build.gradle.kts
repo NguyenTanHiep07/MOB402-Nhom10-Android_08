@@ -17,9 +17,18 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val apiBaseUrl = providers.gradleProperty("API_BASE_URL")
+            .orElse("http://10.0.2.2:8080/api/")
+            .get()
+        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+        manifestPlaceholders["allowCleartext"] = "false"
     }
 
     buildTypes {
+        debug {
+            manifestPlaceholders["allowCleartext"] = "true"
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -37,8 +46,11 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
+
+ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:${libs.versions.composeBom.get()}")
@@ -54,6 +66,7 @@ dependencies {
     ksp("androidx.room:room-compiler:2.6.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     // Networking - Retrofit cho Rating API
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
@@ -72,6 +85,7 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.8.4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation(libs.junit)
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     testImplementation("androidx.room:room-testing:2.6.1")
     testImplementation("androidx.test:core-ktx:1.6.1")
     testImplementation("androidx.test.ext:junit-ktx:1.2.1")

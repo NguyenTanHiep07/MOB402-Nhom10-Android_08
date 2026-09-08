@@ -21,7 +21,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
@@ -67,14 +67,15 @@ import com.mob10.deliveryapp.ui.theme.UthSecondaryContainer
 fun LoginScreen(
     onLogin: (phoneNumber: String, password: String) -> Unit = { _, _ -> },
     onForgotPassword: () -> Unit = {},
-    isLoading: Boolean = false
+    isLoading: Boolean = false,
+    errorMessage: String? = null
 ) {
     var phoneNumber by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var showValidationError by rememberSaveable { mutableStateOf(false) }
 
-    BoxWithConstraints(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
@@ -99,8 +100,7 @@ fun LoginScreen(
 
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = (maxHeight - 48.dp).coerceAtLeast(0.dp))
+                .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -147,9 +147,9 @@ fun LoginScreen(
                             phoneNumber = it
                             showValidationError = false
                         },
-                        label = stringResource(R.string.email_label),
+                        label = "Số điện thoại",
                         keyboardType = KeyboardType.Phone,
-                        leadingIcon = Icons.Default.Phone
+                        leadingIcon = Icons.Default.Person
                     )
                     Spacer(modifier = Modifier.height(14.dp))
                     LoginTextField(
@@ -178,9 +178,9 @@ fun LoginScreen(
                             }
                         }
                     )
-                    if (showValidationError) {
+                    if (errorMessage != null || showValidationError) {
                         Text(
-                            text = "Vui lòng nhập số điện thoại và mật khẩu",
+                            text = errorMessage ?: stringResource(R.string.login_validation_error),
                             color = MaterialTheme.colorScheme.error,
                             fontSize = 12.sp,
                             modifier = Modifier
@@ -209,7 +209,7 @@ fun LoginScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(53.dp),
+                            .height(56.dp),
                         enabled = !isLoading,
                         shape = RoundedCornerShape(15.dp),
                         colors = ButtonDefaults.buttonColors(

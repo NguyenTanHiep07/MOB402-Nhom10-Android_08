@@ -15,4 +15,6 @@
         <item name="android:statusBarColor">#10131C</item>
     </style>
 
+    <style name="Theme.Android08" parent="Base.Theme.Android08" />
+
 </resources>

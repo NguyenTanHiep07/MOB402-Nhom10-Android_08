@@ -28,7 +28,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Inventory2
-import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Schedule
@@ -52,10 +52,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
-import com.mob10.deliveryapp.data.local.entity.PackageEntity
-import com.mob10.deliveryapp.data.local.entity.StatusHistoryEntity
+import com.mob10.deliveryapp.data.model.Order
+import com.mob10.deliveryapp.data.model.OrderPackage
+import com.mob10.deliveryapp.data.model.StatusHistory
 import com.mob10.deliveryapp.data.model.DeliveryStatus
+import com.mob10.deliveryapp.formatServerTimestamp
 import com.mob10.deliveryapp.ui.components.MetricCard
 import com.mob10.deliveryapp.ui.components.SectionTitle
 import com.mob10.deliveryapp.ui.components.StatusPill
@@ -66,7 +67,6 @@ import com.mob10.deliveryapp.ui.theme.UthPrimary
 import com.mob10.deliveryapp.ui.theme.UthSecondary
 import com.mob10.deliveryapp.ui.theme.UthSuccess
 import com.mob10.deliveryapp.ui.theme.UthSuccessContainer
-import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -79,9 +79,9 @@ enum class HistoryFilter {
 
 @Composable
 fun DeliveryHistoryTab(
-    historyOrders: List<DeliveryRequestEntity>,
-    packagesByOrder: Map<Int, List<PackageEntity>>,
-    historiesByOrder: Map<Int, List<StatusHistoryEntity>>,
+    historyOrders: List<Order>,
+    packagesByOrder: Map<Int, List<OrderPackage>> = emptyMap(),
+    historiesByOrder: Map<Int, List<StatusHistory>> = emptyMap(),
     totalEarnings: Double,
     todayEarnings: Double,
     completedCount: Int,
@@ -97,11 +97,9 @@ fun DeliveryHistoryTab(
         }
     }
 
-    val currencyFormatter = remember { NumberFormat.getCurrencyInstance(Locale.forLanguageTag("vi-VN")) }
-
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Summary Header Cards
         SectionTitle(title = "Tổng quan thu nhập")
@@ -112,7 +110,7 @@ fun DeliveryHistoryTab(
             MetricCard(
                 modifier = Modifier.weight(1f),
                 label = "Tổng thu nhập",
-                value = currencyFormatter.format(totalEarnings),
+                value = String.format(java.util.Locale.forLanguageTag("vi-VN"), "%,.0fđ", totalEarnings),
                 helper = "Từ $completedCount đơn hoàn thành",
                 icon = Icons.Default.Payments,
                 highlighted = totalEarnings > 0
@@ -120,7 +118,7 @@ fun DeliveryHistoryTab(
             MetricCard(
                 modifier = Modifier.weight(1f),
                 label = "Thu nhập hôm nay",
-                value = currencyFormatter.format(todayEarnings),
+                value = String.format(java.util.Locale.forLanguageTag("vi-VN"), "%,.0fđ", todayEarnings),
                 helper = "$deliveredTodayCount đơn trong ngày",
                 icon = Icons.Default.CheckCircle
             )
@@ -129,12 +127,12 @@ fun DeliveryHistoryTab(
         // Filter Chips
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             FilterChip(
                 selected = currentFilter == HistoryFilter.ALL,
                 onClick = { currentFilter = HistoryFilter.ALL },
-                label = { Text("Tất cả (${historyOrders.size})") },
+                label = { Text("Tất cả (${historyOrders.size})", fontWeight = FontWeight.SemiBold) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = UthPrimary,
                     selectedLabelColor = Color.White
@@ -143,7 +141,7 @@ fun DeliveryHistoryTab(
             FilterChip(
                 selected = currentFilter == HistoryFilter.COMPLETED,
                 onClick = { currentFilter = HistoryFilter.COMPLETED },
-                label = { Text("Đã giao (${historyOrders.count { it.status == DeliveryStatus.DA_GIAO }})") },
+                label = { Text("Đã giao (${historyOrders.count { it.status == DeliveryStatus.DA_GIAO }})", fontWeight = FontWeight.SemiBold) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = UthSuccess,
                     selectedLabelColor = Color.White
@@ -152,7 +150,7 @@ fun DeliveryHistoryTab(
             FilterChip(
                 selected = currentFilter == HistoryFilter.CANCELLED,
                 onClick = { currentFilter = HistoryFilter.CANCELLED },
-                label = { Text("Đã hủy (${historyOrders.count { it.status == DeliveryStatus.DA_HUY }})") },
+                label = { Text("Đã hủy (${historyOrders.count { it.status == DeliveryStatus.DA_HUY }})", fontWeight = FontWeight.SemiBold) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = UthError,
                     selectedLabelColor = Color.White
@@ -166,8 +164,8 @@ fun DeliveryHistoryTab(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 24.dp),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = MaterialTheme.shapes.medium,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Column(
@@ -177,24 +175,33 @@ fun DeliveryHistoryTab(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.History,
-                        contentDescription = null,
-                        tint = UthOnSurfaceVariant,
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.History,
+                            contentDescription = null,
+                            tint = UthOnSurfaceVariant,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "Không có lịch sử giao hàng",
                         fontWeight = FontWeight.Bold,
                         color = UthOnSurface,
-                        fontSize = 15.sp
+                        fontSize = 16.sp
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "Các đơn hàng đã hoàn tất hoặc đã hủy sẽ hiển thị ở đây.",
                         color = UthOnSurfaceVariant,
-                        fontSize = 12.sp
+                        fontSize = 13.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
             }
@@ -202,8 +209,8 @@ fun DeliveryHistoryTab(
             filteredOrders.forEach { order ->
                 HistoryOrderCard(
                     order = order,
-                    packages = packagesByOrder[order.id] ?: emptyList(),
-                    histories = historiesByOrder[order.id] ?: emptyList()
+                    packages = packagesByOrder[order.id.toInt()] ?: order.packages,
+                    histories = historiesByOrder[order.id.toInt()] ?: emptyList()
                 )
             }
         }
@@ -212,31 +219,27 @@ fun DeliveryHistoryTab(
 
 @Composable
 private fun HistoryOrderCard(
-    order: DeliveryRequestEntity,
-    packages: List<PackageEntity>,
-    histories: List<StatusHistoryEntity>
+    order: Order,
+    packages: List<OrderPackage> = order.packages,
+    histories: List<StatusHistory> = emptyList()
 ) {
     var isExpanded by remember { mutableStateOf(false) }
-    val dateFormat = remember { SimpleDateFormat("HH:mm - dd/MM/yyyy", Locale.getDefault()) }
-    val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
-    val currencyFormatter = remember { NumberFormat.getCurrencyInstance(Locale.forLanguageTag("vi-VN")) }
 
-    val displayTime = order.actualDeliveryTime?.let { dateFormat.format(Date(it)) }
-        ?: dateFormat.format(Date(order.createdAt))
+    val displayTime = formatServerTimestamp(order.actualDeliveryTime ?: order.createdAt, "Giao hoàn tất")
 
     val isCompleted = order.status == DeliveryStatus.DA_GIAO
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
+            .clip(MaterialTheme.shapes.medium)
             .clickable { isExpanded = !isExpanded },
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(18.dp)) {
             // Header Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -246,23 +249,24 @@ private fun HistoryOrderCard(
                 Column {
                     Text(
                         text = "#GD-${order.id}",
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         color = UthOnSurface,
-                        fontSize = 15.sp
+                        fontSize = 16.sp
                     )
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.Schedule,
                             contentDescription = null,
                             tint = UthOnSurfaceVariant,
-                            modifier = Modifier.size(13.dp)
+                            modifier = Modifier.size(14.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = displayTime,
                             color = UthOnSurfaceVariant,
-                            fontSize = 11.sp
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -275,7 +279,7 @@ private fun HistoryOrderCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Route addresses
             AddressRow(
@@ -285,9 +289,9 @@ private fun HistoryOrderCard(
                 address = order.pickupAddress.ifEmpty { "Địa chỉ lấy hàng" },
                 contact = if (order.senderName.isNotEmpty()) "${order.senderName} (${order.senderPhone})" else null
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             AddressRow(
-                icon = Icons.Default.LocalShipping,
+                icon = Icons.Default.TwoWheeler,
                 iconTint = UthSecondary,
                 label = "Giao hàng: ",
                 address = order.deliveryAddress.ifEmpty { "Địa chỉ giao hàng" },
@@ -296,24 +300,25 @@ private fun HistoryOrderCard(
 
             // Packages preview
             if (packages.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(14.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Inventory2,
                         contentDescription = null,
                         tint = UthOnSurfaceVariant,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(16.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Kiện hàng: " + packages.joinToString { "${it.quantity}x ${it.name}" },
+                        text = "Kiện hàng: " + packages.joinToString { "${it.quantity} × ${it.name}" },
                         color = UthOnSurfaceVariant,
-                        fontSize = 12.sp
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Footer: Cost & Expand Toggle
             Row(
@@ -325,13 +330,14 @@ private fun HistoryOrderCard(
                     Text(
                         text = "Thu nhập: ",
                         color = UthOnSurfaceVariant,
-                        fontSize = 12.sp
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
                     )
                     Text(
-                        text = currencyFormatter.format(order.totalCost),
-                        fontWeight = FontWeight.Bold,
+                        text = String.format(java.util.Locale.forLanguageTag("vi-VN"), "%,.0fđ", order.totalCost),
+                        fontWeight = FontWeight.ExtraBold,
                         color = if (isCompleted) UthSuccess else UthOnSurfaceVariant,
-                        fontSize = 14.sp
+                        fontSize = 16.sp
                     )
                 }
 
@@ -342,14 +348,14 @@ private fun HistoryOrderCard(
                     Text(
                         text = if (isExpanded) "Thu gọn" else "Tiến trình (${histories.size})",
                         color = UthPrimary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
                     )
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                         contentDescription = null,
                         tint = UthPrimary,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
@@ -363,32 +369,32 @@ private fun HistoryOrderCard(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 14.dp)
+                        .padding(top = 16.dp)
                         .background(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                            shape = RoundedCornerShape(12.dp)
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(14.dp)
                         )
-                        .padding(12.dp)
+                        .padding(14.dp)
                 ) {
                     Text(
                         text = "Lịch sử cập nhật trạng thái",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         color = UthOnSurface
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     if (histories.isEmpty()) {
                         Text(
                             text = "Chưa có thông tin tiến trình",
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             color = UthOnSurfaceVariant
                         )
                     } else {
                         val sortedHistories = histories.sortedBy { it.timestamp }
                         sortedHistories.forEachIndexed { index, history ->
                             val isLast = index == sortedHistories.size - 1
-                            val statusTime = timeFormat.format(Date(history.timestamp))
+                            val statusTime = formatServerTimestamp(history.timestamp, "")
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -397,7 +403,7 @@ private fun HistoryOrderCard(
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Box(
                                         modifier = Modifier
-                                            .size(8.dp)
+                                            .size(10.dp)
                                             .clip(CircleShape)
                                             .background(if (isLast) UthPrimary else UthOnSurfaceVariant)
                                     )
@@ -405,37 +411,37 @@ private fun HistoryOrderCard(
                                         Box(
                                             modifier = Modifier
                                                 .width(1.dp)
-                                                .height(24.dp)
+                                                .height(28.dp)
                                                 .background(UthOnSurfaceVariant.copy(alpha = 0.4f))
                                         )
                                     }
                                 }
-                                Spacer(modifier = Modifier.width(10.dp))
+                                Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
                                         Text(
-                                            text = getStatusLabel(history.toStatus),
+                                            text = getStatusLabel(history.toStatus ?: DeliveryStatus.CHO_TIEP_NHAN),
                                             fontWeight = if (isLast) FontWeight.Bold else FontWeight.Medium,
-                                            fontSize = 12.sp,
+                                            fontSize = 13.sp,
                                             color = if (isLast) UthPrimary else UthOnSurface
                                         )
                                         Text(
                                             text = statusTime,
-                                            fontSize = 11.sp,
+                                            fontSize = 12.sp,
                                             color = UthOnSurfaceVariant
                                         )
                                     }
                                     history.note?.takeIf { it.isNotBlank() }?.let { note ->
                                         Text(
                                             text = note,
-                                            fontSize = 11.sp,
+                                            fontSize = 12.sp,
                                             color = UthOnSurfaceVariant
                                         )
                                     }
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Spacer(modifier = Modifier.height(6.dp))
                                 }
                             }
                         }
@@ -451,6 +457,7 @@ private fun getStatusLabel(status: DeliveryStatus): String = when (status) {
     DeliveryStatus.DA_CHAP_NHAN -> "Tài xế nhận đơn"
     DeliveryStatus.DA_DEN_NHA_HANG -> "Tài xế tới điểm lấy hàng"
     DeliveryStatus.DA_LAY_HANG -> "Đã lấy hàng"
+    DeliveryStatus.DANG_VAN_CHUYEN -> "Đang vận chuyển"
     DeliveryStatus.DA_DEN_KHACH_HANG -> "Đã tới điểm giao"
     DeliveryStatus.DA_GIAO -> "Giao hàng thành công"
     DeliveryStatus.DA_HUY -> "Đã hủy đơn"
@@ -471,27 +478,28 @@ private fun AddressRow(
             tint = iconTint,
             modifier = Modifier
                 .padding(top = 2.dp)
-                .size(16.dp)
+                .size(18.dp)
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(10.dp))
         Column {
             Row {
                 Text(
                     text = label,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
                     color = UthOnSurface
                 )
                 Text(
                     text = address,
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = UthOnSurface
                 )
             }
             contact?.takeIf { it.isNotBlank() }?.let { contactText ->
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = contactText,
-                    fontSize = 11.sp,
+                    fontSize = 12.sp,
                     color = UthOnSurfaceVariant
                 )
             }

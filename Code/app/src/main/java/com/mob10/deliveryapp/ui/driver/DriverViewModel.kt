@@ -4,20 +4,23 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.mob10.deliveryapp.data.local.AppDatabase
-import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
-import com.mob10.deliveryapp.data.local.entity.PackageEntity
-import com.mob10.deliveryapp.data.local.entity.StatusHistoryEntity
 import com.mob10.deliveryapp.data.model.DeliveryStatus
-import com.mob10.deliveryapp.data.repository.AcceptResult
-import com.mob10.deliveryapp.data.repository.DeliveryRepository
+import com.mob10.deliveryapp.data.model.DriverStatistics
+import com.mob10.deliveryapp.data.model.Order
+import com.mob10.deliveryapp.data.model.RejectionReason
+import com.mob10.deliveryapp.data.model.RejectInfo
+import com.mob10.deliveryapp.data.model.StatusHistory
+import com.mob10.deliveryapp.data.remote.RetrofitClient
+import com.mob10.deliveryapp.data.repository.ShipperRepository
+import com.mob10.deliveryapp.data.util.NetworkResult
+import com.mob10.deliveryapp.ui.components.InAppNotification
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Job
-import java.util.Calendar
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 enum class DriverWorkingStatus(val label: String) {
     AVAILABLE("Sẵn sàng nhận đơn"),
@@ -26,205 +29,449 @@ enum class DriverWorkingStatus(val label: String) {
 }
 
 data class DriverUiState(
-    val newOrders: List<DeliveryRequestEntity> = emptyList(),
-    val activeOrders: List<DeliveryRequestEntity> = emptyList(),
-    val historyOrders: List<DeliveryRequestEntity> = emptyList(),
-    val packagesByOrder: Map<Int, List<PackageEntity>> = emptyMap(),
-    val historiesByOrder: Map<Int, List<StatusHistoryEntity>> = emptyMap(),
+    val newOrders: List<Order> = emptyList(),
+    val activeOrders: List<Order> = emptyList(),
+    val historyOrders: List<Order> = emptyList(),
+    val historiesByOrder: Map<Int, List<StatusHistory>> = emptyMap(),
+    val rejectionReasons: List<RejectionReason> = emptyList(),
+    val statistics: DriverStatistics? = null,
     val pendingCount: Int = 0,
     val deliveredTodayCount: Int = 0,
     val totalEarnings: Double = 0.0,
     val todayEarnings: Double = 0.0,
     val completedCount: Int = 0,
-    val rejectedOrderIds: Set<Int> = emptySet(),
     val rejectedCount: Int = 0,
-    val reliabilityScore: Int = 100,
+    val reliabilityScore: Double = 100.0,
     val driverStatus: DriverWorkingStatus = DriverWorkingStatus.AVAILABLE,
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
+    val actionInProgress: Boolean = false,
+    val rejectedOrderId: Int? = null,
+    val errorMessage: String? = null,
     val acceptMessage: String? = null,
-    val userMessage: String? = null
+    val userMessage: String? = null,
+    val isConflictError: Boolean = false,      // 409 ORDER_ALREADY_TAKEN
+    val isSessionExpired: Boolean = false       // 401 UNAUTHORIZED
 )
 
-class DriverViewModel(private val repository: DeliveryRepository) : ViewModel() {
+/**
+ * DriverViewModel — chuyển từ Room local sang REST API thật qua ShipperRepository.
+ *
+ * Thay đổi chính so với phiên bản cũ:
+ * - Dùng ShipperRepository thay cho DeliveryRepository (Room)
+ * - Data là domain model `Order` thay vì `DeliveryRequestEntity`
+ * - Load data bằng API call thay vì Flow/Room observation
+ * - Xử lý NetworkResult (Loading/Success/Error) ở mọi thao tác
+ * - Hiển thị conflict dialog khi 409 ORDER_ALREADY_TAKEN
+ */
+class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(DriverUiState(isLoading = true))
     val uiState: StateFlow<DriverUiState> = _uiState.asStateFlow()
+    private val _notifications = MutableStateFlow<List<InAppNotification>>(emptyList())
+    val notifications: StateFlow<List<InAppNotification>> = _notifications.asStateFlow()
+    private var knownOpenOrderIds: Set<Long>? = null
+    /**
+     * Tải toàn bộ dữ liệu tài xế: đơn chờ, đơn đang giao, thống kê và lý do từ chối.
+     * Gọi khi DriverHomeScreen mở lần đầu hoặc khi pull-to-refresh.
+     */
+    fun loadDriverData() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
 
-    // Lưu driverId để dùng cho updateOrderStatus
-    private var currentDriverId: Int? = null
-    private var loadJob: Job? = null
+            // Nạp đầy đủ dữ liệu cần cho các tab tài xế.
+            loadOpenOrders()
+            loadMyOrders()
+            loadStatistics()
+            loadRejectionReasons()
 
-    fun loadDriverData(driverId: Int) {
-        currentDriverId = driverId
+            _uiState.value = _uiState.value.copy(isLoading = false)
+        }
+    }
 
-        val startOfDay = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
+    /** Làm mới dữ liệu. */
+    fun refreshData() {
+        if (_uiState.value.isLoading || _uiState.value.isRefreshing || _uiState.value.actionInProgress) return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isRefreshing = true, errorMessage = null)
+            loadOpenOrders()
+            loadMyOrders()
+            loadStatistics()
+            if (_uiState.value.rejectionReasons.isEmpty()) loadRejectionReasons()
+            _uiState.value = _uiState.value.copy(isRefreshing = false)
+        }
+    }
 
-        // ViewModel có thể được tái sử dụng sau logout/login bằng tài xế khác.
-        // Hủy collector cũ để dữ liệu hai tài xế không ghi đè lẫn nhau.
-        loadJob?.cancel()
-        loadJob = viewModelScope.launch {
-            combine(
-                repository.allRequests,
-                repository.getPendingCount(),
-                repository.getDeliveredTodayCountForDriver(driverId, startOfDay)
-            ) { allRequests, pendingCount, deliveredTodayCount ->
-                Triple(allRequests, pendingCount, deliveredTodayCount)
-            }.collect { (allRequests, pendingCount, deliveredTodayCount) ->
-                val ignoredIds = _uiState.value.rejectedOrderIds
-                val newOrders = allRequests.filter {
-                    it.status == DeliveryStatus.CHO_TIEP_NHAN && 
-                    it.deliveryPersonId == null && 
-                    !ignoredIds.contains(it.id)
-                }
-                val activeOrders = allRequests.filter {
-                    it.deliveryPersonId == driverId && it.status in listOf(
+    // ── Danh sách đơn chờ ─────────────────────────────────────
+
+    private suspend fun loadOpenOrders() {
+        when (val result = repository.getOpenOrders()) {
+            is NetworkResult.Success -> {
+                detectNewOpenOrders(result.data)
+                _uiState.value = _uiState.value.copy(
+                    newOrders = result.data,
+                    pendingCount = result.data.size
+                )
+            }
+            is NetworkResult.Empty -> {
+                knownOpenOrderIds = emptySet()
+                _uiState.value = _uiState.value.copy(
+                    newOrders = emptyList(),
+                    pendingCount = 0
+                )
+            }
+            is NetworkResult.Error -> handleError(result)
+            is NetworkResult.Loading -> { /* ignored */ }
+        }
+    }
+
+    fun markNotificationsRead() {
+        _notifications.value = _notifications.value.map { it.copy(isRead = true) }
+    }
+    fun markNotificationRead(id: String) {
+        _notifications.value = _notifications.value.map { if (it.id == id) it.copy(isRead = true) else it }
+    }
+
+    private fun detectNewOpenOrders(currentOrders: List<Order>) {
+        val currentIds = currentOrders.mapTo(mutableSetOf()) { it.id }
+        val previous = knownOpenOrderIds
+        knownOpenOrderIds = currentIds
+        if (previous == null) return
+        val newOrders = currentOrders.filter { it.id !in previous }
+        if (newOrders.isEmpty()) return
+        val additions = newOrders.map { order ->
+            InAppNotification(
+                id = "driver-open-${order.id}-${order.createdAt}",
+                title = "Có đơn giao hàng mới",
+                message = "Đơn #GD-${order.id}: ${order.pickupAddress} → ${order.deliveryAddress}.",
+                orderId = order.id
+            )
+        }
+        val existingIds = _notifications.value.mapTo(mutableSetOf()) { it.id }
+        _notifications.value = (additions.filterNot { it.id in existingIds } + _notifications.value).take(50)
+    }
+
+    // ── My Orders ──────────────────────────────────────────────
+
+    private suspend fun loadMyOrders() {
+        when (val result = repository.getMyOrders()) {
+            is NetworkResult.Success -> {
+                val allMyOrders = result.data
+                val active = allMyOrders.filter { order ->
+                    order.status in listOf(
                         DeliveryStatus.DA_CHAP_NHAN,
                         DeliveryStatus.DA_DEN_NHA_HANG,
-                        DeliveryStatus.DA_LAY_HANG,
-                        DeliveryStatus.DA_DEN_KHACH_HANG
+                        DeliveryStatus.DA_LAY_HANG, DeliveryStatus.DANG_VAN_CHUYEN, DeliveryStatus.DA_DEN_KHACH_HANG
                     )
                 }
-                val historyOrders = allRequests.filter {
-                    it.deliveryPersonId == driverId && it.status in listOf(
+                val history = allMyOrders.filter { order ->
+                    order.status in listOf(
                         DeliveryStatus.DA_GIAO,
                         DeliveryStatus.DA_HUY
                     )
                 }
-
-                val completedOrders = historyOrders.filter { it.status == DeliveryStatus.DA_GIAO }
-                val totalEarnings = completedOrders.sumOf { it.totalCost }
-                val todayCompletedOrders = completedOrders.filter {
-                    (it.actualDeliveryTime ?: it.createdAt) >= startOfDay
-                }
-                val todayEarnings = todayCompletedOrders.sumOf { it.totalCost }
-                val completedCount = completedOrders.size
-
-                // Tính điểm tin cậy: max(0, min(100, 100 - (rejected * 5) + (completed * 2)))
-                val currentRejectedCount = _uiState.value.rejectedCount
-                val calculatedScore = maxOf(
-                    0, 
-                    minOf(100, 100 - (currentRejectedCount * 5) + (completedCount * 2))
-                )
-
-                // Load packages and histories for all relevant orders
-                val packagesMap = mutableMapOf<Int, List<PackageEntity>>()
-                val historiesMap = mutableMapOf<Int, List<StatusHistoryEntity>>()
-                val relevantOrders = newOrders + activeOrders + historyOrders
-                for (order in relevantOrders) {
-                    val packages = repository.getRequestPackages(order.id)
-                    packagesMap[order.id] = packages
-                    val histories = repository.getRequestHistory(order.id)
-                    historiesMap[order.id] = histories
-                }
+                val completed = history.filter { it.status == DeliveryStatus.DA_GIAO }
+                val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                val completedToday = completed.filter { it.actualDeliveryTime.isToday(todayStr) }
+                val historiesByOrder = loadHistories(history)
 
                 _uiState.value = _uiState.value.copy(
-                    newOrders = newOrders,
-                    activeOrders = activeOrders,
-                    historyOrders = historyOrders,
-                    packagesByOrder = packagesMap,
-                    historiesByOrder = historiesMap,
-                    pendingCount = pendingCount,
-                    deliveredTodayCount = deliveredTodayCount,
-                    totalEarnings = totalEarnings,
-                    todayEarnings = todayEarnings,
-                    completedCount = completedCount,
-                    reliabilityScore = calculatedScore,
-                    isLoading = false
+                    activeOrders = active,
+                    historyOrders = history,
+                    historiesByOrder = historiesByOrder,
+                    completedCount = completed.size,
+                    totalEarnings = completed.sumOf { it.totalCost },
+                    deliveredTodayCount = completedToday.size,
+                    todayEarnings = completedToday.sumOf { it.totalCost }
                 )
             }
+            is NetworkResult.Empty -> {
+                _uiState.value = _uiState.value.copy(
+                    activeOrders = emptyList(),
+                    historyOrders = emptyList(),
+                    historiesByOrder = emptyMap(),
+                    completedCount = 0, totalEarnings = 0.0, deliveredTodayCount = 0, todayEarnings = 0.0
+                )
+            }
+            is NetworkResult.Error -> handleError(result)
+            is NetworkResult.Loading -> { /* ignored */ }
         }
     }
 
-    fun setWorkingStatus(status: DriverWorkingStatus) {
-        _uiState.value = _uiState.value.copy(
-            driverStatus = status,
-            userMessage = "Đã chuyển sang: ${status.label}"
-        )
+    // ── Statistics ──────────────────────────────────────────────
+
+    private suspend fun loadStatistics() {
+        when (val result = repository.getMyStatistics()) {
+            is NetworkResult.Success -> {
+                val stats = result.data
+                _uiState.value = _uiState.value.copy(
+                    statistics = stats,
+                    reliabilityScore = stats.reliabilityScore,
+                    rejectedCount = stats.totalRejected,
+                    driverStatus = stats.availability?.let { runCatching { DriverWorkingStatus.valueOf(it) }.getOrNull() }
+                        ?: _uiState.value.driverStatus
+                )
+            }
+            is NetworkResult.Error -> handleError(result)
+            is NetworkResult.Empty -> handleError(
+                NetworkResult.Error(message = "Máy chủ chưa có thống kê tài xế.")
+            )
+            is NetworkResult.Loading -> Unit
+        }
     }
+
+    // ── Rejection Reasons ──────────────────────────────────────────────
+
+    private suspend fun loadRejectionReasons() {
+        when (val result = repository.getRejectionReasons()) {
+            is NetworkResult.Success -> {
+                _uiState.value = _uiState.value.copy(rejectionReasons = result.data)
+            }
+            is NetworkResult.Error -> handleError(result)
+            is NetworkResult.Empty -> handleError(
+                NetworkResult.Error(message = "Máy chủ chưa cấu hình lý do từ chối.")
+            )
+            is NetworkResult.Loading -> Unit
+        }
+    }
+
+    // ── Accept Order ──────────────────────────────────────────────
 
     fun acceptOrder(orderId: Int) {
-        val driverId = currentDriverId
-        if (driverId == null) {
-            _uiState.value = _uiState.value.copy(userMessage = "Phiên đăng nhập không hợp lệ, vui lòng đăng nhập lại.")
-            return
-        }
+        if (_uiState.value.actionInProgress) return
+        _uiState.value = _uiState.value.copy(actionInProgress = true)
         viewModelScope.launch {
-            val result = repository.acceptRequest(orderId, driverId)
-            val message = when (result) {
-                is AcceptResult.Success -> "Nhận đơn #$orderId thành công!"
-                is AcceptResult.AlreadyTaken -> "Đơn #$orderId đã được tài xế khác nhận trước."
-                is AcceptResult.NotFound -> "Không tìm thấy đơn #$orderId."
-                is AcceptResult.InvalidStatus -> "Đơn #$orderId không ở trạng thái chờ tiếp nhận."
+            _uiState.value = _uiState.value.copy(isLoading = true)
+
+            when (val result = repository.acceptOrder(orderId.toLong())) {
+                is NetworkResult.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        acceptMessage = "Nhận đơn #$orderId thành công!",
+                        userMessage = "Nhận đơn #$orderId thành công!",
+                        isConflictError = false,
+                        driverStatus = DriverWorkingStatus.BUSY
+                    )
+                    // Làm mới dữ liệu để cập nhật danh sách
+                    loadOpenOrders()
+                    loadMyOrders()
+                }
+                is NetworkResult.Error -> {
+                    if (result.code == "ORDER_ALREADY_TAKEN") {
+                        _uiState.value = _uiState.value.copy(
+                            acceptMessage = result.message,
+                            userMessage = result.message,
+                            isConflictError = true
+                        )
+                    } else {
+                        _uiState.value = _uiState.value.copy(
+                            acceptMessage = result.message,
+                            userMessage = result.message,
+                            isConflictError = false
+                        )
+                    }
+                    handleError(result)
+                }
+                else -> { /* ignored */ }
             }
-            _uiState.value = _uiState.value.copy(
-                acceptMessage = message,
-                userMessage = message
-            )
+
+            _uiState.value = _uiState.value.copy(isLoading = false, actionInProgress = false)
         }
     }
 
-    fun clearAcceptMessage() {
-        _uiState.value = _uiState.value.copy(
-            acceptMessage = null,
-            userMessage = null
-        )
+    // ── Reject Order ──────────────────────────────────────────────
+
+    fun rejectOrder(orderId: Int, reason: String = "OTHER", note: String = "") {
+        if (_uiState.value.actionInProgress) return
+        _uiState.value = _uiState.value.copy(actionInProgress = true, errorMessage = null, rejectedOrderId = null)
+        viewModelScope.launch {
+            when (val result = repository.rejectOrder(
+                orderId = orderId.toLong(),
+                reasonCode = reason,
+                note = note.ifBlank { null },
+            )) {
+                is NetworkResult.Success -> {
+                    val rejectInfo = result.data
+                    val detailMessage = if (rejectInfo.penaltyApplied) {
+                        "Đã từ chối đơn #$orderId (có trừ điểm)"
+                    } else {
+                        "Đã từ chối đơn #$orderId"
+                    }
+                    _uiState.value = _uiState.value.copy(
+                        userMessage = detailMessage,
+                        rejectedOrderId = orderId,
+                        newOrders = _uiState.value.newOrders.filterNot { it.id.toInt() == orderId }
+                    )
+
+                    // Cập nhật statistics nếu có
+                    rejectInfo.statistics?.let { stats ->
+                        _uiState.value = _uiState.value.copy(
+                            statistics = stats,
+                            reliabilityScore = stats.reliabilityScore,
+                            rejectedCount = stats.totalRejected
+                        )
+                    }
+
+                    // Làm mới danh sách đơn chờ
+                    loadOpenOrders()
+                }
+                is NetworkResult.Error -> handleError(result)
+                else -> { /* ignored */ }
+            }
+            _uiState.value = _uiState.value.copy(actionInProgress = false)
+        }
     }
 
-    fun rejectOrder(orderId: Int, reason: String = "Lý do khác", note: String = "") {
-        val updatedRejected = _uiState.value.rejectedOrderIds + orderId
-        val newRejectedCount = _uiState.value.rejectedCount + 1
-        val completedCount = _uiState.value.completedCount
-        val newScore = maxOf(0, minOf(100, 100 - (newRejectedCount * 5) + (completedCount * 2)))
-
-        val remainingNewOrders = _uiState.value.newOrders.filter { it.id != orderId }
-
-        val detailReason = if (note.isNotBlank()) "$reason ($note)" else reason
-        _uiState.value = _uiState.value.copy(
-            newOrders = remainingNewOrders,
-            rejectedOrderIds = updatedRejected,
-            rejectedCount = newRejectedCount,
-            reliabilityScore = newScore,
-            userMessage = "Đã từ chối đơn #$orderId: $detailReason"
-        )
-    }
+    // ── Update Order Status ──────────────────────────────────────────────
 
     fun updateOrderStatus(orderId: Int, newStatus: DeliveryStatus, note: String = "") {
-        val driverId = currentDriverId
-        if (driverId == null) {
-            _uiState.value = _uiState.value.copy(userMessage = "Phiên đăng nhập không hợp lệ, vui lòng đăng nhập lại.")
-            return
-        }
+        if (_uiState.value.actionInProgress) return
+        _uiState.value = _uiState.value.copy(actionInProgress = true)
         val finalNote = note.ifBlank {
             when (newStatus) {
                 DeliveryStatus.DA_CHAP_NHAN -> "Tài xế đã nhận đơn"
                 DeliveryStatus.DA_DEN_NHA_HANG -> "Tài xế tới điểm lấy hàng"
                 DeliveryStatus.DA_LAY_HANG -> "Đã lấy hàng thành công"
+                DeliveryStatus.DANG_VAN_CHUYEN -> "Đang vận chuyển"
                 DeliveryStatus.DA_DEN_KHACH_HANG -> "Đã tới điểm giao cho khách"
                 DeliveryStatus.DA_GIAO -> "Giao hàng thành công cho khách"
                 DeliveryStatus.DA_HUY -> "Đã hủy đơn hàng"
-                else -> "Cập nhật trạng thái"
+                DeliveryStatus.CHO_TIEP_NHAN -> "Chờ tiếp nhận"
             }
         }
+
         viewModelScope.launch {
-            repository.updateRequestStatus(orderId, newStatus, updatedBy = driverId, note = finalNote)
+            when (val result = repository.updateOrderStatus(
+                orderId = orderId.toLong(),
+                newStatus = newStatus,
+                note = finalNote
+            )) {
+                is NetworkResult.Success -> {
+                    val statusLabel = when (newStatus) {
+                        DeliveryStatus.CHO_TIEP_NHAN -> "Chờ tiếp nhận"
+                        DeliveryStatus.DA_CHAP_NHAN -> "Đã nhận đơn"
+                        DeliveryStatus.DA_DEN_NHA_HANG -> "Đã đến nhà hàng"
+                        DeliveryStatus.DA_LAY_HANG -> "Đã lấy hàng"
+                        DeliveryStatus.DANG_VAN_CHUYEN -> "Đang vận chuyển"
+                        DeliveryStatus.DA_DEN_KHACH_HANG -> "Đã đến khách hàng"
+                        DeliveryStatus.DA_GIAO -> "Đã giao thành công"
+                        DeliveryStatus.DA_HUY -> "Đã hủy"
+                    }
+                    _uiState.value = _uiState.value.copy(
+                        userMessage = "Đơn #$orderId: $statusLabel",
+                        driverStatus = if (newStatus == DeliveryStatus.DA_GIAO) {
+                            DriverWorkingStatus.AVAILABLE
+                        } else {
+                            _uiState.value.driverStatus
+                        }
+                    )
+                    // Làm mới dữ liệu
+                    loadMyOrders()
+                    if (newStatus == DeliveryStatus.DA_GIAO) {
+                        loadStatistics()
+                    }
+                }
+                is NetworkResult.Error -> handleError(result)
+                else -> { /* ignored */ }
+            }
+            _uiState.value = _uiState.value.copy(actionInProgress = false)
         }
+    }
+
+    // ── Working Status (Availability) ──────────────────────────────────────────────
+
+    fun setWorkingStatus(status: DriverWorkingStatus) {
+        if (_uiState.value.actionInProgress) return
+        _uiState.value = _uiState.value.copy(actionInProgress = true, errorMessage = null)
+        viewModelScope.launch {
+            try {
+            when (val result = repository.updateAvailability(status.name)) {
+                is NetworkResult.Success -> {
+                    val confirmedStatus = runCatching {
+                        DriverWorkingStatus.valueOf(result.data)
+                    }.getOrElse {
+                        handleError(NetworkResult.Error(message = "Máy chủ trả về trạng thái tài xế không hợp lệ."))
+                        return@launch
+                    }
+                    _uiState.value = _uiState.value.copy(
+                        driverStatus = confirmedStatus,
+                        userMessage = "Đã chuyển sang: ${confirmedStatus.label}"
+                    )
+                }
+                is NetworkResult.Empty -> handleError(
+                    NetworkResult.Error(message = "Máy chủ không xác nhận trạng thái làm việc.")
+                )
+                is NetworkResult.Error -> handleError(result)
+                is NetworkResult.Loading -> { /* ignored */ }
+            }
+            } finally { _uiState.value = _uiState.value.copy(actionInProgress = false) }
+        }
+    }
+
+    // ── Clear Messages ──────────────────────────────────────────────
+
+    fun clearAcceptMessage() {
+        _uiState.value = _uiState.value.copy(
+            acceptMessage = null,
+            userMessage = null,
+            isConflictError = false
+        )
+    }
+
+    // ── Error Handling ──────────────────────────────────────────────
+
+    private fun handleError(error: NetworkResult.Error) {
+        _uiState.value = _uiState.value.copy(errorMessage = error.message)
+        if (error.isUnauthorized) {
+            _uiState.value = _uiState.value.copy(
+                isSessionExpired = true,
+                userMessage = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+            )
+        } else {
+            _uiState.value = _uiState.value.copy(userMessage = error.message)
+        }
+    }
+
+    private suspend fun loadHistories(orders: List<Order>): Map<Int, List<StatusHistory>> {
+        val result = linkedMapOf<Int, List<StatusHistory>>()
+        val previous = _uiState.value
+        val previousOrders = previous.historyOrders.associateBy { it.id }
+        orders.forEach { order ->
+            val cached = previous.historiesByOrder[order.id.toInt()]
+            val previousOrder = previousOrders[order.id]
+            if (cached != null && previousOrder?.updatedAt == order.updatedAt && previousOrder?.status == order.status) {
+                result[order.id.toInt()] = cached
+                return@forEach
+            }
+            when (val historyResult = repository.getOrderHistory(order.id)) {
+                is NetworkResult.Success -> result[order.id.toInt()] = historyResult.data
+                is NetworkResult.Empty -> result[order.id.toInt()] = emptyList()
+                is NetworkResult.Error -> handleError(historyResult)
+                is NetworkResult.Loading -> Unit
+            }
+        }
+        return result
     }
 }
 
+private fun String?.isToday(todayStr: String): Boolean {
+    if (this.isNullOrBlank()) return false
+    return runCatching {
+        val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX", Locale.US).apply { isLenient = false }
+        val instant = parser.parse(replace(Regex("\\.\\d+(?=Z$)"), "")) ?: return false
+        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(instant) == todayStr
+    }.getOrDefault(false)
+}
+
+/**
+ * Factory tạo DriverViewModel với ShipperRepository dùng REST API thật.
+ */
 class DriverViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(DriverViewModel::class.java)) {
-            val db = AppDatabase.getDatabase(context)
-            val repository = DeliveryRepository(
-                db,
-                db.deliveryRequestDao(),
-                db.packageDao(),
-                db.statusHistoryDao()
+            RetrofitClient.init(context)
+            val repository = ShipperRepository(
+                driverApi = RetrofitClient.driverApi,
+                orderApi = RetrofitClient.orderApi
             )
             return DriverViewModel(repository) as T
         }

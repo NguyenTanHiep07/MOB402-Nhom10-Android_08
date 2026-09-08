@@ -4,26 +4,38 @@ server:
     include-message: never
 
 spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:Backend/.env[.properties]
   application:
     name: delivery-server
-  datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/delivery_db}
-    username: ${DB_USERNAME:delivery_user}
-    password: ${DB_PASSWORD:delivery_password}
-  jpa:
-    open-in-view: false
-    hibernate:
-      ddl-auto: validate
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
-      hibernate:
-        jdbc:
-          time_zone: UTC
-  flyway:
-    enabled: true
+      mail.smtp.auth: ${MAIL_AUTH:true}
+      mail.smtp.starttls.enable: ${MAIL_TLS:true}
+      mail.smtp.starttls.required: ${MAIL_TLS:true}
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/delivery_db}
+      auto-index-creation: false
 
 app:
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:}
+  demo:
+    enabled: ${DEMO_ENABLED:true}
+    password: ${DEMO_PASSWORD:123456}
   jwt:
-    secret: ${JWT_SECRET:change-this-secret-key-before-production-at-least-32-characters}
+    secret: ${JWT_SECRET:dev_secret_key_change_me_in_production_1234567890123456}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
@@ -31,6 +43,11 @@ app:
     lock-threshold-in-24-hours: 3
     lock-duration-minutes: 30
     alert-score-threshold: 70
+  location:
+    photon-base-url: ${PHOTON_BASE_URL:https://photon.komoot.io}
+    osrm-base-url: ${OSRM_BASE_URL:https://router.project-osrm.org}
+    request-timeout-ms: ${LOCATION_REQUEST_TIMEOUT_MS:8000}
+    user-agent: ${LOCATION_USER_AGENT:GoDrop-UTH-08/1.0-student-project}
 
 springdoc:
   swagger-ui:

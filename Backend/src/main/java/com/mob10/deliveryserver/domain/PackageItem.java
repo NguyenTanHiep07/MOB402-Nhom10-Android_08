@@ -1,44 +1,48 @@
 package com.mob10.deliveryserver.domain;
 
-import jakarta.persistence.*;
 import java.math.BigDecimal;
 
-@Entity
-@Table(name = "packages")
 public class PackageItem {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "delivery_request_id", nullable = false)
-    private DeliveryRequest deliveryRequest;
-    @Column(nullable = false, length = 150)
     private String name;
-    @Column(name = "package_type", length = 50)
     private String packageType;
-    @Column(name = "weight_kg", nullable = false, precision = 10, scale = 2)
     private BigDecimal weightKg;
-    @Column(nullable = false)
     private int quantity;
-    @Column(length = 500)
     private String notes;
-    @Column(name = "is_fragile", nullable = false)
     private boolean fragile;
-    @Column(name = "is_express", nullable = false)
     private boolean express;
 
-    protected PackageItem() {}
+    public PackageItem() {}
+
     public PackageItem(String name, String packageType, BigDecimal weightKg, int quantity, String notes, boolean fragile, boolean express) {
-        this.name = name; this.packageType = packageType; this.weightKg = weightKg;
-        this.quantity = quantity; this.notes = notes; this.fragile = fragile; this.express = express;
+        this.name = name;
+        this.packageType = packageType;
+        this.weightKg = weightKg;
+        this.quantity = quantity;
+        this.notes = notes;
+        this.fragile = fragile;
+        this.express = express;
     }
-    void attachTo(DeliveryRequest request) { this.deliveryRequest = request; }
+
+    public PackageItem(Long id, String name, String packageType, BigDecimal weightKg, int quantity, String notes, boolean fragile, boolean express) {
+        this(name, packageType, weightKg, quantity, notes, fragile, express);
+        this.id = id;
+    }
+
     public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
     public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
     public String getPackageType() { return packageType; }
+    public void setPackageType(String packageType) { this.packageType = packageType; }
     public BigDecimal getWeightKg() { return weightKg; }
+    public void setWeightKg(BigDecimal weightKg) { this.weightKg = weightKg; }
     public int getQuantity() { return quantity; }
+    public void setQuantity(int quantity) { this.quantity = quantity; }
     public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
     public boolean isFragile() { return fragile; }
+    public void setFragile(boolean fragile) { this.fragile = fragile; }
     public boolean isExpress() { return express; }
+    public void setExpress(boolean express) { this.express = express; }
 }

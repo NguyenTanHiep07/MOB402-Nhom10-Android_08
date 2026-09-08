@@ -285,7 +285,8 @@ class DeliveryRepository(
             DeliveryStatus.CHO_TIEP_NHAN -> to == DeliveryStatus.DA_CHAP_NHAN || to == DeliveryStatus.DA_HUY
             DeliveryStatus.DA_CHAP_NHAN -> to == DeliveryStatus.DA_DEN_NHA_HANG || to == DeliveryStatus.DA_HUY
             DeliveryStatus.DA_DEN_NHA_HANG -> to == DeliveryStatus.DA_LAY_HANG
-            DeliveryStatus.DA_LAY_HANG -> to == DeliveryStatus.DA_DEN_KHACH_HANG
+            DeliveryStatus.DA_LAY_HANG -> to == DeliveryStatus.DANG_VAN_CHUYEN
+            DeliveryStatus.DANG_VAN_CHUYEN -> to == DeliveryStatus.DA_DEN_KHACH_HANG
             DeliveryStatus.DA_DEN_KHACH_HANG -> to == DeliveryStatus.DA_GIAO
             else -> false // DA_GIAO and DA_HUY are terminal states
         }

@@ -38,9 +38,11 @@ public class DtoMapper {
     }
 
     public DriverStatisticsResponse toStatistics(DriverStatistics stats) {
+        java.math.BigDecimal score = stats.getReliabilityScore() != null ? stats.getReliabilityScore() : java.math.BigDecimal.valueOf(100.0);
+        DriverAvailability availability = stats.getAvailability() != null ? stats.getAvailability() : DriverAvailability.AVAILABLE;
         return new DriverStatisticsResponse(stats.getDriverId(), stats.getTotalAccepted(), stats.getTotalRejected(),
-                stats.getPenalizedRejections(), stats.getReliabilityScore(), stats.getLockedUntil(), stats.isLocked(),
-                stats.getReliabilityScore().doubleValue() < alertScoreThreshold);
+                stats.getPenalizedRejections(), score, stats.getLockedUntil(), stats.isLocked(),
+                score.doubleValue() < alertScoreThreshold, availability);
     }
 
     private PersonResponse toPerson(User user) {

@@ -1,6 +1,8 @@
 # Android và Gradle
 .gradle/
+.kotlin/
 **/build/
+**/bin/
 local.properties
 *.apk
 *.aab
@@ -28,6 +30,7 @@ captures/
 # Environment và bảo mật
 .env
 .env.*
+!.env.example
 *api_key*
 *apikey*
 *password*

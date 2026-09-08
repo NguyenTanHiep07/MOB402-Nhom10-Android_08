@@ -5,7 +5,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.mob10.deliveryapp.data.local.DatabaseInitializer
 import com.mob10.deliveryapp.data.local.entity.UserEntity
+import com.mob10.deliveryapp.data.model.Role
+import com.mob10.deliveryapp.data.remote.dto.UserSummaryDto
+import com.mob10.deliveryapp.data.repository.AuthRepository
 import com.mob10.deliveryapp.data.repository.UserRepository
+import com.mob10.deliveryapp.data.util.NetworkResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,17 +24,28 @@ data class AuthUiState(
 
 class AuthViewModel(
     private val userRepository: UserRepository,
+    private val authRepository: AuthRepository,
     private val initializeDatabase: suspend () -> Unit
 ) : ViewModel() {
     constructor(
         userRepository: UserRepository,
+        authRepository: AuthRepository,
         databaseInitializer: DatabaseInitializer
-    ) : this(userRepository, databaseInitializer::initialize)
+    ) : this(userRepository, authRepository, databaseInitializer::initialize)
 
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            authRepository.sessionExpired.collect { expired ->
+                if (expired) {
+                    userRepository.logout()
+                    _uiState.value = AuthUiState(isInitializing = false,
+                        errorMessage = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.")
+                }
+            }
+        }
         viewModelScope.launch {
             val databaseResult = runCatching { initializeDatabase() }
             if (databaseResult.isFailure) {
@@ -41,7 +56,16 @@ class AuthViewModel(
                 return@launch
             }
 
-            runCatching { userRepository.restoreSession() }
+            runCatching {
+                if (!authRepository.isLoggedIn()) {
+                    userRepository.logout()
+                    null
+                } else {
+                    userRepository.restoreSession().also { restoredUser ->
+                        if (restoredUser == null) authRepository.logout()
+                    }
+                }
+            }
                 .onSuccess { restoredUser ->
                     _uiState.value = _uiState.value.copy(
                         isInitializing = false,
@@ -71,45 +95,55 @@ class AuthViewModel(
                 isAuthenticating = true,
                 errorMessage = null
             )
-            runCatching { userRepository.login(phoneNumber.trim(), password) }
-                .onSuccess { user ->
-                    _uiState.value = if (user == null) {
-                        _uiState.value.copy(
-                            isAuthenticating = false,
-                            errorMessage = "Số điện thoại hoặc mật khẩu không đúng."
-                        )
-                    } else {
-                        _uiState.value.copy(
+            when (val result = authRepository.login(phoneNumber.trim(), password)) {
+                is NetworkResult.Success -> {
+                    runCatching {
+                        result.data.user.toLocalUser().also { userRepository.saveAuthenticatedUser(it) }
+                    }.onSuccess { user ->
+                        _uiState.value = _uiState.value.copy(
                             isAuthenticating = false,
                             currentUser = user,
                             errorMessage = null
                         )
+                    }.onFailure {
+                        authRepository.logout()
+                        _uiState.value = _uiState.value.copy(
+                            isAuthenticating = false,
+                            currentUser = null,
+                            errorMessage = "Thông tin tài khoản từ máy chủ không hợp lệ."
+                        )
                     }
                 }
-                .onFailure {
+                is NetworkResult.Error -> {
                     _uiState.value = _uiState.value.copy(
                         isAuthenticating = false,
-                        errorMessage = "Không thể đăng nhập, vui lòng thử lại."
+                        currentUser = null,
+                        errorMessage = result.message
                     )
                 }
+                is NetworkResult.Empty -> {
+                    _uiState.value = _uiState.value.copy(
+                        isAuthenticating = false,
+                        currentUser = null,
+                        errorMessage = "Máy chủ không trả về thông tin đăng nhập."
+                    )
+                }
+                is NetworkResult.Loading -> Unit
+            }
         }
     }
 
-    fun updateProfile(fullName: String, phoneNumber: String, username: String, licensePlate: String) {
-        val currentUser = _uiState.value.currentUser ?: return
-        val updatedUser = currentUser.copy(
-            fullName = fullName,
-            phoneNumber = phoneNumber,
-            username = username,
-            licensePlate = licensePlate
-        )
+    fun syncProfile(profile: com.mob10.deliveryapp.data.remote.api.AccountProfile) {
+        val user = _uiState.value.currentUser ?: return
+        if (user.id.toLong() != profile.id) return
+        val updated = user.copy(username = profile.username, fullName = profile.fullName,
+            phoneNumber = profile.phoneNumber, licensePlate = profile.licensePlate)
+        if (updated == user) return
+        _uiState.value = _uiState.value.copy(currentUser = updated)
         viewModelScope.launch {
-            try {
-                userRepository.updateUser(updatedUser)
-                _uiState.value = _uiState.value.copy(currentUser = updatedUser, errorMessage = null)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(errorMessage = "Không thể cập nhật hồ sơ. Tên đăng nhập hoặc SĐT có thể đã tồn tại.")
-            }
+            try { userRepository.updateUser(updated) }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { /* Server remains authoritative; the next login refreshes the cache. */ }
         }
     }
 
@@ -125,7 +159,10 @@ class AuthViewModel(
                 isAuthenticating = true,
                 errorMessage = null
             )
-            runCatching { userRepository.logout() }
+            runCatching {
+                authRepository.logout()
+                userRepository.logout()
+            }
                 .onSuccess {
                     _uiState.value = _uiState.value.copy(
                         isAuthenticating = false,
@@ -143,14 +180,29 @@ class AuthViewModel(
     }
 }
 
+private fun UserSummaryDto.toLocalUser(): UserEntity {
+    val localId = id.toInt()
+    require(localId > 0 && localId.toLong() == id) { "Mã tài khoản không hợp lệ" }
+    return UserEntity(
+        id = localId,
+        username = username,
+        password = "",
+        fullName = fullName.orEmpty().ifBlank { username },
+        phoneNumber = phoneNumber.orEmpty(),
+        role = Role.valueOf(role),
+        licensePlate = licensePlate
+    )
+}
+
 class AuthViewModelFactory(
     private val userRepository: UserRepository,
+    private val authRepository: AuthRepository,
     private val databaseInitializer: DatabaseInitializer
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
-            return AuthViewModel(userRepository, databaseInitializer) as T
+            return AuthViewModel(userRepository, authRepository, databaseInitializer) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
