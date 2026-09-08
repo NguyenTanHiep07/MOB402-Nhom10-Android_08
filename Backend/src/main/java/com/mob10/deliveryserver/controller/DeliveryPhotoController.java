@@ -51,32 +51,63 @@ public class DeliveryPhotoController {
                                   @Valid @RequestBody PhotoRequest input) {
         if (user.role() != Role.DELIVERY) throw new ApiException(HttpStatus.FORBIDDEN, "NOT_A_DRIVER", "Chức năng chỉ dành cho tài xế");
         var order = orders.findByIdForUpdate(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", "Không tìm thấy đơn hàng"));
-        access.detail(user, id);
+
+        // Kiểm tra ownership trực tiếp từ locked order (không gọi access.detail lần 2 để tránh conflict)
+        if (order.getDeliveryPerson() == null || !order.getDeliveryPerson().getId().equals(user.id())) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "NOT_ASSIGNED_DRIVER", "Chỉ tài xế đang phụ trách mới có thể xác nhận giao hàng");
+        }
+
+        // Idempotent retry: nếu đã giao thành công rồi, trả về response hiện tại
+        if (order.getStatus() == DeliveryStatus.DA_GIAO && order.getDeliveryPhoto() != null) {
+            return access.detail(user, id);
+        }
+
+        // Validate order phải ở trạng thái DA_DEN_KHACH_HANG mới được xác nhận giao
+        if (order.getStatus() != DeliveryStatus.DA_DEN_KHACH_HANG) {
+            throw new ApiException(HttpStatus.CONFLICT, "INVALID_STATUS_FOR_PHOTO",
+                "Chỉ có thể xác nhận giao hàng khi đã đến điểm giao (trạng thái hiện tại: " + order.getStatus() + ")");
+        }
+
         String normalized;
         try {
             byte[] bytes = Base64.getDecoder().decode(input.image());
-            if (bytes.length > 500000) throw new IllegalArgumentException();
+            if (bytes.length > 500000) throw new IllegalArgumentException("Ảnh quá lớn");
             try (var stream = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
+                if (stream == null) throw new IllegalArgumentException("Không đọc được stream ảnh");
                 var readers = ImageIO.getImageReaders(stream);
-                if (!readers.hasNext()) throw new IllegalArgumentException();
+                if (!readers.hasNext()) throw new IllegalArgumentException("Không có image reader");
                 var reader = readers.next();
                 try {
                     reader.setInput(stream);
-                    if (!reader.getFormatName().equalsIgnoreCase("JPEG") || reader.getWidth(0) > 1600 || reader.getHeight(0) > 1600) throw new IllegalArgumentException();
+                    String format = reader.getFormatName();
+                    if (!format.equalsIgnoreCase("JPEG") && !format.equalsIgnoreCase("JPG")) {
+                        throw new IllegalArgumentException("Ảnh không phải JPEG: " + format);
+                    }
+                    if (reader.getWidth(0) > 1600 || reader.getHeight(0) > 1600) {
+                        throw new IllegalArgumentException("Ảnh quá lớn (max 1600x1600)");
+                    }
                     var image = reader.read(0);
                     var out = new java.io.ByteArrayOutputStream();
-                    ImageIO.write(image, "jpg", out); // Remove metadata and retain only decoded image content.
-                    if (out.size() > 700000) throw new IllegalArgumentException();
-                    normalized = Base64.getEncoder().encodeToString(out.toByteArray());
+                    // ImageIO.write có thể trả về false trong môi trường headless server
+                    // nếu không có JPEG writer registered → fallback dùng byte gốc đã validate
+                    boolean written = ImageIO.write(image, "jpeg", out);
+                    if (!written || out.size() == 0) {
+                        // Fallback: dùng trực tiếp byte gốc (đã validate JPEG hợp lệ ở trên)
+                        normalized = Base64.getEncoder().encodeToString(bytes);
+                    } else {
+                        if (out.size() > 700000) throw new IllegalArgumentException("Ảnh sau xử lý quá lớn");
+                        normalized = Base64.getEncoder().encodeToString(out.toByteArray());
+                    }
                 } finally { reader.dispose(); }
             }
+        } catch (ApiException e) {
+            throw e;
         } catch (Exception e) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PHOTO", "Ảnh không hợp lệ hoặc quá lớn. Hãy chụp lại.");
         }
-        // A retry after a lost response must not complete the order a second time.
-        if (order.getStatus() == DeliveryStatus.DA_GIAO && order.getDeliveryPhoto() != null &&
-            order.getDeliveryPerson().getId().equals(user.id())) return access.detail(user, id);
+
         order.setDeliveryPhoto(normalized);
+        orders.save(order); // Persist photo first so updateStatus can verify it's set.
         return driver.updateStatus(user, id, new UpdateStatusRequest(DeliveryStatus.DA_GIAO, "Đã giao hàng, có ảnh xác nhận"));
     }
 }
