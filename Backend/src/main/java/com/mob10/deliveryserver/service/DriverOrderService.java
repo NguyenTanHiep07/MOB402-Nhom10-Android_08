@@ -22,16 +22,19 @@ public class DriverOrderService {
     private final OrderRejectionRepository rejections;
     private final DriverStatisticsRepository statistics;
     private final DtoMapper mapper;
+    private final SequenceGeneratorService sequences;
     private final int lockThreshold;
     private final int lockDurationMinutes;
 
     public DriverOrderService(DeliveryRequestRepository orders, UserRepository users, StatusHistoryRepository histories,
                               RejectionReasonRepository reasons, OrderRejectionRepository rejections,
                               DriverStatisticsRepository statistics, DtoMapper mapper,
+                              SequenceGeneratorService sequences,
                               @Value("${app.reliability.lock-threshold-in-24-hours}") int lockThreshold,
                               @Value("${app.reliability.lock-duration-minutes}") int lockDurationMinutes) {
         this.orders = orders; this.users = users; this.histories = histories; this.reasons = reasons;
         this.rejections = rejections; this.statistics = statistics; this.mapper = mapper;
+        this.sequences = sequences;
         this.lockThreshold = lockThreshold; this.lockDurationMinutes = lockDurationMinutes;
     }
 
@@ -79,7 +82,7 @@ public class DriverOrderService {
         orders.save(assigned);
         users.save(driver);
         statistics.save(stats);
-        histories.save(new StatusHistory(assigned, DeliveryStatus.CHO_TIEP_NHAN, DeliveryStatus.DA_CHAP_NHAN,
+        saveHistory(new StatusHistory(assigned, DeliveryStatus.CHO_TIEP_NHAN, DeliveryStatus.DA_CHAP_NHAN,
                 driver, "Tài xế đã nhận đơn"));
         assigned.getPackages().size();
         return mapper.toOrderResponse(assigned);
@@ -102,7 +105,9 @@ public class DriverOrderService {
         if (reason.isRequiresNote() && (input.note() == null || input.note().isBlank())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "REJECTION_NOTE_REQUIRED", "Lý do này yêu cầu nhập ghi chú");
         }
-        OrderRejection rejection = rejections.save(new OrderRejection(order, driver, reason, clean(input.note())));
+        OrderRejection rejectionToSave = new OrderRejection(order, driver, reason, clean(input.note()));
+        rejectionToSave.setId(sequences.generateSequence("order_rejections"));
+        OrderRejection rejection = rejections.save(rejectionToSave);
         DriverStatistics stats = getStatistics(driver);
         stats.recordRejection(reason.getPenaltyPoints(), rejection.isPenaltyApplied());
         if (rejection.isPenaltyApplied()) {
@@ -124,6 +129,11 @@ public class DriverOrderService {
             throw new ApiException(HttpStatus.FORBIDDEN, "NOT_ASSIGNED_DRIVER", "Chỉ tài xế đang phụ trách mới được cập nhật trạng thái");
         }
         DeliveryStatus previous = order.getStatus();
+        // Idempotent: nếu trạng thái không đổi, trả về đơn hàng hiện tại mà không báo lỗi
+        if (previous == input.status()) {
+            order.getPackages().size();
+            return mapper.toOrderResponse(order);
+        }
         if (!isValidTransition(previous, input.status())) {
             throw new ApiException(HttpStatus.CONFLICT, "INVALID_STATUS_TRANSITION",
                     "Không thể chuyển trạng thái từ " + previous + " sang " + input.status());
@@ -133,7 +143,7 @@ public class DriverOrderService {
         }
         order.changeStatus(input.status());
         orders.save(order);
-        histories.save(new StatusHistory(order, previous, input.status(), driver, clean(input.note())));
+        saveHistory(new StatusHistory(order, previous, input.status(), driver, clean(input.note())));
         if (input.status() == DeliveryStatus.DA_GIAO) {
             User lockedDriver = users.findByIdForUpdate(driver.getId()).orElseThrow();
             boolean hasOtherActive = orders.findAllByDeliveryPersonIdOrderByCreatedAtDesc(driver.getId()).stream()
@@ -180,6 +190,11 @@ public class DriverOrderService {
             case DA_DEN_KHACH_HANG -> to == DeliveryStatus.DA_GIAO;
             default -> false;
         };
+    }
+
+    private void saveHistory(StatusHistory history) {
+        history.setId(sequences.generateSequence("status_histories"));
+        histories.save(history);
     }
 
     private DriverStatistics getStatistics(User driver) {
