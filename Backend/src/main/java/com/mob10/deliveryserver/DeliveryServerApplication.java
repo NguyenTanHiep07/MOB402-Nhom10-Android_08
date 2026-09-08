@@ -10,6 +10,8 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 @EnableScheduling
 public class DeliveryServerApplication {
     public static void main(String[] args) {
+        // Đảm bảo ImageIO hoạt động đúng trong môi trường server không có màn hình (Linux headless)
+        System.setProperty("java.awt.headless", "true");
         SpringApplication.run(DeliveryServerApplication.class, args);
     }
 }
