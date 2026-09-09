@@ -3,9 +3,12 @@ package com.mob10.deliveryapp.ui.admin
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ListAlt
@@ -13,17 +16,34 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import com.mob10.deliveryapp.data.model.AdminUser
 import com.mob10.deliveryapp.data.model.Order
 import com.mob10.deliveryapp.ui.components.*
+import com.mob10.deliveryapp.ui.theme.UthPrimary
+import com.mob10.deliveryapp.ui.theme.UthPrimaryContainer
 import com.mob10.deliveryapp.label
 import com.mob10.deliveryapp.formatServerTimestamp
 import java.util.Locale
+
+/**
+ * Enum biểu diễn các vai trò có thể lọc trong tab Người dùng.
+ */
+private enum class UserRoleFilter(val label: String, val apiValue: String?) {
+    ALL("Tất cả", null),
+    CLIENT("Khách hàng", "CLIENT"),
+    ADMIN("Quản trị viên", "ADMIN")
+}
 
 @Composable
 fun AdminHomeScreen(adminName: String, viewModel: AdminViewModel, onLogout: () -> Unit) {
@@ -32,6 +52,9 @@ fun AdminHomeScreen(adminName: String, viewModel: AdminViewModel, onLogout: () -
     var selected by remember { mutableStateOf<Order?>(null) }
     var orderQuery by rememberSaveable { mutableStateOf("") }
     var orderStatus by rememberSaveable { mutableStateOf<String?>(null) }
+    // -- Người dùng: bộ lọc vai trò + tìm kiếm --
+    var userRoleFilter by rememberSaveable { mutableStateOf(UserRoleFilter.ALL) }
+    var userQuery by rememberSaveable { mutableStateOf("") }
     val context = LocalContext.current
     val orders by viewModel.orders.collectAsStateWithLifecycle()
     val users by viewModel.users.collectAsStateWithLifecycle()
@@ -44,6 +67,18 @@ fun AdminHomeScreen(adminName: String, viewModel: AdminViewModel, onLogout: () -
             (orderStatus == null || order.status.name == orderStatus) && order.matchesAdminSearch(orderQuery)
         }
     }
+    // -- Lọc người dùng theo vai trò và tìm kiếm --
+    val filteredUsers = remember(users, userRoleFilter, userQuery) {
+        users.filter { user ->
+            // Loại bỏ tài xế (DELIVERY) khỏi tab Người dùng — tài xế có tab riêng
+            user.role.uppercase() != "DELIVERY" &&
+            (userRoleFilter.apiValue == null || user.role.uppercase() == userRoleFilter.apiValue) &&
+            user.matchesUserSearch(userQuery)
+        }
+    }
+    val clientCount = remember(users) { users.count { it.role.uppercase() == "CLIENT" } }
+    val adminCount = remember(users) { users.count { it.role.uppercase() == "ADMIN" } }
+    val nonDriverCount = remember(users) { users.count { it.role.uppercase() != "DELIVERY" } }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lifecycle) {
         lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) { viewModel.loadDashboardData() }
@@ -69,7 +104,7 @@ fun AdminHomeScreen(adminName: String, viewModel: AdminViewModel, onLogout: () -
             0 -> {
                 DashboardHeroCard("Toàn hệ thống", "${orders.size} đơn hàng", "${users.size} tài khoản • ${drivers.size} tài xế", Icons.Default.Inventory)
                 QuickActionCard("Đơn hàng", "Xem trạng thái, khách hàng và tài xế", Icons.AutoMirrored.Filled.ListAlt) { tab = 1 }
-                QuickActionCard("Người dùng", "Danh sách khách hàng, tài xế và quản trị viên", Icons.Default.Person) { tab = 2 }
+                QuickActionCard("Người dùng", "$clientCount khách hàng • $adminCount quản trị viên", Icons.Default.Person) { tab = 2 }
                 QuickActionCard("Tài xế", "Trạng thái làm việc và điểm tin cậy", Icons.Default.TwoWheeler) { tab = 3 }
                 QuickActionCard("${alerts.size} cảnh báo", "Tài xế cần kiểm tra", Icons.Default.Warning) { tab = 4 }
             }
@@ -108,10 +143,62 @@ fun AdminHomeScreen(adminName: String, viewModel: AdminViewModel, onLogout: () -
                     "${order.client?.fullName.orEmpty()} → ${order.deliveryPerson?.fullName ?: "Chưa có tài xế"}", Icons.Default.Inventory) { selected = order } }
             }
             2 -> {
-                SectionTitle("Người dùng (${users.size})")
-                if (!loading && users.isEmpty()) Text("Chưa có người dùng.")
-                users.forEach { user -> AdminInfoCard(user.fullName ?: user.username,
-                    "${user.username} • ${roleLabel(user.role)}\n${user.phoneNumber.orEmpty()}\n${if (user.active) "Đang hoạt động" else "Ngừng hoạt động"}") }
+                // ── Tiêu đề và tóm tắt số lượng theo vai trò ──
+                SectionTitle("Người dùng ($nonDriverCount)")
+
+                // ── Thanh tìm kiếm ──
+                OutlinedTextField(
+                    value = userQuery,
+                    onValueChange = { userQuery = it.take(100) },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Tên, tài khoản hoặc số điện thoại") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = {
+                        if (userQuery.isNotEmpty()) IconButton(onClick = { userQuery = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Xóa tìm kiếm")
+                        }
+                    },
+                    singleLine = true
+                )
+
+                // ── FilterChips phân loại vai trò ──
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    UserRoleFilter.entries.forEach { filter ->
+                        val count = when (filter) {
+                            UserRoleFilter.ALL -> nonDriverCount
+                            UserRoleFilter.CLIENT -> clientCount
+                            UserRoleFilter.ADMIN -> adminCount
+                        }
+                        FilterChip(
+                            selected = userRoleFilter == filter,
+                            onClick = { userRoleFilter = filter },
+                            label = { Text("${filter.label} ($count)") },
+                            leadingIcon = if (userRoleFilter == filter) {
+                                { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            } else null
+                        )
+                    }
+                }
+
+                // ── Kết quả lọc ──
+                Text(
+                    "Hiển thị ${filteredUsers.size}/$nonDriverCount người dùng",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                if (!loading && nonDriverCount == 0) {
+                    Text("Chưa có người dùng.")
+                } else if (!loading && filteredUsers.isEmpty()) {
+                    Text("Không tìm thấy người dùng phù hợp. Hãy đổi từ khóa hoặc bộ lọc.")
+                }
+
+                filteredUsers.forEach { user ->
+                    UserInfoCard(user)
+                }
             }
             else -> {
                 val list = if (tab == 4) alerts else drivers
@@ -159,6 +246,18 @@ fun AdminHomeScreen(adminName: String, viewModel: AdminViewModel, onLogout: () -
     }
 }
 
+// ── Tìm kiếm người dùng ──────────────────────────────────────────────
+private fun AdminUser.matchesUserSearch(rawQuery: String): Boolean {
+    val query = rawQuery.trim().normalizeForSearch()
+    if (query.isEmpty()) return true
+    val searchable = buildList {
+        add(username)
+        fullName?.let { add(it) }
+        phoneNumber?.let { add(it) }
+    }.joinToString(" ").normalizeForSearch()
+    return searchable.contains(query)
+}
+
 private fun Order.matchesAdminSearch(rawQuery: String): Boolean {
     val query = rawQuery.trim().normalizeForSearch()
     if (query.isEmpty()) return true
@@ -196,6 +295,14 @@ private fun roleLabel(role: String): String = when (role.uppercase()) {
     else -> role
 }
 
+private fun roleIcon(role: String): @Composable () -> Unit = {
+    when (role.uppercase()) {
+        "ADMIN" -> Icon(Icons.Default.AdminPanelSettings, contentDescription = null, modifier = Modifier.size(14.dp))
+        "CLIENT" -> Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(14.dp))
+        else -> Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(14.dp))
+    }
+}
+
 private fun availabilityLabel(availability: String?): String = when (availability?.uppercase()) {
     "AVAILABLE" -> "Sẵn sàng"
     "BUSY" -> "Đang bận"
@@ -203,6 +310,96 @@ private fun availabilityLabel(availability: String?): String = when (availabilit
     else -> "Chưa cập nhật"
 }
 
+// ── UserInfoCard — thẻ người dùng với badge vai trò và trạng thái ──
+@Composable
+private fun UserInfoCard(user: AdminUser) {
+    val isAdmin = user.role.uppercase() == "ADMIN"
+    val roleBadgeColor = if (isAdmin) Color(0xFFE65100) else UthPrimary
+    val roleBadgeBg = if (isAdmin) Color(0xFFFFF3E0) else UthPrimaryContainer
+
+    Card(
+        Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            Modifier.padding(14.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            // Avatar placeholder
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(if (isAdmin) Color(0xFFFFF3E0) else UthPrimaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isAdmin) Icons.Default.AdminPanelSettings else Icons.Default.Person,
+                    contentDescription = null,
+                    tint = if (isAdmin) Color(0xFFE65100) else UthPrimary,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                // Tên + badge vai trò
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        user.fullName ?: user.username,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    // Role badge
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = roleBadgeBg
+                    ) {
+                        Text(
+                            text = roleLabel(user.role),
+                            color = roleBadgeColor,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+                // Username và phone
+                Text(
+                    text = buildString {
+                        append(user.username)
+                        if (!user.phoneNumber.isNullOrBlank()) append(" • ${user.phoneNumber}")
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                // Trạng thái hoạt động
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(if (user.active) Color(0xFF4CAF50) else Color(0xFFBDBDBD))
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = if (user.active) "Đang hoạt động" else "Ngừng hoạt động",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium,
+                        color = if (user.active) Color(0xFF388E3C) else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ── AdminInfoCard — dùng cho tab Tài xế và Cảnh báo ──
 @Composable
 private fun AdminInfoCard(title: String, detail: String) {
     Card(
