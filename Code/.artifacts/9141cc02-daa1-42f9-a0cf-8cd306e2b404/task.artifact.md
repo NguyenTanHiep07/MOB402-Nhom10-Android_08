@@ -1,3 +1,0 @@
-- [ ] Update KSP version in `libs.versions.toml`
-- [ ] Run Gradle Sync to verify the fix
-- [ ] Verify build and Room annotation processing
