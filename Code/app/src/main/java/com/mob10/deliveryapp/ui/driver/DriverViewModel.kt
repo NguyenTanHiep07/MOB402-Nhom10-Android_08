@@ -324,6 +324,9 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
 
     fun updateOrderStatus(orderId: Int, newStatus: DeliveryStatus, note: String = "") {
         if (_uiState.value.actionInProgress) return
+        // Guard: nếu UI vẫn cache trạng thái cũ nhưng thực ra order đã ở newStatus → skip
+        val currentOrder = _uiState.value.activeOrders.find { it.id.toInt() == orderId }
+        if (currentOrder != null && currentOrder.status == newStatus) return
         _uiState.value = _uiState.value.copy(actionInProgress = true)
         val finalNote = note.ifBlank {
             when (newStatus) {
@@ -355,15 +358,20 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
                         DeliveryStatus.DA_GIAO -> "Đã giao thành công"
                         DeliveryStatus.DA_HUY -> "Đã hủy"
                     }
+                    // Optimistic update: cập nhật ngay activeOrders trong UI tránh shipper bấm lại
+                    val updatedActive = _uiState.value.activeOrders.map { order ->
+                        if (order.id.toInt() == orderId) order.copy(status = newStatus) else order
+                    }.filter { it.status !in listOf(DeliveryStatus.DA_GIAO, DeliveryStatus.DA_HUY) }
                     _uiState.value = _uiState.value.copy(
                         userMessage = "Đơn #$orderId: $statusLabel",
+                        activeOrders = updatedActive,
                         driverStatus = if (newStatus == DeliveryStatus.DA_GIAO) {
                             DriverWorkingStatus.AVAILABLE
                         } else {
                             _uiState.value.driverStatus
                         }
                     )
-                    // Làm mới dữ liệu
+                    // Làm mới dữ liệu từ server để đồng bộ
                     loadMyOrders()
                     if (newStatus == DeliveryStatus.DA_GIAO) {
                         loadStatistics()
