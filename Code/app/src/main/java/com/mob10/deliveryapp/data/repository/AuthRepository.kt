@@ -47,6 +47,25 @@ class AuthRepository(
 
         return result
     }
+    /**
+     * Đăng ký tài khoản mới.
+     * @return NetworkResult.Success chứa RegisterResponse (thông tin tài khoản vừa tạo)
+     */
+    suspend fun register(
+        phoneNumber: String,
+        password: String,
+        fullName: String
+    ): NetworkResult<com.mob10.deliveryapp.data.remote.dto.RegisterResponse> {
+        return RemoteDataSource.safeApiCall {
+            authApi.register(
+                com.mob10.deliveryapp.data.remote.dto.RegisterRequest(
+                    phoneNumber = phoneNumber,
+                    password = password,
+                    fullName = fullName
+                )
+            )
+        }
+    }
 
     /** Đăng xuất khỏi API — xóa access token. */
     suspend fun logout() {

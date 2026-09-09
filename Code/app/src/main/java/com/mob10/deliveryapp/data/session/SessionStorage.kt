@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -16,13 +17,18 @@ private val Context.authSessionDataStore: DataStore<Preferences> by preferencesD
 )
 
 /**
- * Lưu duy nhất id của tài khoản Room đang đăng nhập.
+ * Lưu id của tài khoản Room đang đăng nhập và JWT accessToken (dùng để gắn vào header
+ * Authorization cho các request cần xác thực).
  * Role và thông tin người dùng luôn được đọc lại từ Room khi khôi phục phiên.
  */
 interface SessionStorage {
     suspend fun getUserId(): Int?
 
     suspend fun saveUserId(userId: Int)
+
+    suspend fun getAccessToken(): String?
+
+    suspend fun saveAccessToken(accessToken: String)
 
     suspend fun clear()
 }
@@ -41,13 +47,26 @@ class DataStoreSessionStorage(context: Context) : SessionStorage {
         }
     }
 
+    override suspend fun getAccessToken(): String? = dataStore.data
+        .map { preferences -> preferences[ACCESS_TOKEN] }
+        .first()
+
+    override suspend fun saveAccessToken(accessToken: String) {
+        require(accessToken.isNotBlank()) { "Access token must not be blank." }
+        dataStore.edit { preferences ->
+            preferences[ACCESS_TOKEN] = accessToken
+        }
+    }
+
     override suspend fun clear() {
         dataStore.edit { preferences ->
             preferences.remove(CURRENT_USER_ID)
+            preferences.remove(ACCESS_TOKEN)
         }
     }
 
     private companion object {
         val CURRENT_USER_ID = intPreferencesKey("current_user_id")
+        val ACCESS_TOKEN = stringPreferencesKey("access_token")
     }
 }
