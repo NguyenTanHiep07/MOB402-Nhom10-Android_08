@@ -4,13 +4,12 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -20,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
@@ -45,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -64,24 +65,24 @@ import com.mob10.deliveryapp.ui.theme.UthPrimary
 import com.mob10.deliveryapp.ui.theme.UthSecondaryContainer
 
 @Composable
-fun LoginScreen(
-    onLogin: (phoneNumber: String, password: String) -> Unit = { _, _ -> },
-    onForgotPassword: () -> Unit = {},
-    onRegister: () -> Unit = {},
+fun RegisterScreen(
+    onRegister: (phoneNumber: String, password: String, fullName: String) -> Unit = { _, _, _ -> },
+    onBackToLogin: () -> Unit = {},
     isLoading: Boolean = false,
     errorMessage: String? = null
 ) {
+    var fullName by rememberSaveable { mutableStateOf("") }
     var phoneNumber by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
+    var confirmPassword by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
-    var showValidationError by rememberSaveable { mutableStateOf(false) }
+    var validationError by rememberSaveable { mutableStateOf<String?>(null) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // A soft brand shape gives the login page visual depth without making the form busy.
         Box(
             modifier = Modifier
                 .size(300.dp)
@@ -127,37 +128,48 @@ fun LoginScreen(
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = stringResource(R.string.login_title),
+                        text = "Tạo tài khoản",
                         color = UthPrimary,
-                        fontSize = 30.sp,
+                        fontSize = 26.sp,
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = (-0.5).sp
                     )
                     Spacer(modifier = Modifier.height(5.dp))
                     Text(
-                        text = stringResource(R.string.login_subtitle),
+                        text = "Điền thông tin để bắt đầu sử dụng dịch vụ",
                         color = UthOnSurfaceVariant,
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center
                     )
-                    Spacer(modifier = Modifier.height(26.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                    LoginTextField(
+                    RegisterTextField(
+                        value = fullName,
+                        onValueChange = {
+                            fullName = it
+                            validationError = null
+                        },
+                        label = "Họ và tên",
+                        keyboardType = KeyboardType.Text,
+                        leadingIcon = Icons.Default.Badge
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    RegisterTextField(
                         value = phoneNumber,
                         onValueChange = {
                             phoneNumber = it
-                            showValidationError = false
+                            validationError = null
                         },
                         label = "Số điện thoại",
                         keyboardType = KeyboardType.Phone,
                         leadingIcon = Icons.Default.Person
                     )
                     Spacer(modifier = Modifier.height(14.dp))
-                    LoginTextField(
+                    RegisterTextField(
                         value = password,
                         onValueChange = {
                             password = it
-                            showValidationError = false
+                            validationError = null
                         },
                         label = stringResource(R.string.password_label),
                         keyboardType = KeyboardType.Password,
@@ -179,9 +191,26 @@ fun LoginScreen(
                             }
                         }
                     )
-                    if (errorMessage != null || showValidationError) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    RegisterTextField(
+                        value = confirmPassword,
+                        onValueChange = {
+                            confirmPassword = it
+                            validationError = null
+                        },
+                        label = "Xác nhận mật khẩu",
+                        keyboardType = KeyboardType.Password,
+                        visualTransformation = if (passwordVisible) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
+                        },
+                        leadingIcon = Icons.Default.Lock
+                    )
+
+                    if (errorMessage != null || validationError != null) {
                         Text(
-                            text = errorMessage ?: stringResource(R.string.login_validation_error),
+                            text = errorMessage ?: validationError.orEmpty(),
                             color = MaterialTheme.colorScheme.error,
                             fontSize = 12.sp,
                             modifier = Modifier
@@ -189,23 +218,23 @@ fun LoginScreen(
                                 .padding(top = 7.dp)
                         )
                     }
-                    TextButton(
-                        onClick = onForgotPassword,
-                        modifier = Modifier.align(Alignment.End)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.forgot_password),
-                            color = UthPrimary,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.sp
-                        )
-                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
                     Button(
                         onClick = {
-                            if (phoneNumber.isBlank() || password.isBlank()) {
-                                showValidationError = true
-                            } else {
-                                onLogin(phoneNumber.trim(), password)
+                            when {
+                                fullName.isBlank() || phoneNumber.isBlank() || password.isBlank() -> {
+                                    validationError = "Vui lòng điền đầy đủ thông tin."
+                                }
+                                password.length < 6 -> {
+                                    validationError = "Mật khẩu phải có ít nhất 6 ký tự."
+                                }
+                                password != confirmPassword -> {
+                                    validationError = "Mật khẩu xác nhận không khớp."
+                                }
+                                else -> {
+                                    onRegister(phoneNumber.trim(), password, fullName.trim())
+                                }
                             }
                         },
                         modifier = Modifier
@@ -227,24 +256,23 @@ fun LoginScreen(
                             )
                         } else {
                             Text(
-                                text = stringResource(R.string.login_button),
+                                text = "Đăng ký",
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     }
 
-                    androidx.compose.foundation.layout.Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "Chưa có tài khoản?",
+                            text = "Đã có tài khoản?",
                             color = UthOnSurfaceVariant,
                             fontSize = 13.sp
                         )
-                        TextButton(onClick = onRegister) {
+                        TextButton(onClick = onBackToLogin) {
                             Text(
-                                text = "Đăng ký",
+                                text = "Đăng nhập",
                                 color = UthPrimary,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 13.sp
@@ -253,25 +281,17 @@ fun LoginScreen(
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = stringResource(R.string.login_copyright),
-                color = UthOnSurfaceVariant.copy(alpha = 0.8f),
-                fontSize = 11.sp,
-                textAlign = TextAlign.Center
-            )
         }
     }
 }
 
 @Composable
-private fun LoginTextField(
+private fun RegisterTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
     keyboardType: KeyboardType,
-    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector,
+    leadingIcon: ImageVector,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     trailingContent: @Composable (() -> Unit)? = null
 ) {
@@ -303,8 +323,8 @@ private fun LoginTextField(
 
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun LoginScreenPreview() {
+private fun RegisterScreenPreview() {
     Android08Theme {
-        LoginScreen()
+        RegisterScreen()
     }
 }

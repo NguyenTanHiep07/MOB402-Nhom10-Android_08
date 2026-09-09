@@ -19,6 +19,7 @@ import com.mob10.deliveryapp.ui.auth.AuthViewModel
 import com.mob10.deliveryapp.ui.auth.LocalAccountUpdated
 import com.mob10.deliveryapp.ui.auth.LoginScreen
 import com.mob10.deliveryapp.ui.auth.RecoveryScreen
+import com.mob10.deliveryapp.ui.auth.RegisterScreen
 import com.mob10.deliveryapp.ui.customer.ClientFeatureFlow
 import com.mob10.deliveryapp.ui.driver.DriverHomeScreen
 import com.mob10.deliveryapp.ui.theme.Android08Theme
@@ -29,6 +30,7 @@ fun DeliveryApp(authViewModel: AuthViewModel) {
     val currentUser = authState.currentUser
     val context = LocalContext.current
     var showRecovery by rememberSaveable { mutableStateOf(false) }
+    var showRegister by rememberSaveable { mutableStateOf(false) }
 
     Android08Theme {
         androidx.compose.runtime.CompositionLocalProvider(
@@ -68,10 +70,28 @@ fun DeliveryApp(authViewModel: AuthViewModel) {
                     showRecovery -> {
                         RecoveryScreen(onBack = { showRecovery = false })
                     }
+                    showRegister -> {
+                        RegisterScreen(
+                            onRegister = { phoneNumber, password, fullName ->
+                                authViewModel.register(phoneNumber, password, fullName)
+                            },
+                            onBackToLogin = {
+                                authViewModel.clearError()
+                                showRegister = false
+                            },
+                            isLoading = authState.isAuthenticating,
+                            errorMessage = authState.errorMessage
+                        )
+                        if (authState.registrationSuccess) {
+                            authViewModel.clearRegistrationSuccess()
+                            showRegister = false
+                        }
+                    }
                     else -> {
                         LoginScreen(
                             onLogin = authViewModel::login,
                             onForgotPassword = { showRecovery = true },
+                            onRegister = { showRegister = true },
                             isLoading = authState.isInitializing || authState.isAuthenticating,
                             errorMessage = authState.errorMessage
                         )

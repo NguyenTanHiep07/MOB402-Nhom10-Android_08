@@ -19,7 +19,8 @@ data class AuthUiState(
     val isInitializing: Boolean = true,
     val isAuthenticating: Boolean = false,
     val currentUser: UserEntity? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val registrationSuccess: Boolean = false
 )
 
 class AuthViewModel(
@@ -131,6 +132,47 @@ class AuthViewModel(
                 is NetworkResult.Loading -> Unit
             }
         }
+    }
+
+    fun register(phoneNumber: String, password: String, fullName: String) {
+        if (_uiState.value.isInitializing) {
+            _uiState.value = _uiState.value.copy(errorMessage = "Dữ liệu đang được khởi tạo, vui lòng thử lại.")
+            return
+        }
+        if (_uiState.value.isAuthenticating) return
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isAuthenticating = true,
+                errorMessage = null
+            )
+            when (val result = authRepository.register(phoneNumber.trim(), password, fullName.trim())) {
+                is NetworkResult.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        isAuthenticating = false,
+                        errorMessage = null,
+                        registrationSuccess = true
+                    )
+                }
+                is NetworkResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isAuthenticating = false,
+                        errorMessage = result.message
+                    )
+                }
+                is NetworkResult.Empty -> {
+                    _uiState.value = _uiState.value.copy(
+                        isAuthenticating = false,
+                        errorMessage = "Máy chủ không trả về thông tin đăng ký."
+                    )
+                }
+                is NetworkResult.Loading -> Unit
+            }
+        }
+    }
+
+    fun clearRegistrationSuccess() {
+        _uiState.value = _uiState.value.copy(registrationSuccess = false)
     }
 
     fun syncProfile(profile: com.mob10.deliveryapp.data.remote.api.AccountProfile) {
