@@ -7,13 +7,9 @@ import com.mob10.deliveryapp.data.remote.RemoteDataSource
 import com.mob10.deliveryapp.data.remote.api.AdminApiService
 import com.mob10.deliveryapp.data.remote.mapper.AdminMapper.toDomainDriverList
 import com.mob10.deliveryapp.data.remote.mapper.AdminMapper.toDomainUserList
-import com.mob10.deliveryapp.data.remote.mapper.AdminMapper.toDomainRequestList
-import com.mob10.deliveryapp.data.remote.mapper.AdminMapper.toDomain
 import com.mob10.deliveryapp.data.remote.mapper.OrderMapper.toDomainList
 import com.mob10.deliveryapp.data.util.NetworkResult
 import com.mob10.deliveryapp.data.util.mapData
-import com.mob10.deliveryapp.data.model.AdminDriverRequest
-import com.mob10.deliveryapp.data.remote.dto.AdminDriverRegistrationResponseDto
 
 /**
  * Repository REST cho Admin — quản lý tài khoản, tài xế và đơn hàng.
@@ -47,19 +43,4 @@ class AdminRepository(
         RemoteDataSource.safeApiCall {
             adminApi.getAllOrders()
         }.mapData { it.toDomainList() }
-
-    suspend fun getDriverRequests(): NetworkResult<List<AdminDriverRequest>> =
-        RemoteDataSource.safeApiCall<List<AdminDriverRegistrationResponseDto>> {
-            adminApi.getDriverRequests()
-        }.mapData { it.toDomainRequestList() }
-
-    suspend fun approveDriverRequest(id: Long): NetworkResult<AdminDriverRequest> =
-        RemoteDataSource.safeApiCall<AdminDriverRegistrationResponseDto> {
-            adminApi.approveDriverRequest(id)
-        }.mapData { it.toDomain() }
-
-    suspend fun rejectDriverRequest(id: Long): NetworkResult<AdminDriverRequest> =
-        RemoteDataSource.safeApiCall<AdminDriverRegistrationResponseDto> {
-            adminApi.rejectDriverRequest(id)
-        }.mapData { it.toDomain() }
 }

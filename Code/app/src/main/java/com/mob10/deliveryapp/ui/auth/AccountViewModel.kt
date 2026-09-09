@@ -168,20 +168,6 @@ class AccountViewModel(
             handleProfile(repo.verify(EmailVerify(code, password)), "Đã xác minh email. Bạn có thể dùng số điện thoại để khôi phục mật khẩu.")
         }
     }
-    fun submitDriverRequest(licensePlate: String) {
-        if (mutable.value.busy) return
-        if (licensePlate.isBlank()) {
-            mutable.value = mutable.value.copy(error = "Vui lòng nhập biển số xe."); return
-        }
-        viewModelScope.launch {
-            mutable.value = mutable.value.copy(busy = true, error = null, message = null)
-            when (val result = repo.submitDriverRequest(licensePlate)) {
-                is NetworkResult.Success -> mutable.value = mutable.value.copy(busy = false, message = result.data.message)
-                is NetworkResult.Error -> mutable.value = mutable.value.copy(busy = false, error = result.message)
-                else -> mutable.value = mutable.value.copy(busy = false, error = "Không nhận được phản hồi.")
-            }
-        }
-    }
     private suspend fun handleProfile(result: NetworkResult<AccountProfile>, message: String) {
         when (result) {
             is NetworkResult.Success -> {

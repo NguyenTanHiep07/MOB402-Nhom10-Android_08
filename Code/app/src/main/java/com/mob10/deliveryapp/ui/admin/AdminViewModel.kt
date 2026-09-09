@@ -36,7 +36,6 @@ class AdminViewModel(
     private val _drivers = MutableStateFlow<List<AdminDriver>>(emptyList())
     private val _driverAlerts = MutableStateFlow<List<AdminDriver>>(emptyList())
     private val _orders = MutableStateFlow<List<Order>>(emptyList())
-    private val _driverRequests = MutableStateFlow<List<com.mob10.deliveryapp.data.model.AdminDriverRequest>>(emptyList())
     private val _isLoading = MutableStateFlow(false)
     private val _errorMessage = MutableStateFlow<String?>(null)
 
@@ -46,7 +45,6 @@ class AdminViewModel(
     val drivers = _drivers.asStateFlow()
     val driverAlerts = _driverAlerts.asStateFlow()
     val orders = _orders.asStateFlow()
-    val driverRequests = _driverRequests.asStateFlow()
 
     /** Tổng số đơn hàng */
     val totalRequestCount: StateFlow<Int> = _orders
@@ -88,7 +86,6 @@ class AdminViewModel(
             loadUsers()
             loadDrivers()
             loadOrders()
-            loadDriverRequests()
             when (val result = adminRepository.getDriverAlerts()) {
                 is NetworkResult.Success -> _driverAlerts.value = result.data
                 is NetworkResult.Empty -> _driverAlerts.value = emptyList()
@@ -124,39 +121,6 @@ class AdminViewModel(
             is NetworkResult.Empty -> _orders.value = emptyList()
             is NetworkResult.Error -> _errorMessage.value = result.message
             is NetworkResult.Loading -> Unit
-        }
-    }
-
-    private suspend fun loadDriverRequests() {
-        when (val result = adminRepository.getDriverRequests()) {
-            is NetworkResult.Success -> _driverRequests.value = result.data
-            is NetworkResult.Empty -> _driverRequests.value = emptyList()
-            is NetworkResult.Error -> _errorMessage.value = result.message
-            is NetworkResult.Loading -> Unit
-        }
-    }
-
-    fun approveDriverRequest(id: Long) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            when (val result = adminRepository.approveDriverRequest(id)) {
-                is NetworkResult.Success -> loadDriverRequests()
-                is NetworkResult.Error -> _errorMessage.value = result.message
-                else -> Unit
-            }
-            _isLoading.value = false
-        }
-    }
-
-    fun rejectDriverRequest(id: Long) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            when (val result = adminRepository.rejectDriverRequest(id)) {
-                is NetworkResult.Success -> loadDriverRequests()
-                is NetworkResult.Error -> _errorMessage.value = result.message
-                else -> Unit
-            }
-            _isLoading.value = false
         }
     }
 }
