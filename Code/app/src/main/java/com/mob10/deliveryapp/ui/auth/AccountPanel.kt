@@ -131,6 +131,30 @@ fun AccountPanel(
                     }
                 }
             }
+            if (p.role == "CLIENT") {
+                var applyingDriver by rememberSaveable { mutableStateOf(false) }
+                var lp by rememberSaveable { mutableStateOf("") }
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Đăng ký trở thành Tài Xế", style = MaterialTheme.typography.titleMedium)
+                        if (!applyingDriver) {
+                            OutlinedButton(onClick = { applyingDriver = true }, enabled = !state.busy) {
+                                Text("Trở thành Tài xế của GoDrop")
+                            }
+                        } else {
+                            OutlinedTextField(lp, { lp = it.take(20) }, Modifier.fillMaxWidth(), label = { Text("Biển số xe") }, singleLine = true, enabled = !state.busy)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = { vm.submitDriverRequest(lp) }, enabled = !state.busy && lp.isNotBlank()) {
+                                    Text("Gửi yêu cầu")
+                                }
+                                TextButton(onClick = { applyingDriver = false }, enabled = !state.busy) {
+                                    Text("Hủy")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             TextButton(onClick = vm::load, enabled = !state.busy && !editing && !linking) { Text("Làm mới hồ sơ") }
         }
     }

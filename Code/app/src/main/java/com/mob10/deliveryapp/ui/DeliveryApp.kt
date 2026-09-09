@@ -29,6 +29,7 @@ fun DeliveryApp(authViewModel: AuthViewModel) {
     val currentUser = authState.currentUser
     val context = LocalContext.current
     var showRecovery by rememberSaveable { mutableStateOf(false) }
+    var showRegister by rememberSaveable { mutableStateOf(false) }
 
     Android08Theme {
         androidx.compose.runtime.CompositionLocalProvider(
@@ -38,6 +39,21 @@ fun DeliveryApp(authViewModel: AuthViewModel) {
                 modifier = androidx.compose.ui.Modifier.fillMaxSize(),
                 color = androidx.compose.material3.MaterialTheme.colorScheme.background
             ) {
+                if (authState.isNewlyRegistered) {
+                    val accountViewModel: com.mob10.deliveryapp.ui.auth.AccountViewModel = viewModel(
+                        factory = com.mob10.deliveryapp.ui.auth.AccountViewModelFactory(context.applicationContext, authViewModel::syncProfile)
+                    )
+                    val accountState by accountViewModel.state.collectAsStateWithLifecycle()
+                    com.mob10.deliveryapp.ui.auth.RoleSelectionDialog(
+                        onCustomerSelected = { authViewModel.clearNewlyRegistered() },
+                        onDriverSelected = { licensePlate ->
+                            accountViewModel.submitDriverRequest(licensePlate)
+                            authViewModel.clearNewlyRegistered()
+                        }
+                    )
+                    // If there's an error message from accountViewModel, we might want to show it, but for simplicity, we just clear and let the request happen.
+                }
+
                 when {
                     currentUser != null -> {
                         when (currentUser.role) {
@@ -68,10 +84,19 @@ fun DeliveryApp(authViewModel: AuthViewModel) {
                     showRecovery -> {
                         RecoveryScreen(onBack = { showRecovery = false })
                     }
+                    showRegister -> {
+                        com.mob10.deliveryapp.ui.auth.RegisterScreen(
+                            onRegister = authViewModel::register,
+                            onBackToLogin = { showRegister = false },
+                            isLoading = authState.isInitializing || authState.isAuthenticating,
+                            errorMessage = authState.errorMessage
+                        )
+                    }
                     else -> {
                         LoginScreen(
                             onLogin = authViewModel::login,
                             onForgotPassword = { showRecovery = true },
+                            onNavigateToRegister = { showRegister = true },
                             isLoading = authState.isInitializing || authState.isAuthenticating,
                             errorMessage = authState.errorMessage
                         )

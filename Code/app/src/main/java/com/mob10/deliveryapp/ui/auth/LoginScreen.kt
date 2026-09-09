@@ -67,6 +67,7 @@ import com.mob10.deliveryapp.ui.theme.UthSecondaryContainer
 fun LoginScreen(
     onLogin: (phoneNumber: String, password: String) -> Unit = { _, _ -> },
     onForgotPassword: () -> Unit = {},
+    onNavigateToRegister: () -> Unit = {},
     isLoading: Boolean = false,
     errorMessage: String? = null
 ) {
@@ -231,6 +232,15 @@ fun LoginScreen(
                                 fontWeight = FontWeight.Bold
                             )
                         }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(onClick = onNavigateToRegister) {
+                        Text(
+                            text = "Chưa có tài khoản? Đăng ký ngay",
+                            color = UthPrimary,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp
+                        )
                     }
                 }
             }

@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 data class AuthUiState(
     val isInitializing: Boolean = true,
     val isAuthenticating: Boolean = false,
+    val isNewlyRegistered: Boolean = false,
     val currentUser: UserEntity? = null,
     val errorMessage: String? = null
 )
@@ -131,6 +132,61 @@ class AuthViewModel(
                 is NetworkResult.Loading -> Unit
             }
         }
+    }
+
+    fun register(request: com.mob10.deliveryapp.data.remote.dto.RegisterRequest) {
+        if (_uiState.value.isInitializing) {
+            _uiState.value = _uiState.value.copy(errorMessage = "Dữ liệu đang được khởi tạo, vui lòng thử lại.")
+            return
+        }
+        if (_uiState.value.isAuthenticating) return
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isAuthenticating = true,
+                errorMessage = null
+            )
+            when (val result = authRepository.register(request)) {
+                is NetworkResult.Success -> {
+                    runCatching {
+                        result.data.user.toLocalUser().also { userRepository.saveAuthenticatedUser(it) }
+                    }.onSuccess { user ->
+                        _uiState.value = _uiState.value.copy(
+                            isAuthenticating = false,
+                            currentUser = user,
+                            isNewlyRegistered = true,
+                            errorMessage = null
+                        )
+                    }.onFailure {
+                        authRepository.logout()
+                        _uiState.value = _uiState.value.copy(
+                            isAuthenticating = false,
+                            currentUser = null,
+                            errorMessage = "Thông tin tài khoản từ máy chủ không hợp lệ."
+                        )
+                    }
+                }
+                is NetworkResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isAuthenticating = false,
+                        currentUser = null,
+                        errorMessage = result.message
+                    )
+                }
+                is NetworkResult.Empty -> {
+                    _uiState.value = _uiState.value.copy(
+                        isAuthenticating = false,
+                        currentUser = null,
+                        errorMessage = "Máy chủ không trả về thông tin đăng ký."
+                    )
+                }
+                is NetworkResult.Loading -> Unit
+            }
+        }
+    }
+
+    fun clearNewlyRegistered() {
+        _uiState.value = _uiState.value.copy(isNewlyRegistered = false)
     }
 
     fun syncProfile(profile: com.mob10.deliveryapp.data.remote.api.AccountProfile) {

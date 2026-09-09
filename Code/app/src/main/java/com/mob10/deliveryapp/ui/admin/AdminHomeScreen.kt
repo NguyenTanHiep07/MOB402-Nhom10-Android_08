@@ -87,7 +87,7 @@ fun AdminHomeScreen(adminName: String, viewModel: AdminViewModel, onLogout: () -
     DashboardScaffold(selectedTab = tab, onTabSelected = { tab = it }, navItems = listOf(
         DashboardNavItem("Tổng quan", Icons.Default.Home), DashboardNavItem("Đơn hàng", Icons.AutoMirrored.Filled.ListAlt),
         DashboardNavItem("Người dùng", Icons.Default.Person), DashboardNavItem("Tài xế", Icons.Default.TwoWheeler),
-        DashboardNavItem("Cảnh báo", Icons.Default.Warning)
+        DashboardNavItem("Cảnh báo", Icons.Default.Warning), DashboardNavItem("Yêu cầu", Icons.Default.HowToReg)
     ), header = { GoDropHeader(roleLabel = "Trung tâm quản trị", name = adminName,
         subtitle = "Quản lý hoạt động toàn hệ thống",
         onProfileClick = { profileDialogVisible = true }, onLogout = onLogout) }) {
@@ -198,6 +198,31 @@ fun AdminHomeScreen(adminName: String, viewModel: AdminViewModel, onLogout: () -
 
                 filteredUsers.forEach { user ->
                     UserInfoCard(user)
+                }
+            }
+            5 -> {
+                val requests by viewModel.driverRequests.collectAsStateWithLifecycle()
+                SectionTitle("Yêu cầu đăng ký tài xế (${requests.size})")
+                if (!loading && requests.isEmpty()) Text("Không có yêu cầu nào.")
+                requests.forEach { req ->
+                    Card(Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    ) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Người dùng: ${req.user?.fullName ?: req.user?.username}", style = MaterialTheme.typography.titleMedium)
+                            Text("Biển số xe đăng ký: ${req.licensePlate}", style = MaterialTheme.typography.bodyMedium)
+                            Text("Ngày yêu cầu: ${formatServerTimestamp(req.createdAt)}", style = MaterialTheme.typography.bodySmall)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = { viewModel.approveDriverRequest(req.id) }) {
+                                    Text("Phê duyệt")
+                                }
+                                OutlinedButton(onClick = { viewModel.rejectDriverRequest(req.id) }) {
+                                    Text("Từ chối")
+                                }
+                            }
+                        }
+                    }
                 }
             }
             else -> {
