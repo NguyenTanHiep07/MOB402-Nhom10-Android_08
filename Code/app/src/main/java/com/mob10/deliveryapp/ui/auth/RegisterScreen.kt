@@ -2,25 +2,50 @@ package com.mob10.deliveryapp.ui.auth
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -29,10 +54,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mob10.deliveryapp.R
-import com.mob10.deliveryapp.data.remote.dto.RegisterRequest
+import com.mob10.deliveryapp.ui.theme.Android08Theme
 import com.mob10.deliveryapp.ui.theme.UthOnSurfaceVariant
 import com.mob10.deliveryapp.ui.theme.UthOutline
 import com.mob10.deliveryapp.ui.theme.UthPrimary
@@ -40,17 +66,17 @@ import com.mob10.deliveryapp.ui.theme.UthSecondaryContainer
 
 @Composable
 fun RegisterScreen(
-    onRegister: (RegisterRequest) -> Unit,
-    onBackToLogin: () -> Unit,
-    isLoading: Boolean,
-    errorMessage: String?
+    onRegister: (phoneNumber: String, password: String, fullName: String) -> Unit = { _, _, _ -> },
+    onBackToLogin: () -> Unit = {},
+    isLoading: Boolean = false,
+    errorMessage: String? = null
 ) {
-    var username by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
     var fullName by rememberSaveable { mutableStateOf("") }
     var phoneNumber by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    var confirmPassword by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
-    var showValidationError by rememberSaveable { mutableStateOf(false) }
+    var validationError by rememberSaveable { mutableStateOf<String?>(null) }
 
     Box(
         modifier = Modifier
@@ -102,65 +128,89 @@ fun RegisterScreen(
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "Đăng ký",
+                        text = "Tạo tài khoản",
                         color = UthPrimary,
-                        fontSize = 30.sp,
+                        fontSize = 26.sp,
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = (-0.5).sp
                     )
                     Spacer(modifier = Modifier.height(5.dp))
                     Text(
-                        text = "Tạo tài khoản mới để trải nghiệm GoDrop",
+                        text = "Điền thông tin để bắt đầu sử dụng dịch vụ",
                         color = UthOnSurfaceVariant,
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center
                     )
-                    Spacer(modifier = Modifier.height(26.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
                     RegisterTextField(
-                        value = username,
-                        onValueChange = { username = it; showValidationError = false },
-                        label = "Tên đăng nhập",
-                        keyboardType = KeyboardType.Text,
-                        leadingIcon = Icons.Default.Person
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
-                    RegisterTextField(
                         value = fullName,
-                        onValueChange = { fullName = it; showValidationError = false },
+                        onValueChange = {
+                            fullName = it
+                            validationError = null
+                        },
                         label = "Họ và tên",
                         keyboardType = KeyboardType.Text,
-                        leadingIcon = Icons.Default.Person
+                        leadingIcon = Icons.Default.Badge
                     )
                     Spacer(modifier = Modifier.height(14.dp))
                     RegisterTextField(
                         value = phoneNumber,
-                        onValueChange = { phoneNumber = it; showValidationError = false },
+                        onValueChange = {
+                            phoneNumber = it
+                            validationError = null
+                        },
                         label = "Số điện thoại",
                         keyboardType = KeyboardType.Phone,
-                        leadingIcon = Icons.Default.Phone
+                        leadingIcon = Icons.Default.Person
                     )
                     Spacer(modifier = Modifier.height(14.dp))
                     RegisterTextField(
                         value = password,
-                        onValueChange = { password = it; showValidationError = false },
-                        label = "Mật khẩu",
+                        onValueChange = {
+                            password = it
+                            validationError = null
+                        },
+                        label = stringResource(R.string.password_label),
                         keyboardType = KeyboardType.Password,
-                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        visualTransformation = if (passwordVisible) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
+                        },
                         leadingIcon = Icons.Default.Lock,
                         trailingContent = {
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
                                     imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = null,
+                                    contentDescription = stringResource(
+                                        if (passwordVisible) R.string.hide_password else R.string.show_password
+                                    ),
                                     tint = UthOnSurfaceVariant
                                 )
                             }
                         }
                     )
-                    if (errorMessage != null || showValidationError) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    RegisterTextField(
+                        value = confirmPassword,
+                        onValueChange = {
+                            confirmPassword = it
+                            validationError = null
+                        },
+                        label = "Xác nhận mật khẩu",
+                        keyboardType = KeyboardType.Password,
+                        visualTransformation = if (passwordVisible) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
+                        },
+                        leadingIcon = Icons.Default.Lock
+                    )
+
+                    if (errorMessage != null || validationError != null) {
                         Text(
-                            text = errorMessage ?: "Vui lòng nhập đầy đủ thông tin",
+                            text = errorMessage ?: validationError.orEmpty(),
                             color = MaterialTheme.colorScheme.error,
                             fontSize = 12.sp,
                             modifier = Modifier
@@ -168,13 +218,23 @@ fun RegisterScreen(
                                 .padding(top = 7.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Spacer(modifier = Modifier.height(18.dp))
                     Button(
                         onClick = {
-                            if (username.isBlank() || password.isBlank() || fullName.isBlank() || phoneNumber.isBlank()) {
-                                showValidationError = true
-                            } else {
-                                onRegister(RegisterRequest(username.trim(), password, fullName.trim(), phoneNumber.trim()))
+                            when {
+                                fullName.isBlank() || phoneNumber.isBlank() || password.isBlank() -> {
+                                    validationError = "Vui lòng điền đầy đủ thông tin."
+                                }
+                                password.length < 6 -> {
+                                    validationError = "Mật khẩu phải có ít nhất 6 ký tự."
+                                }
+                                password != confirmPassword -> {
+                                    validationError = "Mật khẩu xác nhận không khớp."
+                                }
+                                else -> {
+                                    onRegister(phoneNumber.trim(), password, fullName.trim())
+                                }
                             }
                         },
                         modifier = Modifier
@@ -202,14 +262,22 @@ fun RegisterScreen(
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    TextButton(onClick = onBackToLogin) {
+
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "Đã có tài khoản? Đăng nhập",
-                            color = UthPrimary,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp
+                            text = "Đã có tài khoản?",
+                            color = UthOnSurfaceVariant,
+                            fontSize = 13.sp
                         )
+                        TextButton(onClick = onBackToLogin) {
+                            Text(
+                                text = "Đăng nhập",
+                                color = UthPrimary,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp
+                            )
+                        }
                     }
                 }
             }
@@ -218,64 +286,12 @@ fun RegisterScreen(
 }
 
 @Composable
-fun RoleSelectionDialog(
-    onCustomerSelected: () -> Unit,
-    onDriverSelected: (String) -> Unit
-) {
-    var showDriverForm by remember { mutableStateOf(false) }
-    var licensePlate by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = { /* Must select */ },
-        title = { Text(if (showDriverForm) "Đăng ký trở thành Tài Xế của GoDrop" else "Chào mừng bạn đến với GoDrop!") },
-        text = {
-            if (showDriverForm) {
-                Column {
-                    Text("Vui lòng nhập biển số xe của bạn để hoàn tất hồ sơ. Quản trị viên sẽ liên hệ để phê duyệt.")
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = licensePlate,
-                        onValueChange = { licensePlate = it },
-                        label = { Text("Biển số xe") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            } else {
-                Text("Cảm ơn bạn đã đăng ký tài khoản. Bạn muốn sử dụng GoDrop với vai trò nào?")
-            }
-        },
-        confirmButton = {
-            if (showDriverForm) {
-                Button(onClick = { onDriverSelected(licensePlate) }, enabled = licensePlate.isNotBlank()) {
-                    Text("Gửi yêu cầu")
-                }
-            } else {
-                Button(onClick = { showDriverForm = true }) {
-                    Text("Tài xế mới")
-                }
-            }
-        },
-        dismissButton = {
-            if (showDriverForm) {
-                TextButton(onClick = { showDriverForm = false }) {
-                    Text("Quay lại")
-                }
-            } else {
-                TextButton(onClick = onCustomerSelected) {
-                    Text("Khách hàng mới")
-                }
-            }
-        }
-    )
-}
-
-@Composable
 private fun RegisterTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
     keyboardType: KeyboardType,
-    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector,
+    leadingIcon: ImageVector,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     trailingContent: @Composable (() -> Unit)? = null
 ) {
@@ -303,4 +319,12 @@ private fun RegisterTextField(
             unfocusedContainerColor = Color.White
         )
     )
+}
+
+@Preview(showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun RegisterScreenPreview() {
+    Android08Theme {
+        RegisterScreen()
+    }
 }

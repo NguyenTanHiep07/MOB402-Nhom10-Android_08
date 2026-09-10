@@ -67,6 +67,7 @@ import com.mob10.deliveryapp.ui.theme.UthSecondaryContainer
 fun LoginScreen(
     onLogin: (phoneNumber: String, password: String) -> Unit = { _, _ -> },
     onForgotPassword: () -> Unit = {},
+    onRegister: () -> Unit = {},
     isLoading: Boolean = false,
     errorMessage: String? = null
 ) {
@@ -229,6 +230,24 @@ fun LoginScreen(
                                 text = stringResource(R.string.login_button),
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    androidx.compose.foundation.layout.Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Chưa có tài khoản?",
+                            color = UthOnSurfaceVariant,
+                            fontSize = 13.sp
+                        )
+                        TextButton(onClick = onRegister) {
+                            Text(
+                                text = "Đăng ký",
+                                color = UthPrimary,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp
                             )
                         }
                     }

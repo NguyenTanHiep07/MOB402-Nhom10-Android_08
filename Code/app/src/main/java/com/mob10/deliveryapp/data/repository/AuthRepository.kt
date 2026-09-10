@@ -47,23 +47,24 @@ class AuthRepository(
 
         return result
     }
-
-    suspend fun register(request: com.mob10.deliveryapp.data.remote.dto.RegisterRequest): NetworkResult<LoginResponse> {
-        val result = RemoteDataSource.safeApiCall {
-            authApi.register(request)
-        }
-        if (result is NetworkResult.Success) {
-            val loginResponse = result.data
-            if (loginResponse.accessToken.isBlank() || !loginResponse.tokenType.equals("Bearer", ignoreCase = true)) {
-                return NetworkResult.Error(message = "Phản hồi đăng nhập không hợp lệ.")
-            }
-            tokenManager.saveToken(
-                token = loginResponse.accessToken,
-                type = loginResponse.tokenType,
-                expiresInMs = loginResponse.expiresInMs
+    /**
+     * Đăng ký tài khoản mới.
+     * @return NetworkResult.Success chứa RegisterResponse (thông tin tài khoản vừa tạo)
+     */
+    suspend fun register(
+        phoneNumber: String,
+        password: String,
+        fullName: String
+    ): NetworkResult<com.mob10.deliveryapp.data.remote.dto.RegisterResponse> {
+        return RemoteDataSource.safeApiCall {
+            authApi.register(
+                com.mob10.deliveryapp.data.remote.dto.RegisterRequest(
+                    phoneNumber = phoneNumber,
+                    password = password,
+                    fullName = fullName
+                )
             )
         }
-        return result
     }
 
     /** Đăng xuất khỏi API — xóa access token. */

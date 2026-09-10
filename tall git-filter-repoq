@@ -1,0 +1,53 @@
+bb0458d | Tên bạn | email@gmail.com | feat(client): hoan thien Client Orders List, Detail, Cancel & Current Status
+c948b45 | Tên bạn | email@gmail.com | fix: resolve conflicts and update UI
+84de12b | Tên bạn | email@gmail.com | refactor: dong bo cau truc thu muc theo nhanh main (bo thu muc Android_UTH_08)
+6b8a155 | Tên bạn | email@gmail.com | fix: resolve merge conflicts va bo sung navigation-compose dependency
+b9d023e | Tên bạn | email@gmail.com | wip: cap nhat OrderConfirmationScreen va MainActivity
+c4a9721 | Tên bạn | email@gmail.com | fix: resolve all conflicts
+2a4a198 | Tên bạn | email@gmail.com | fix: cap nhat giao dien khach hang
+c4aeb87 | Tên bạn | email@gmail.com | feat: hoan thien giao dien khach hang va cap nhat ViewModel
+0b4fe94 | Nguyễn Tấn Hiệp | tanhiep.569124@gmail.com | Merge branch 'main' of https://github.com/NguyenTanHiep07/MOB402-Nhom10-Android_08
+9bf2074 | Nguyễn Tấn Hiệp | tanhiep.569124@gmail.com | cập nhật readme và sửa lỗi
+8f8b7e9 | Tấn Hiệp | tanhiep.569124@gmail.com | Merge pull request #16 from NguyenTanHiep07/fix/driver-home-screen
+7e8c2a3 | Thinh Nguyen | nquocthinh06@gmail.com | Cập nhật tính năng lưu lịch sử đơn hàng đã giao của tài xế
+300b1c2 | Thinh Nguyen | nquocthinh06@gmail.com | Fix Driver Home Screen issues: add status history to active delivery, dynamic card, and quick action clicks
+a67ef9f | Nguyễn Tấn Hiệp | tanhiep.569124@gmail.com | Fix build errors and sync data models for Package Delivery domain
+21f779e | Tấn Hiệp | tanhiep.569124@gmail.com | Merge pull request #14 from NguyenTanHiep07/feature/delivery-profile
+d1b2c34 | Thinh Nguyen | nquocthinh06@gmail.com | Thiết kế giao diện Tài xế mục Hồ sơ và giải quyết xung đột
+e58fc9c | Thinh Nguyen | nquocthinh06@gmail.com | Merge main into feature/delivery-profile and resolve conflict by keeping ours (will apply stash)
+c7f1d51 | Tấn Hiệp | tanhiep.569124@gmail.com | Merge pull request #15 from NguyenTanHiep07/feature/database
+dbd927b | Nhat_dep | 96358505+Nhat-Dep@users.noreply.github.com | Merge branch 'main' into feature/database
+a31cff3 | Nhat_dep | 96358505+Nhat-Dep@users.noreply.github.com | hoàn thiện cơ sở dữ liệu Room, Repository, ViewModel và kết nối UI
+8db141a | Thinh Nguyen | nquocthinh06@gmail.com | Thiết kế giao diện Tài xế mục Hồ sơ.
+1171b92 | Tấn Hiệp | tanhiep.569124@gmail.com | Merge pull request #13 from NguyenTanHiep07/feature/auth-navigation
+332d5dd | Nguyễn Tấn Hiệp | tanhiep.569124@gmail.com | Resolve merge conflicts by keeping feature branch entities
+8331d73 | Nguyễn Tấn Hiệp | tanhiep.569124@gmail.com | Cập nhật logic đăng nhập và thêm Room Database Thêm các Entity cho database và cập nhật dữ liệu mẫu Update login logic with local database and demo accounts
+f70a2c2 | Nhat_dep | 96358505+Nhat-Dep@users.noreply.github.com | fix xung đột
+319a29f | Tấn Hiệp | tanhiep.569124@gmail.com | Merge pull request #12 from NguyenTanHiep07/feature/database
+da873b2 | Nhat_dep | 96358505+Nhat-Dep@users.noreply.github.com | feat(database): implement Room database with entities, DAOs, and repository for delivery management
+3964d2c | Nguyễn Tấn Hiệp | tanhiep.569124@gmail.com | Update README.md
+8f0da40 | Nguyễn Tấn Hiệp | tanhiep.569124@gmail.com | Merge branch 'main' of https://github.com/NguyenTanHiep07/MOB402-Nhom10-Android_08
+1787b8b | Nguyễn Tấn Hiệp | tanhiep.569124@gmail.com | cập nhật môi trường và phân công
+a02a325 | Tấn Hiệp | tanhiep.569124@gmail.com | Merge pull request #11 from NguyenTanHiep07/feature/auth-navigation
+6cfd2c3 | Nguyễn Tấn Hiệp | tanhiep.569124@gmail.com | Merge main into feature/auth-navigation and resolve conflicts
+9d81bed | Nguyễn Tấn Hiệp | tanhiep.569124@gmail.com | feat(ui): làm UI login, Admin, driver, khách hàng
+44f9470 | Nguyễn Tấn Hiệp | tanhiep.569124@gmail.com | feat(ui): migrate sample screen to Jetpack Compose
+ab4d900 | Nguyễn Tấn Hiệp | tanhiep.569124@gmail.com | chore: remove UTH from all files and references
+0d4ef5e | Nguyễn Tấn Hiệp | tanhiep.569124@gmail.com | chore: reorganize folder structure to match requirements
+2e36605 | Tên bạn | email@gmail.com | feat: implement create request UI and fee calculation
+bff91c3 | Tấn Hiệp | tanhiep.569124@gmail.com | Merge pull request #9 from NguyenTanHiep07/main
+575a174 | Tấn Hiệp | tanhiep.569124@gmail.com | Merge pull request #8 from NguyenTanHiep07/feature/project-setup
+d5e07f1 | Nguyễn Tấn Hiệp | tanhiep.569124@gmail.com | chore: thêm .gitkeep để tách giao diện thư mục Code trên GitHub
+1e5656d | Tấn Hiệp | tanhiep.569124@gmail.com | Merge pull request #7 from NguyenTanHiep07/feature/project-setup
+b686278 | Nguyễn Tấn Hiệp | tanhiep.569124@gmail.com | chore: dọn dẹp các file project bị trùng lặp ở vòng ngoài
+cbb74a1 | Tấn Hiệp | tanhiep.569124@gmail.com | Merge pull request #6 from NguyenTanHiep07/feature/project-setup
+9c1e9e0 | Nguyễn Tấn Hiệp | tanhiep.569124@gmail.com | chore(android): initialize Android project
+0348db8 | Tấn Hiệp | tanhiep.569124@gmail.com | Merge pull request #4 from NguyenTanHiep07/feature/activity-
+f399740 | hung-TTpow | nlhhung.77@gmail.com | AC_DeliveryApp
+13818d4 | Nhat_dep | 96358505+Nhat-Dep@users.noreply.github.com | Merge pull request #1 from NguyenTanHiep07/feature/state-erd
+675dded | Nhat_dep | 96358505+Nhat-Dep@users.noreply.github.com | Merge pull request #2 from NguyenTanHiep07/feature/use-case
+fc2fc1e | Nguyễn Quốc Thịnh | nquocthinh06@gmail.com | add Screen Flow and Architecture diagrams
+055658d | Nhat_dep | 96358505+Nhat-Dep@users.noreply.github.com | add State&ERD
+1c2b17c | Nguyễn Tấn Hiệp | tanhiep.569124@gmail.com | docs(usecase): add completed use case diagrams
+ed36353 | Nguyễn Tấn Hiệp | tanhiep.569124@gmail.com | cập nhật tên và mssv
+efe754d | Nguyễn Tấn Hiệp | tanhiep.569124@gmail.com | chore(project): initialize repository structure

@@ -25,3 +25,15 @@ data class UserSummaryDto(
     val role: String,           // "CLIENT", "DELIVERY", "ADMIN"
     val licensePlate: String?
 )
+data class RegisterRequest(
+    val phoneNumber: String,
+    val password: String,
+    val fullName: String
+)
+
+data class RegisterResponse(
+    val id: Long,
+    val phoneNumber: String,
+    val fullName: String?,
+    val role: String
+)

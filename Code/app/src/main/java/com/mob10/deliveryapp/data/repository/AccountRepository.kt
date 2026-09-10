@@ -13,5 +13,4 @@ open class AccountRepository(private val apiProvider: () -> RecoveryApiService =
     open suspend fun emailStatus() = safeApiCall { api.emailStatus() }
     open suspend fun request(phone: String) = safeApiCall { api.request(RecoveryRequest(phone)) }
     open suspend fun reset(body: RecoveryReset) = safeApiCall { api.reset(body) }
-    open suspend fun submitDriverRequest(licensePlate: String) = safeApiCall { api.submitDriverRequest(DriverRequestSubmit(licensePlate)) }
 }

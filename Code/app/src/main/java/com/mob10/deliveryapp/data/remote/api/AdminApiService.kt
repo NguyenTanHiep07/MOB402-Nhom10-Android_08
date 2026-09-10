@@ -1,12 +1,10 @@
 package com.mob10.deliveryapp.data.remote.api
 
-import com.mob10.deliveryapp.data.remote.dto.AdminDriverRegistrationResponseDto
 import com.mob10.deliveryapp.data.remote.dto.AdminDriverResponseDto
 import com.mob10.deliveryapp.data.remote.dto.AdminUserResponseDto
 import com.mob10.deliveryapp.data.remote.dto.OrderResponseDto
 import retrofit2.Response
 import retrofit2.http.GET
-import retrofit2.http.POST
 
 /**
  * Admin API Service — 4 endpoints theo API Contract.
@@ -30,13 +28,4 @@ interface AdminApiService {
     /** Toàn bộ đơn hàng trong hệ thống. */
     @GET("admin/orders")
     suspend fun getAllOrders(): Response<List<OrderResponseDto>>
-
-    @GET("admin/driver-requests")
-    suspend fun getDriverRequests(): Response<List<AdminDriverRegistrationResponseDto>>
-
-    @POST("admin/driver-requests/{id}/approve")
-    suspend fun approveDriverRequest(@retrofit2.http.Path("id") id: Long): Response<AdminDriverRegistrationResponseDto>
-
-    @POST("admin/driver-requests/{id}/reject")
-    suspend fun rejectDriverRequest(@retrofit2.http.Path("id") id: Long): Response<AdminDriverRegistrationResponseDto>
 }
