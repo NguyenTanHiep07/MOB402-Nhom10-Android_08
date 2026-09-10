@@ -29,11 +29,12 @@ class DriverOrderServiceTest {
     @Mock OrderRejectionRepository rejections;
     @Mock DriverStatisticsRepository statistics;
     @Mock DtoMapper mapper;
+    @Mock SequenceGeneratorService sequences;
     private DriverOrderService service;
 
     @BeforeEach
     void setUp() {
-        service = new DriverOrderService(orders, users, histories, reasons, rejections, statistics, mapper, 3, 30);
+        service = new DriverOrderService(orders, users, histories, reasons, rejections, statistics, mapper, sequences, 3, 30);
     }
 
     @Test
