@@ -1,3 +1,0 @@
-- [ ] Update KSP version in `libs.versions.toml`
-- [ ] Fix repository filtering in `settings.gradle.kts`
-- [ ] Verify Gradle sync
