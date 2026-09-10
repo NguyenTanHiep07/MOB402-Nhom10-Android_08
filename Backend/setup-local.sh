@@ -6,20 +6,18 @@ if [ -e .env ]; then
   exit 0
 fi
 umask 077
-db_password=""
-if command -v docker >/dev/null 2>&1; then
-  db_password=$(docker inspect mob402-delivery-postgres --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null | sed -n 's/^POSTGRES_PASSWORD=//p') || true
-fi
-db_password=${db_password:-$(openssl rand -hex 24)}
 jwt_value=$(openssl rand -hex 32)
 demo_value=$(openssl rand -hex 8)
 cat > .env <<EOF
-POSTGRES_DB=delivery_db
-POSTGRES_USER=delivery_user
-POSTGRES_PASSWORD=$db_password
+MONGODB_URI=mongodb://localhost:27017/delivery_db
 JWT_SECRET=$jwt_value
 DEMO_ENABLED=true
 DEMO_PASSWORD=$demo_value
+JWT_EXPIRATION_MS=86400000
+PHOTON_BASE_URL=https://photon.komoot.io
+OSRM_BASE_URL=https://router.project-osrm.org
+LOCATION_REQUEST_TIMEOUT_MS=8000
+LOCATION_USER_AGENT=GoDrop-UTH-08/1.0-student-project
 EOF
 echo "Đã tạo Backend/.env (không đưa lên Git). Mật khẩu tài khoản demo mới nằm ở DEMO_PASSWORD."
-echo "Tài khoản đã tồn tại trong PostgreSQL giữ nguyên mật khẩu cũ."
+echo "Tài khoản đã tồn tại trong MongoDB giữ nguyên mật khẩu cũ."

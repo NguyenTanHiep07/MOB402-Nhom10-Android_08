@@ -10,4 +10,5 @@ public final class AdminDtos {
     public record UserResponse(Long id, String username, String fullName, String phoneNumber, Role role,
                                String licensePlate, DriverAvailability availability, boolean active, Instant createdAt) {}
     public record DriverResponse(UserResponse user, DriverStatisticsResponse statistics) {}
+    public record DriverRegistrationResponse(Long id, UserResponse user, String licensePlate, String status, Instant createdAt) {}
 }

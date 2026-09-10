@@ -1,11 +1,13 @@
 package com.mob10.deliveryserver.service;
 
 import com.mob10.deliveryserver.domain.AccountChallenge;
+import com.mob10.deliveryserver.domain.DriverRegistrationRequest;
 import com.mob10.deliveryserver.domain.PasswordRecoveryLimit;
 import com.mob10.deliveryserver.domain.User;
 import com.mob10.deliveryserver.dto.AccountDtos.*;
 import com.mob10.deliveryserver.exception.ApiException;
 import com.mob10.deliveryserver.repository.AccountChallengeRepository;
+import com.mob10.deliveryserver.repository.DriverRegistrationRequestRepository;
 import com.mob10.deliveryserver.repository.PasswordRecoveryLimitRepository;
 import com.mob10.deliveryserver.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,17 +31,23 @@ public class AccountService {
     private final UserRepository users;
     private final AccountChallengeRepository challenges;
     private final PasswordRecoveryLimitRepository limits;
+    private final DriverRegistrationRequestRepository driverRequests;
+    private final SequenceGeneratorService sequences;
     private final PasswordEncoder passwords;
     private final AccountMail mail;
     private final byte[] secret;
     private final SecureRandom random = new SecureRandom();
 
     public AccountService(UserRepository users, AccountChallengeRepository challenges,
-                          PasswordRecoveryLimitRepository limits, PasswordEncoder passwords,
+                          PasswordRecoveryLimitRepository limits, DriverRegistrationRequestRepository driverRequests,
+                          SequenceGeneratorService sequences,
+                          PasswordEncoder passwords,
                           AccountMail mail, @Value("${app.jwt.secret}") String secret) {
         this.users = users;
         this.challenges = challenges;
         this.limits = limits;
+        this.driverRequests = driverRequests;
+        this.sequences = sequences;
         this.passwords = passwords;
         this.mail = mail;
         this.secret = secret.getBytes(StandardCharsets.UTF_8);
@@ -283,5 +291,20 @@ public class AccountService {
 
     private ApiException bad(String message) {
         return new ApiException(HttpStatus.BAD_REQUEST, "ACCOUNT_INVALID", message);
+    }
+
+    public Message submitDriverRequest(long id, DriverRequestSubmit body) {
+        limit("driver_req:" + id, 3, 3600); // allow 3 requests per hour max
+        User u = user(id);
+        if (!"CLIENT".equals(u.getRole().name())) {
+            throw bad("Chỉ khách hàng mới có thể đăng ký làm tài xế.");
+        }
+        if (driverRequests.existsByUserIdAndStatus(id, "PENDING")) {
+            throw bad("Bạn đã gửi yêu cầu và đang chờ duyệt.");
+        }
+        DriverRegistrationRequest req = new DriverRegistrationRequest(id, body.licensePlate().trim());
+        req.setId(sequences.generateSequence("driver_requests"));
+        driverRequests.save(req);
+        return new Message("Yêu cầu đăng ký tài xế đã được gửi. Vui lòng chờ quản trị viên phê duyệt.");
     }
 }

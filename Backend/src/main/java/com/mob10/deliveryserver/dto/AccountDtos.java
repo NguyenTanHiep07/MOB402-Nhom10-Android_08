@@ -20,4 +20,5 @@ public final class AccountDtos {
     public record Reset(@NotBlank @Size(max=20) String phoneNumber,
                         @NotNull @Pattern(regexp="[0-9]{6}") String code,
                         @NotNull @Size(min=12,max=64) String newPassword) {}
+    public record DriverRequestSubmit(@NotBlank @Size(max=20) String licensePlate) {}
 }

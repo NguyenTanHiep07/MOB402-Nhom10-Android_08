@@ -38,4 +38,8 @@ public class AccountController {
         accounts.reset(body, request.getRemoteAddr());
         return new Message("Đổi mật khẩu thành công. Hãy đăng nhập bằng tên đăng nhập và mật khẩu mới.");
     }
+    @PostMapping("/api/account/driver-request")
+    public Message submitDriverRequest(@AuthenticationPrincipal AuthenticatedUser user, @Valid @RequestBody DriverRequestSubmit body) {
+        return accounts.submitDriverRequest(user.id(), body);
+    }
 }

@@ -28,6 +28,15 @@ object AdminMapper {
         statistics = statistics?.toDomain()  // Dùng OrderMapper.toDomain() cho DriverStatistics
     )
 
+    fun com.mob10.deliveryapp.data.remote.dto.AdminDriverRegistrationResponseDto.toDomain(): com.mob10.deliveryapp.data.model.AdminDriverRequest = com.mob10.deliveryapp.data.model.AdminDriverRequest(
+        id = id,
+        user = user?.toDomain(),
+        licensePlate = licensePlate,
+        status = status,
+        createdAt = createdAt
+    )
+
     fun List<AdminUserResponseDto>.toDomainUserList(): List<AdminUser> = map { it.toDomain() }
     fun List<AdminDriverResponseDto>.toDomainDriverList(): List<AdminDriver> = map { it.toDomain() }
+    fun List<com.mob10.deliveryapp.data.remote.dto.AdminDriverRegistrationResponseDto>.toDomainRequestList(): List<com.mob10.deliveryapp.data.model.AdminDriverRequest> = map { it.toDomain() }
 }

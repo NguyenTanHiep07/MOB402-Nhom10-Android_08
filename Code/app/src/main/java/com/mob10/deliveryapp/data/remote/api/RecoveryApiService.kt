@@ -20,4 +20,6 @@ interface RecoveryApiService {
     @GET("account/email/status") suspend fun emailStatus(): Response<AccountMessage>
     @POST("auth/recovery/request") suspend fun request(@Body body: RecoveryRequest): Response<AccountMessage>
     @POST("auth/recovery/complete") suspend fun reset(@Body body: RecoveryReset): Response<AccountMessage>
+    @POST("account/driver-request") suspend fun submitDriverRequest(@Body body: DriverRequestSubmit): Response<AccountMessage>
 }
+data class DriverRequestSubmit(val licensePlate: String)

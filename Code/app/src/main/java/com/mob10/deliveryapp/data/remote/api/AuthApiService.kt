@@ -14,4 +14,7 @@ interface AuthApiService {
 
     @POST("auth/login")
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
+
+    @POST("auth/register")
+    suspend fun register(@Body request: com.mob10.deliveryapp.data.remote.dto.RegisterRequest): Response<LoginResponse>
 }
