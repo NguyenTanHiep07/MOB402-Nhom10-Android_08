@@ -70,15 +70,6 @@ public class DatabaseSeeder implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        // Drop stale embedded-document indexes that conflict with @DocumentReference
-        if (mongoOperations != null) {
-            for (String col : new String[]{"delivery_requests", "status_histories", "order_rejections", "ratings", "driver_statistics"}) {
-                try {
-                    mongoOperations.indexOps(col).dropAllIndexes();
-                } catch (Exception ignored) {}
-            }
-        }
-
         User client1 = seedUser("client1", "Nguyễn Văn A", "0123456789", Role.CLIENT, null);
         User client2 = seedUser("client2", "Trần Thị B", "0987654321", Role.CLIENT, null);
         User client3 = seedUser("client3", "Hoàng Minh Anh", "0903000003", Role.CLIENT, null);

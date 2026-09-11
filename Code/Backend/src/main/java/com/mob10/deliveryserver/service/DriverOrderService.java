@@ -79,7 +79,11 @@ public class DriverOrderService {
         assigned.assignDriver(driver, Instant.now());
         driver.setDriverAvailability(DriverAvailability.BUSY);
         stats.recordAcceptance();
-        orders.save(assigned);
+        try {
+            orders.save(assigned);
+        } catch (org.springframework.dao.OptimisticLockingFailureException e) {
+            throw new ApiException(HttpStatus.CONFLICT, "ORDER_ALREADY_TAKEN", "Đơn hàng đã được nhận bởi tài xế khác");
+        }
         users.save(driver);
         statistics.save(stats);
         saveHistory(new StatusHistory(assigned, DeliveryStatus.CHO_TIEP_NHAN, DeliveryStatus.DA_CHAP_NHAN,

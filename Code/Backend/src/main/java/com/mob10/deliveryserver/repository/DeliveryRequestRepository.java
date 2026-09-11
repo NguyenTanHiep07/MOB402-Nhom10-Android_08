@@ -10,10 +10,10 @@ import java.util.Optional;
 public interface DeliveryRequestRepository extends MongoRepository<DeliveryRequest, Long> {
     boolean existsByNote(String note);
 
-    @Query(value = "{'client.id': ?0}", sort = "{'createdAt': -1}")
+    @Query(value = "{$or: [{'client.$id': ?0}, {'client.id': ?0}, {'client': ?0}]}", sort = "{'createdAt': -1}")
     List<DeliveryRequest> findAllByClientIdOrderByCreatedAtDesc(Long clientId);
 
-    @Query(value = "{'deliveryPerson.id': ?0}", sort = "{'createdAt': -1}")
+    @Query(value = "{$or: [{'deliveryPerson.$id': ?0}, {'deliveryPerson.id': ?0}, {'deliveryPerson': ?0}]}", sort = "{'createdAt': -1}")
     List<DeliveryRequest> findAllByDeliveryPersonIdOrderByCreatedAtDesc(Long driverId);
 
     @Query(value = "{'status': ?1, 'deliveryPerson': null, '_id': {'$nin': ?2}}", sort = "{'createdAt': -1}")

@@ -1,6 +1,7 @@
 package com.mob10.deliveryserver.domain;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.DocumentReference;
@@ -14,6 +15,9 @@ import java.util.List;
 public class DeliveryRequest {
     @Id
     private Long id;
+
+    @Version
+    private Long version;
 
     @DocumentReference(lazy = false)
     private User client;
@@ -86,6 +90,8 @@ public class DeliveryRequest {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+    public Long getVersion() { return version; }
+    public void setVersion(Long version) { this.version = version; }
     public User getClient() { return client; }
     public void setClient(User client) { this.client = client; }
     public User getDeliveryPerson() { return deliveryPerson; }

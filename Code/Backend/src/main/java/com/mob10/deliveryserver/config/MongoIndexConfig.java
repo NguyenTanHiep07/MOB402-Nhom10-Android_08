@@ -25,10 +25,9 @@ public class MongoIndexConfig {
     @EventListener(ApplicationReadyEvent.class)
     public void ensureIndexes() {
         // Drop all existing indexes (except _id_) on all relevant collections first.
-        // This is needed because Atlas may have stale indexes from previous runs
-        // (e.g., embedded-user unique indexes, or differently-named indexes).
         for (String col : new String[]{"users", "delivery_requests", "status_histories",
-                "order_rejections", "ratings", "driver_statistics"}) {
+                "order_rejections", "ratings", "driver_statistics", "rejection_reasons",
+                "account_challenges", "password_recovery_limits"}) {
             try {
                 mongoTemplate.indexOps(col).dropAllIndexes();
             } catch (Exception ignored) {}
@@ -42,18 +41,58 @@ public class MongoIndexConfig {
         mongoTemplate.indexOps("users")
                 .ensureIndex(new Index().on("role", Sort.Direction.ASC));
 
-        // delivery_requests: only non-unique indexes
+        // delivery_requests: status, createdAt, client, deliveryPerson, compound
         mongoTemplate.indexOps("delivery_requests")
                 .ensureIndex(new Index().on("status", Sort.Direction.ASC));
         mongoTemplate.indexOps("delivery_requests")
                 .ensureIndex(new Index().on("createdAt", Sort.Direction.DESC));
+        mongoTemplate.indexOps("delivery_requests")
+                .ensureIndex(new Index().on("client", Sort.Direction.ASC));
+        mongoTemplate.indexOps("delivery_requests")
+                .ensureIndex(new Index().on("deliveryPerson", Sort.Direction.ASC));
+        mongoTemplate.indexOps("delivery_requests")
+                .ensureIndex(new Index().on("status", Sort.Direction.ASC).on("createdAt", Sort.Direction.DESC));
 
         // status_histories
         mongoTemplate.indexOps("status_histories")
                 .ensureIndex(new Index().on("deliveryRequestId", Sort.Direction.ASC));
+        mongoTemplate.indexOps("status_histories")
+                .ensureIndex(new Index().on("deliveryRequestId", Sort.Direction.ASC).on("timestamp", Sort.Direction.ASC));
+
+        // order_rejections
+        mongoTemplate.indexOps("order_rejections")
+                .ensureIndex(new Index().on("driverId", Sort.Direction.ASC));
+        mongoTemplate.indexOps("order_rejections")
+                .ensureIndex(new Index().on("deliveryRequestId", Sort.Direction.ASC));
+        mongoTemplate.indexOps("order_rejections")
+                .ensureIndex(new Index().on("deliveryRequestId", Sort.Direction.ASC).on("driverId", Sort.Direction.ASC));
+        mongoTemplate.indexOps("order_rejections")
+                .ensureIndex(new Index().on("driverId", Sort.Direction.ASC).on("penaltyApplied", Sort.Direction.ASC).on("rejectedAt", Sort.Direction.DESC));
 
         // ratings
         mongoTemplate.indexOps("ratings")
                 .ensureIndex(new Index().on("driverId", Sort.Direction.ASC));
+        mongoTemplate.indexOps("ratings")
+                .ensureIndex(new Index().on("deliveryRequestId", Sort.Direction.ASC));
+
+        // driver_statistics
+        mongoTemplate.indexOps("driver_statistics")
+                .ensureIndex(new Index().on("reliabilityScore", Sort.Direction.ASC));
+
+        // rejection_reasons
+        mongoTemplate.indexOps("rejection_reasons")
+                .ensureIndex(new Index().on("active", Sort.Direction.ASC));
+
+        // account_challenges
+        mongoTemplate.indexOps("account_challenges")
+                .ensureIndex(new Index().on("userId", Sort.Direction.ASC));
+        mongoTemplate.indexOps("account_challenges")
+                .ensureIndex(new Index().on("token", Sort.Direction.ASC));
+        mongoTemplate.indexOps("account_challenges")
+                .ensureIndex(new Index().on("expiresAt", Sort.Direction.ASC));
+
+        // password_recovery_limits
+        mongoTemplate.indexOps("password_recovery_limits")
+                .ensureIndex(new Index().on("identifier", Sort.Direction.ASC));
     }
 }
