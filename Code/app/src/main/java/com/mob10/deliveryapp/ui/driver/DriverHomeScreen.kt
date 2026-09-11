@@ -85,7 +85,6 @@ fun DriverHomeScreen(
     onLogout: () -> Unit = {}
 ) {
     var selectedTab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(0) }
-    var notificationOrderId by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<Long?>(null) }
     var showLoginAnimation by remember { mutableStateOf(true) }
 
     val context = LocalContext.current
@@ -94,7 +93,6 @@ fun DriverHomeScreen(
         factory = DriverViewModelFactory(context)
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val notifications by viewModel.notifications.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Hiển thị Snackbar khi có thông báo (Accept / Reject / Error)
@@ -102,11 +100,6 @@ fun DriverHomeScreen(
         uiState.userMessage?.let { message ->
             snackbarHostState.showSnackbar(message)
             viewModel.clearAcceptMessage()
-        }
-    }
-    LaunchedEffect(notifications.firstOrNull()?.id) {
-        notifications.firstOrNull { !it.isRead }?.let { notification ->
-            snackbarHostState.showSnackbar(notification.message)
         }
     }
 
@@ -163,14 +156,6 @@ fun DriverHomeScreen(
                     subtitle = headerSubtitle,
                     statusLabel = headerStatusText,
                     statusColor = headerStatusColor,
-                    showNotifications = true,
-                    notifications = notifications,
-                onNotificationsOpened = viewModel::markNotificationsRead,
-                    onNotificationClick = {
-                        viewModel.markNotificationRead(it.id)
-                        notificationOrderId = it.orderId
-                        selectedTab = 1
-                    },
                     onProfileClick = { selectedTab = 3 },
                     onLogout = onLogout,
                     onRefresh = viewModel::refreshData
@@ -316,13 +301,8 @@ fun DriverHomeScreen(
                 if (uiState.isLoading) {
                     DriverLoadingState()
                 } else {
-                    notificationOrderId?.let { id ->
-                        Text("Đơn từ thông báo #GD-$id", style = MaterialTheme.typography.titleSmall)
-                        if (uiState.newOrders.none { it.id == id }) Text("Đơn này không còn chờ nhận. Có thể đã được tài xế khác tiếp nhận.", style = MaterialTheme.typography.bodySmall)
-                        androidx.compose.material3.TextButton(onClick = { notificationOrderId = null }) { Text("Xem tất cả đơn chờ") }
-                    }
                     NewOrdersTab(
-                        newOrders = uiState.newOrders.filter { notificationOrderId == null || it.id == notificationOrderId },
+                        newOrders = uiState.newOrders,
                         rejectionReasons = uiState.rejectionReasons,
                         onAcceptOrder = { orderId -> viewModel.acceptOrder(orderId) },
                         onRejectOrder = { orderId, reason, note -> viewModel.rejectOrder(orderId, reason, note) },

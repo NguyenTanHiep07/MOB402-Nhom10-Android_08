@@ -18,7 +18,6 @@ import com.mob10.deliveryapp.data.remote.dto.CreateOrderRequestDto
 import com.mob10.deliveryapp.data.remote.dto.PackageInputDto
 import com.mob10.deliveryapp.data.repository.ClientOrderRepository
 import com.mob10.deliveryapp.data.util.NetworkResult
-import com.mob10.deliveryapp.ui.components.InAppNotification
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -112,9 +111,6 @@ class OrderViewModel(
     val detailLoading = _detailLoading.asStateFlow()
     private val _isCancelling = MutableStateFlow(false)
     val isCancelling = _isCancelling.asStateFlow()
-    private val _notifications = MutableStateFlow<List<InAppNotification>>(emptyList())
-    val notifications = _notifications.asStateFlow()
-    private var knownOrderStatuses: Map<Long, DeliveryStatus>? = null
     private var loadJob: Job? = null
     private var detailJob: Job? = null
 
@@ -133,7 +129,6 @@ class OrderViewModel(
             _errorMessage.value = null
             when (val result = repository.getMyOrders()) {
                 is NetworkResult.Success -> {
-                    detectClientNotifications(result.data)
                     _orderHistory.value = result.data
                     _selectedOrder.value?.id?.let { id ->
                         result.data.firstOrNull { it.id == id }?.let { updated ->
@@ -142,7 +137,6 @@ class OrderViewModel(
                     }
                 }
                 is NetworkResult.Empty -> {
-                    if (knownOrderStatuses == null) knownOrderStatuses = emptyMap()
                     _orderHistory.value = emptyList()
                 }
                 is NetworkResult.Error -> {
@@ -237,45 +231,6 @@ class OrderViewModel(
     }
 
     fun acknowledgeSubmission() { _submissionState.value = OrderSubmissionState() }
-
-    fun markNotificationsRead() {
-        _notifications.value = _notifications.value.map { it.copy(isRead = true) }
-    }
-
-    fun openNotification(notification: InAppNotification) {
-        _notifications.value = _notifications.value.map { if (it.id == notification.id) it.copy(isRead = true) else it }
-        _orderHistory.value.firstOrNull { it.id == notification.orderId }?.let(::selectOrder)
-    }
-
-    private fun detectClientNotifications(currentOrders: List<Order>) {
-        val previous = knownOrderStatuses
-        knownOrderStatuses = currentOrders.associate { it.id to it.status }
-        if (previous == null) return
-        val additions = currentOrders.mapNotNull { order ->
-            val oldStatus = previous[order.id] ?: return@mapNotNull null
-            if (oldStatus == order.status) return@mapNotNull null
-            val message = when (order.status) {
-                DeliveryStatus.DA_CHAP_NHAN -> "Tài xế ${order.deliveryPerson?.fullName ?: ""} đã nhận đơn #GD-${order.id}."
-                DeliveryStatus.DA_DEN_NHA_HANG -> "Tài xế đã đến điểm lấy của đơn #GD-${order.id}."
-                DeliveryStatus.DA_LAY_HANG -> "Kiện hàng của đơn #GD-${order.id} đã được lấy."
-                DeliveryStatus.DANG_VAN_CHUYEN -> "Đơn #GD-${order.id} đang được vận chuyển."
-                DeliveryStatus.DA_DEN_KHACH_HANG -> "Tài xế đã đến điểm giao đơn #GD-${order.id}."
-                DeliveryStatus.DA_GIAO -> "Đơn #GD-${order.id} đã giao thành công. Bạn có thể đánh giá tài xế."
-                DeliveryStatus.DA_HUY -> "Đơn #GD-${order.id} đã được hủy."
-                DeliveryStatus.CHO_TIEP_NHAN -> "Đơn #GD-${order.id} đang chờ tài xế tiếp nhận."
-            }
-            InAppNotification(
-                id = "client-${order.id}-${order.status}-${order.updatedAt}",
-                title = order.status.label(),
-                message = message,
-                orderId = order.id
-            )
-        }
-        if (additions.isNotEmpty()) {
-            val existingIds = _notifications.value.mapTo(mutableSetOf()) { it.id }
-            _notifications.value = (additions.filterNot { it.id in existingIds } + _notifications.value).take(50)
-        }
-    }
 
     /** Chọn đơn hàng để xem chi tiết — load lịch sử trạng thái từ API. */
     fun selectOrder(order: Order) {
