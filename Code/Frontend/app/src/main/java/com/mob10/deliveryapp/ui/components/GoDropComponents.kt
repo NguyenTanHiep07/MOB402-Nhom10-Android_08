@@ -27,12 +27,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.TwoWheeler
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -48,9 +44,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,15 +65,6 @@ import com.mob10.deliveryapp.ui.theme.UthSuccessContainer
 data class DashboardNavItem(
     val label: String,
     val icon: ImageVector
-)
-
-data class InAppNotification(
-    val id: String,
-    val title: String,
-    val message: String,
-    val occurredAt: Long = System.currentTimeMillis(),
-    val isRead: Boolean = false,
-    val orderId: Long? = null
 )
 
 // ── DashboardScaffold ─────────────────────────────────────────────────
@@ -177,17 +161,11 @@ fun GoDropHeader(
     subtitle: String,
     statusLabel: String? = null,
     statusColor: Color = UthSuccess,
-    showNotifications: Boolean = false,
-    notifications: List<InAppNotification> = emptyList(),
-    onNotificationsOpened: () -> Unit = {},
-    onNotificationClick: (InAppNotification) -> Unit = {},
     onProfileClick: () -> Unit = {},
     onLogout: (() -> Unit)? = null,
     onRefresh: (() -> Unit)? = null
 ) {
     val greeting = dashboardGreeting(name)
-    var notificationDialogVisible by rememberSaveable { mutableStateOf(false) }
-    val unreadCount = notifications.count { !it.isRead }
 
     // Subtle gradient tint — resolves from MaterialTheme so it adapts
     // automatically in dark mode (primary at 5-8 % opacity).
@@ -250,29 +228,6 @@ fun GoDropHeader(
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(18.dp)
                                 )
-                            }
-                        }
-                    }
-                    if (showNotifications) {
-                        Surface(
-                            onClick = {
-                                notificationDialogVisible = true
-                            },
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                BadgedBox(badge = {
-                                    if (unreadCount > 0) Badge { Text(if (unreadCount > 99) "99+" else unreadCount.toString()) }
-                                }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Notifications,
-                                        contentDescription = "Thông báo",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
                             }
                         }
                     }
@@ -351,42 +306,6 @@ fun GoDropHeader(
                 }
             }
         }
-    }
-    if (notificationDialogVisible) {
-        AlertDialog(
-            onDismissRequest = { notificationDialogVisible = false },
-            title = { Text("Thông báo") },
-            text = {
-                Column(
-                    modifier = Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    if (notifications.isEmpty()) {
-                        Text("Chưa có thông báo mới.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    } else notifications.sortedByDescending { it.occurredAt }.forEach { notification ->
-                        Surface(
-                            modifier = Modifier.fillMaxWidth().clickable {
-                                notificationDialogVisible = false
-                                onNotificationClick(notification)
-                            },
-                            shape = MaterialTheme.shapes.small,
-                            color = if (notification.isRead) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                                else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
-                        ) {
-                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                Text(notification.title, fontWeight = FontWeight.Bold)
-                                Text(notification.message, style = MaterialTheme.typography.bodySmall)
-                                Text(java.text.SimpleDateFormat("HH:mm dd/MM", java.util.Locale.getDefault())
-                                    .format(java.util.Date(notification.occurredAt)),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = { TextButton(onClick = { notificationDialogVisible = false }) { Text("Đóng") } }
-        )
     }
 }
 

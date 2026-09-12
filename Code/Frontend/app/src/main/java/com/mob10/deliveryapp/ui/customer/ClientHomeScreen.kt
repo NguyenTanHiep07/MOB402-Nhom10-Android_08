@@ -15,7 +15,6 @@ import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.TwoWheeler
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.RocketLaunch
@@ -54,7 +53,6 @@ fun ClientHomeScreen(
     onLogout: () -> Unit
 ) {
     val orderList by orderViewModel.orderHistory.collectAsStateWithLifecycle()
-    val notifications by orderViewModel.notifications.collectAsStateWithLifecycle()
     val pendingCount = orderList.count { it.status !in listOf(DeliveryStatus.DA_GIAO, DeliveryStatus.DA_HUY) }
     val completedCount = orderList.count { it.status == DeliveryStatus.DA_GIAO }
 
@@ -78,23 +76,11 @@ fun ClientHomeScreen(
                 roleLabel = "Khu vực khách hàng",
                 name = customerName,
                 subtitle = "Quản lý giao hàng của bạn hôm nay",
-                showNotifications = true,
-                notifications = notifications,
-                onNotificationsOpened = orderViewModel::markNotificationsRead,
-                onNotificationClick = { orderViewModel.openNotification(it); onOrderListClick() },
                 onProfileClick = onProfileClick,
                 onLogout = onLogout
             )
         }
     ) {
-        notifications.firstOrNull { !it.isRead }?.let { notification ->
-            QuickActionCard(
-                title = notification.title,
-                subtitle = notification.message,
-                icon = Icons.Default.Notifications,
-                onClick = { orderViewModel.openNotification(notification); onOrderListClick() }
-            )
-        }
         // Hero Card
         DashboardHeroCard(
             eyebrow = "Gửi hàng nội thành",

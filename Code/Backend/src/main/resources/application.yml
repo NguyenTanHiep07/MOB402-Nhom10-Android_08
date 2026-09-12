@@ -8,6 +8,7 @@ spring:
     import:
       - optional:file:.env[.properties]
       - optional:file:Backend/.env[.properties]
+      - optional:file:Code/Backend/.env[.properties]
   application:
     name: delivery-server
   mail:

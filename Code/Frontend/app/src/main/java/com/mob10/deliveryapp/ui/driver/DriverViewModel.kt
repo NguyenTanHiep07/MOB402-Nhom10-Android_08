@@ -13,7 +13,6 @@ import com.mob10.deliveryapp.data.model.StatusHistory
 import com.mob10.deliveryapp.data.remote.RetrofitClient
 import com.mob10.deliveryapp.data.repository.ShipperRepository
 import com.mob10.deliveryapp.data.util.NetworkResult
-import com.mob10.deliveryapp.ui.components.InAppNotification
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -67,9 +66,6 @@ data class DriverUiState(
 class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(DriverUiState(isLoading = true))
     val uiState: StateFlow<DriverUiState> = _uiState.asStateFlow()
-    private val _notifications = MutableStateFlow<List<InAppNotification>>(emptyList())
-    val notifications: StateFlow<List<InAppNotification>> = _notifications.asStateFlow()
-    private var knownOpenOrderIds: Set<Long>? = null
     /**
      * Tải toàn bộ dữ liệu tài xế: đơn chờ, đơn đang giao, thống kê và lý do từ chối.
      * Gọi khi DriverHomeScreen mở lần đầu hoặc khi pull-to-refresh.
@@ -106,14 +102,12 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
     private suspend fun loadOpenOrders() {
         when (val result = repository.getOpenOrders()) {
             is NetworkResult.Success -> {
-                detectNewOpenOrders(result.data)
                 _uiState.value = _uiState.value.copy(
                     newOrders = result.data,
                     pendingCount = result.data.size
                 )
             }
             is NetworkResult.Empty -> {
-                knownOpenOrderIds = emptySet()
                 _uiState.value = _uiState.value.copy(
                     newOrders = emptyList(),
                     pendingCount = 0
@@ -122,32 +116,6 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
             is NetworkResult.Error -> handleError(result)
             is NetworkResult.Loading -> { /* ignored */ }
         }
-    }
-
-    fun markNotificationsRead() {
-        _notifications.value = _notifications.value.map { it.copy(isRead = true) }
-    }
-    fun markNotificationRead(id: String) {
-        _notifications.value = _notifications.value.map { if (it.id == id) it.copy(isRead = true) else it }
-    }
-
-    private fun detectNewOpenOrders(currentOrders: List<Order>) {
-        val currentIds = currentOrders.mapTo(mutableSetOf()) { it.id }
-        val previous = knownOpenOrderIds
-        knownOpenOrderIds = currentIds
-        if (previous == null) return
-        val newOrders = currentOrders.filter { it.id !in previous }
-        if (newOrders.isEmpty()) return
-        val additions = newOrders.map { order ->
-            InAppNotification(
-                id = "driver-open-${order.id}-${order.createdAt}",
-                title = "Có đơn giao hàng mới",
-                message = "Đơn #GD-${order.id}: ${order.pickupAddress} → ${order.deliveryAddress}.",
-                orderId = order.id
-            )
-        }
-        val existingIds = _notifications.value.mapTo(mutableSetOf()) { it.id }
-        _notifications.value = (additions.filterNot { it.id in existingIds } + _notifications.value).take(50)
     }
 
     // ── My Orders ──────────────────────────────────────────────
