@@ -79,6 +79,7 @@ import com.mob10.deliveryapp.ui.theme.UthSuccessContainer
 import com.mob10.deliveryapp.ui.theme.UthWarning
 import com.mob10.deliveryapp.ui.theme.UthWarningContainer
 
+// Giao diện danh sách đơn hàng đang chờ tiếp nhận (Open Pool)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewOrdersTab(

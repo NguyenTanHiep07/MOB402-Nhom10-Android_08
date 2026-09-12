@@ -65,6 +65,7 @@ val PrimaryBlue = UthPrimary
 val TextPrimary = UthOnSurface
 val TextSecondary = UthOnSurfaceVariant
 
+// Màn hình tạo đơn giao hàng (nhập người gửi, người nhận, hàng hóa, tính cước)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateRequestScreen(
@@ -208,6 +209,7 @@ fun CreateRequestScreen(
     }
 }
 
+// Hiển thị một dòng chi phí (tiêu đề và số tiền)
 @Composable
 private fun FeeRow(label: String, amount: Long) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -216,6 +218,7 @@ private fun FeeRow(label: String, amount: Long) {
     }
 }
 
+// Hiển thị danh sách kết quả gợi ý địa chỉ tìm kiếm
 @Composable
 private fun AddressResults(loading: Boolean, error: String?, suggestions: List<com.mob10.deliveryapp.data.model.AddressSuggestion>,
                            selected: Boolean, retry: () -> Unit, choose: (com.mob10.deliveryapp.data.model.AddressSuggestion) -> Unit) {
@@ -228,6 +231,7 @@ private fun AddressResults(loading: Boolean, error: String?, suggestions: List<c
     } }
 }
 
+// Card nhóm các trường thông tin theo từng phần
 @Composable
 fun CardSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     Card(
@@ -244,6 +248,7 @@ fun CardSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     }
 }
 
+// Custom ô nhập liệu văn bản với kiểu dáng thống nhất
 @Composable
 fun CustomTextField(
     value: String, 

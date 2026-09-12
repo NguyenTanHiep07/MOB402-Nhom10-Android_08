@@ -5,6 +5,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
+// Bảng quy tắc tính cước phí giao hàng
 @Entity(
     tableName = "fee_rules",
     foreignKeys = [

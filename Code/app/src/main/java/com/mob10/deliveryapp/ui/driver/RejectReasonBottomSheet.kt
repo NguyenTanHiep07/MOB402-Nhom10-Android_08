@@ -50,6 +50,7 @@ import com.mob10.deliveryapp.ui.theme.UthOutlineVariant
 import com.mob10.deliveryapp.ui.theme.UthPrimary
 import com.mob10.deliveryapp.ui.theme.UthSurfaceContainerLow
 
+// BottomSheet chọn lý do từ chối đơn hàng cho tài xế
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RejectReasonBottomSheet(

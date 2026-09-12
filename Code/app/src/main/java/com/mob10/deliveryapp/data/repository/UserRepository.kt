@@ -4,6 +4,7 @@ import com.mob10.deliveryapp.data.local.dao.UserDao
 import com.mob10.deliveryapp.data.local.entity.UserEntity
 import com.mob10.deliveryapp.data.session.SessionStorage
 
+// Repository quản lý xác thực và lưu trữ hồ sơ người dùng cục bộ
 class UserRepository(
     private val userDao: UserDao,
     private val sessionStorage: SessionStorage? = null

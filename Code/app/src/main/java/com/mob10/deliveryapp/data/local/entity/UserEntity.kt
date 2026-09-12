@@ -5,6 +5,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.mob10.deliveryapp.data.model.Role
 
+// Bảng người dùng trong CSDL SQLite
 @Entity(
     tableName = "users",
     indices = [

@@ -5,6 +5,7 @@ import com.mob10.deliveryapp.data.local.entity.UserEntity
 import com.mob10.deliveryapp.data.model.Role
 import kotlinx.coroutines.flow.Flow
 
+// DAO truy vấn và quản lý bảng users
 @Dao
 interface UserDao {
     @Query("SELECT * FROM users WHERE phoneNumber = :phoneNumber AND password = :password LIMIT 1")

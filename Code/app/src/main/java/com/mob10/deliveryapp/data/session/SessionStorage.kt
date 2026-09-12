@@ -16,30 +16,34 @@ private val Context.authSessionDataStore: DataStore<Preferences> by preferencesD
     name = AUTH_SESSION_DATA_STORE_NAME
 )
 
-/**
- * Lưu id của tài khoản Room đang đăng nhập và JWT accessToken (dùng để gắn vào header
- * Authorization cho các request cần xác thực).
- * Role và thông tin người dùng luôn được đọc lại từ Room khi khôi phục phiên.
- */
+// Interface quản lý lưu trữ phiên đăng nhập và token của người dùng
 interface SessionStorage {
+    // Lấy ID người dùng hiện tại đang đăng nhập
     suspend fun getUserId(): Int?
 
+    // Lưu ID người dùng vào DataStore
     suspend fun saveUserId(userId: Int)
 
+    // Lấy JWT Access Token hiện tại
     suspend fun getAccessToken(): String?
 
+    // Lưu JWT Access Token vào DataStore
     suspend fun saveAccessToken(accessToken: String)
 
+    // Xóa toàn bộ phiên đăng nhập (đăng xuất)
     suspend fun clear()
 }
 
+// Triển khai SessionStorage sử dụng Jetpack DataStore Preferences
 class DataStoreSessionStorage(context: Context) : SessionStorage {
     private val dataStore = context.applicationContext.authSessionDataStore
 
+    // Đọc user ID từ DataStore
     override suspend fun getUserId(): Int? = dataStore.data
         .map { preferences -> preferences[CURRENT_USER_ID] }
         .first()
 
+    // Ghi user ID vào DataStore
     override suspend fun saveUserId(userId: Int) {
         require(userId > 0) { "Room user id must be positive." }
         dataStore.edit { preferences ->
@@ -47,10 +51,12 @@ class DataStoreSessionStorage(context: Context) : SessionStorage {
         }
     }
 
+    // Đọc token từ DataStore
     override suspend fun getAccessToken(): String? = dataStore.data
         .map { preferences -> preferences[ACCESS_TOKEN] }
         .first()
 
+    // Ghi token vào DataStore
     override suspend fun saveAccessToken(accessToken: String) {
         require(accessToken.isNotBlank()) { "Access token must not be blank." }
         dataStore.edit { preferences ->
@@ -58,6 +64,7 @@ class DataStoreSessionStorage(context: Context) : SessionStorage {
         }
     }
 
+    // Xóa sạch user ID và token khỏi DataStore khi logout
     override suspend fun clear() {
         dataStore.edit { preferences ->
             preferences.remove(CURRENT_USER_ID)

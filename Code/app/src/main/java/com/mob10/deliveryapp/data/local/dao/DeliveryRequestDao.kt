@@ -5,6 +5,7 @@ import com.mob10.deliveryapp.data.local.entity.DeliveryRequestEntity
 import com.mob10.deliveryapp.data.model.DeliveryStatus
 import kotlinx.coroutines.flow.Flow
 
+// DAO truy vấn và quản lý đơn giao hàng
 @Dao
 interface DeliveryRequestDao {
     @Query("SELECT * FROM delivery_requests ORDER BY createdAt DESC")

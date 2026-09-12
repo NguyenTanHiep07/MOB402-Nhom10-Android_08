@@ -42,6 +42,7 @@ data class CalculatedFeeResult(
     val appliedRuleId: Int? = null
 )
 
+// Repository quản lý toàn bộ nghiệp vụ đơn giao hàng, tính phí, phân phối và trạng thái
 class DeliveryRepository(
     private val db: AppDatabase,
     private val requestDao: DeliveryRequestDao,
@@ -49,27 +50,48 @@ class DeliveryRepository(
     private val historyDao: StatusHistoryDao,
     private val feeRuleDao: FeeRuleDao = db.feeRuleDao()
 ) {
+    // Flow danh sách tất cả các đơn hàng
     val allRequests: Flow<List<DeliveryRequestEntity>> = requestDao.getAllRequests()
+
+    // Flow danh sách đơn hàng đang chờ tiếp nhận
     val pendingRequests: Flow<List<DeliveryRequestEntity>> = requestDao.getPendingRequests()
+
+    // Lấy danh sách đơn hàng theo ID khách hàng
     fun getRequestsForClient(clientId: Int) = requestDao.getRequestsByClient(clientId)
+
+    // Lấy chi tiết đơn hàng của khách hàng cụ thể
     suspend fun getRequestByIdForClient(requestId: Int, clientId: Int) =
         requestDao.getRequestByIdForClient(requestId, clientId)
+
+    // Lấy danh sách đơn hàng được gán cho tài xế
     fun getRequestsForDelivery(deliveryId: Int) = requestDao.getRequestsByDelivery(deliveryId)
+
+    // Đếm tổng số lượng đơn hàng
     fun getTotalCount() = requestDao.getTotalCount()
+
+    // Đếm số lượng đơn hàng đang chờ nhận
     fun getPendingCount() = requestDao.getPendingCount()
+
+    // Đếm số đơn đang hoạt động của khách
     fun getActiveCountForClient(clientId: Int) = requestDao.getActiveCountForClient(clientId)
+
+    // Đếm số đơn đã giao thành công của khách
     fun getDeliveredCountForClient(clientId: Int) = requestDao.getDeliveredCountForClient(clientId)
+
+    // Đếm số đơn tài xế đã giao trong ngày hôm nay
     fun getDeliveredTodayCountForDriver(deliveryId: Int, startOfDay: Long) =
         requestDao.getDeliveredTodayCountForDriver(deliveryId, startOfDay)
 
-    // Fee Rule Queries
+    // Flow quy tắc tính phí đang áp dụng
     fun getActiveFeeRule(): Flow<FeeRuleEntity?> = feeRuleDao.getActiveFeeRule()
+
+    // Lấy quy tắc tính phí đang áp dụng (đồng bộ)
     suspend fun getActiveFeeRuleSync(): FeeRuleEntity? = feeRuleDao.getActiveFeeRuleSync()
+
+    // Flow toàn bộ lịch sử quy tắc tính phí
     fun getAllFeeRules(): Flow<List<FeeRuleEntity>> = feeRuleDao.getAllFeeRules()
 
-    /**
-     * Tính toán phí giao hàng dự kiến dựa trên FeeRule đang kích hoạt hoặc bảng giá mặc định
-     */
+    // Tính toán phí giao hàng dự kiến dựa trên FeeRule đang kích hoạt hoặc bảng giá mặc định
     suspend fun calculateEstimatedFee(
         distanceKm: Double,
         weightKg: Double,
@@ -97,14 +119,7 @@ class DeliveryRepository(
         )
     }
 
-    /**
-     * Tạo đơn hàng mới – toàn bộ 3 thao tác:
-     * 1. Tạo DeliveryRequestEntity với trạng thái ban đầu CHO_TIEP_NHAN
-     * 2. Tạo các PackageEntity thuộc về đơn
-     * 3. Tạo StatusHistoryEntity ban đầu (fromStatus = null, toStatus = CHO_TIEP_NHAN)
-     * được thực thi nguyên tử trong một Room Database Transaction (withTransaction).
-     * Nếu có bất kỳ lỗi nào, toàn bộ dữ liệu sẽ tự động rollback.
-     */
+    // Tạo đơn hàng mới nguyên tử (Request, Packages, StatusHistory) trong Room Transaction
     suspend fun createRequest(
         clientId: Int,
         pickupAddress: String,
@@ -183,10 +198,7 @@ class DeliveryRepository(
         requestId.toLong()
     }
 
-    /**
-     * Cập nhật trạng thái đơn hàng và ghi lịch sử trong cùng một transaction.
-     * @return true nếu cập nhật thành công
-     */
+    // Cập nhật trạng thái giao hàng của tài xế và ghi lịch sử
     suspend fun updateRequestStatus(
         requestId: Int,
         newStatus: DeliveryStatus,
@@ -218,10 +230,7 @@ class DeliveryRepository(
         true
     }
 
-    /**
-     * Tài xế nhận đơn – atomically kiểm tra đơn chưa được nhận + gán tài xế + ghi history.
-     * Nếu 2 tài xế accept cùng lúc, chỉ 1 thành công nhờ WHERE clause trong DAO.
-     */
+    // Tài xế nhận đơn hàng (chống race condition)
     suspend fun acceptRequest(requestId: Int, deliveryPersonId: Int): AcceptResult = db.withTransaction {
         val currentRequest = requestDao.getRequestById(requestId)
             ?: return@withTransaction AcceptResult.NotFound
@@ -249,11 +258,7 @@ class DeliveryRepository(
         AcceptResult.Success
     }
 
-    /**
-     * Client hủy đơn hàng của chính mình.
-     * - Kiểm tra đúng chủ đơn (ownership check)
-     * - Update có điều kiện để tránh race với Accept của Delivery
-     */
+    // Khách hàng hủy đơn hàng của chính mình
     suspend fun cancelRequestByClient(requestId: Int, clientId: Int): CancelResult = db.withTransaction {
         val request = requestDao.getRequestByIdForClient(requestId, clientId)
             ?: return@withTransaction CancelResult.NotOwnerOrNotFound
@@ -280,6 +285,7 @@ class DeliveryRepository(
         CancelResult.Success
     }
 
+    // Kiểm tra tính hợp lệ của bước chuyển đổi trạng thái đơn
     private fun isValidTransition(from: DeliveryStatus, to: DeliveryStatus): Boolean {
         return when (from) {
             DeliveryStatus.CHO_TIEP_NHAN -> to == DeliveryStatus.DA_CHAP_NHAN || to == DeliveryStatus.DA_HUY
@@ -292,14 +298,23 @@ class DeliveryRepository(
         }
     }
 
+    // Đếm số đơn hoàn thành của tài xế (Flow)
     fun getCompletedCountForDriver(driverId: Int) = requestDao.getCompletedCountForDriverFlow(driverId)
+
+    // Đếm số đơn bị hủy của tài xế (Flow)
     fun getCancelledCountForDriver(driverId: Int) = requestDao.getCancelledCountForDriverFlow(driverId)
 
+    // Lấy danh sách lịch sử trạng thái của đơn
     suspend fun getRequestHistory(requestId: Int) = historyDao.getHistoryForRequest(requestId)
+
+    // Lấy danh sách kiện hàng của đơn
     suspend fun getRequestPackages(requestId: Int) = packageDao.getPackagesForRequest(requestId)
+
+    // Lấy thông tin đơn hàng theo ID
     suspend fun getRequestById(requestId: Int) = requestDao.getRequestById(requestId)
 }
 
+// Kết quả của thao tác khách hàng hủy đơn
 sealed class CancelResult {
     data object Success : CancelResult()
     data object NotOwnerOrNotFound : CancelResult()

@@ -4,6 +4,7 @@ import androidx.room.*
 import com.mob10.deliveryapp.data.local.entity.FeeRuleEntity
 import kotlinx.coroutines.flow.Flow
 
+// DAO quản lý quy tắc tính cước phí giao hàng
 @Dao
 interface FeeRuleDao {
     @Query("SELECT * FROM fee_rules WHERE isActive = 1 ORDER BY effectiveDate DESC LIMIT 1")

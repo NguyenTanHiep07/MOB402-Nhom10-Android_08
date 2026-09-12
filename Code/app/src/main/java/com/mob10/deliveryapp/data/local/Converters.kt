@@ -4,6 +4,7 @@ import androidx.room.TypeConverter
 import com.mob10.deliveryapp.data.model.DeliveryStatus
 import com.mob10.deliveryapp.data.model.Role
 
+// Bộ chuyển đổi kiểu dữ liệu cho Room SQLite
 class Converters {
     @TypeConverter
     fun fromRole(role: Role): String = role.name

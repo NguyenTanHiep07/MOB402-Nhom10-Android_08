@@ -9,6 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.mob10.deliveryapp.data.local.dao.*
 import com.mob10.deliveryapp.data.local.entity.*
 
+// Lớp cấu hình Room Database trung tâm
 @Database(
     entities = [
         UserEntity::class,
@@ -32,7 +33,7 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        /** Migration từ Version 1 lên Version 6 */
+        // Migration từ v1 lên v6 (Thêm cột, bảng fee_rules và chỉ mục)
         val MIGRATION_1_6 = object : androidx.room.migration.Migration(1, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // 1. Cập nhật bảng users
@@ -107,6 +108,7 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Lấy thể hiện duy nhất của Database (Singleton)
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(

@@ -4,6 +4,7 @@ import androidx.room.*
 import com.mob10.deliveryapp.data.local.entity.StatusHistoryEntity
 import kotlinx.coroutines.flow.Flow
 
+// DAO quản lý lịch sử chuyển đổi trạng thái đơn
 @Dao
 interface StatusHistoryDao {
     @Query("SELECT * FROM status_history WHERE deliveryRequestId = :requestId ORDER BY timestamp ASC, id ASC")

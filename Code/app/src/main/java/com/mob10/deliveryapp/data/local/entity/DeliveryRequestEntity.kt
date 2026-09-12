@@ -6,6 +6,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.mob10.deliveryapp.data.model.DeliveryStatus
 
+// Bảng đơn giao hàng trong CSDL SQLite
 @Entity(
     tableName = "delivery_requests",
     foreignKeys = [

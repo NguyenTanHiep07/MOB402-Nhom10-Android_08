@@ -5,6 +5,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
+// Bảng kiện hàng thuộc đơn giao
 @Entity(
     tableName = "packages",
     foreignKeys = [

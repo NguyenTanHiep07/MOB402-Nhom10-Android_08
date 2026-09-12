@@ -6,6 +6,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.mob10.deliveryapp.data.model.DeliveryStatus
 
+// Bảng lịch sử thay đổi trạng thái đơn hàng
 @Entity(
     tableName = "status_history",
     foreignKeys = [

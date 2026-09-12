@@ -21,12 +21,14 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+// Trạng thái trực tuyến / bận / ngoại tuyến của tài xế
 enum class DriverWorkingStatus(val label: String) {
     AVAILABLE("Sẵn sàng nhận đơn"),
     BUSY("Đang bận giao"),
     OFFLINE("Ngoại tuyến")
 }
 
+// State UI màn hình phân hệ tài xế
 data class DriverUiState(
     val newOrders: List<Order> = emptyList(),
     val activeOrders: List<Order> = emptyList(),
@@ -53,23 +55,12 @@ data class DriverUiState(
     val isSessionExpired: Boolean = false       // 401 UNAUTHORIZED
 )
 
-/**
- * DriverViewModel — chuyển từ Room local sang REST API thật qua ShipperRepository.
- *
- * Thay đổi chính so với phiên bản cũ:
- * - Dùng ShipperRepository thay cho DeliveryRepository (Room)
- * - Data là domain model `Order` thay vì `DeliveryRequestEntity`
- * - Load data bằng API call thay vì Flow/Room observation
- * - Xử lý NetworkResult (Loading/Success/Error) ở mọi thao tác
- * - Hiển thị conflict dialog khi 409 ORDER_ALREADY_TAKEN
- */
+// ViewModel xử lý tương tác nghiệp vụ của tài xế (nhận đơn, từ chối, cập nhật trạng thái, thống kê)
 class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(DriverUiState(isLoading = true))
     val uiState: StateFlow<DriverUiState> = _uiState.asStateFlow()
-    /**
-     * Tải toàn bộ dữ liệu tài xế: đơn chờ, đơn đang giao, thống kê và lý do từ chối.
-     * Gọi khi DriverHomeScreen mở lần đầu hoặc khi pull-to-refresh.
-     */
+
+    // Tải toàn bộ dữ liệu tài xế (đơn chờ, đơn của tôi, thống kê, lý do từ chối)
     fun loadDriverData() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
@@ -84,7 +75,7 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
         }
     }
 
-    /** Làm mới dữ liệu. */
+    // Làm mới dữ liệu (khi người dùng kéo vuốt Refresh)
     fun refreshData() {
         if (_uiState.value.isLoading || _uiState.value.isRefreshing || _uiState.value.actionInProgress) return
         viewModelScope.launch {
@@ -97,8 +88,7 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
         }
     }
 
-    // ── Danh sách đơn chờ ─────────────────────────────────────
-
+    // Nạp danh sách đơn hàng đang mở chờ tài xế tiếp nhận
     private suspend fun loadOpenOrders() {
         when (val result = repository.getOpenOrders()) {
             is NetworkResult.Success -> {
@@ -118,8 +108,7 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
         }
     }
 
-    // ── My Orders ──────────────────────────────────────────────
-
+    // Nạp danh sách đơn hàng đang nhận giao và lịch sử giao hàng của tài xế
     private suspend fun loadMyOrders() {
         when (val result = repository.getMyOrders()) {
             is NetworkResult.Success -> {
@@ -165,8 +154,7 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
         }
     }
 
-    // ── Statistics ──────────────────────────────────────────────
-
+    // Nạp thông tin thống kê hiệu suất và điểm uy tín của tài xế
     private suspend fun loadStatistics() {
         when (val result = repository.getMyStatistics()) {
             is NetworkResult.Success -> {
@@ -187,8 +175,7 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
         }
     }
 
-    // ── Rejection Reasons ──────────────────────────────────────────────
-
+    // Nạp danh mục các lý do từ chối đơn hàng từ hệ thống
     private suspend fun loadRejectionReasons() {
         when (val result = repository.getRejectionReasons()) {
             is NetworkResult.Success -> {
@@ -202,8 +189,7 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
         }
     }
 
-    // ── Accept Order ──────────────────────────────────────────────
-
+    // Tài xế bấm nhận đơn hàng
     fun acceptOrder(orderId: Int) {
         if (_uiState.value.actionInProgress) return
         _uiState.value = _uiState.value.copy(actionInProgress = true)
@@ -245,8 +231,7 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
         }
     }
 
-    // ── Reject Order ──────────────────────────────────────────────
-
+    // Tài xế từ chối đơn hàng kèm lý do
     fun rejectOrder(orderId: Int, reason: String = "OTHER", note: String = "") {
         if (_uiState.value.actionInProgress) return
         _uiState.value = _uiState.value.copy(actionInProgress = true, errorMessage = null, rejectedOrderId = null)
@@ -288,8 +273,7 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
         }
     }
 
-    // ── Update Order Status ──────────────────────────────────────────────
-
+    // Chuyển bước tiến trình đơn hàng (Đã đến nhà hàng -> Đã lấy hàng -> Đang vận chuyển -> Đã giao)
     fun updateOrderStatus(orderId: Int, newStatus: DeliveryStatus, note: String = "") {
         if (_uiState.value.actionInProgress) return
         // Guard: nếu UI vẫn cache trạng thái cũ nhưng thực ra order đã ở newStatus → skip
@@ -352,8 +336,7 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
         }
     }
 
-    // ── Working Status (Availability) ──────────────────────────────────────────────
-
+    // Cập nhật trạng thái làm việc (Online, Busy, Offline)
     fun setWorkingStatus(status: DriverWorkingStatus) {
         if (_uiState.value.actionInProgress) return
         _uiState.value = _uiState.value.copy(actionInProgress = true, errorMessage = null)
@@ -382,8 +365,7 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
         }
     }
 
-    // ── Clear Messages ──────────────────────────────────────────────
-
+    // Xóa thông báo nhận đơn
     fun clearAcceptMessage() {
         _uiState.value = _uiState.value.copy(
             acceptMessage = null,
@@ -392,8 +374,7 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
         )
     }
 
-    // ── Error Handling ──────────────────────────────────────────────
-
+    // Xử lý lỗi trả về từ mạng / API
     private fun handleError(error: NetworkResult.Error) {
         _uiState.value = _uiState.value.copy(errorMessage = error.message)
         if (error.isUnauthorized) {
@@ -406,6 +387,7 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
         }
     }
 
+    // Tải lịch sử các trạng thái của từng đơn hàng
     private suspend fun loadHistories(orders: List<Order>): Map<Int, List<StatusHistory>> {
         val result = linkedMapOf<Int, List<StatusHistory>>()
         val previous = _uiState.value
@@ -428,6 +410,7 @@ class DriverViewModel(private val repository: ShipperRepository) : ViewModel() {
     }
 }
 
+// Kiểm tra thời gian có thuộc ngày hôm nay không
 private fun String?.isToday(todayStr: String): Boolean {
     if (this.isNullOrBlank()) return false
     return runCatching {
@@ -437,9 +420,7 @@ private fun String?.isToday(todayStr: String): Boolean {
     }.getOrDefault(false)
 }
 
-/**
- * Factory tạo DriverViewModel với ShipperRepository dùng REST API thật.
- */
+// Factory tạo DriverViewModel với ShipperRepository
 class DriverViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

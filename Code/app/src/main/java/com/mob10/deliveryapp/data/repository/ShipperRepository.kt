@@ -26,18 +26,22 @@ import com.mob10.deliveryapp.data.util.mapData
  * chính xác Loading/Empty/Error, 401, 403, 409, 423 và lỗi máy chủ. Cache/offline là P1
  * và chỉ nên bổ sung khi có cơ chế lưu đồng bộ rõ ràng.
  */
+// Repository gọi API RESTful cho phân hệ tài xế (Shipper)
 class ShipperRepository(
     private val driverApi: DriverApiService,
     private val orderApi: OrderApiService
 ) {
+    // Lấy danh sách các đơn hàng đang mở chờ nhận từ API
     suspend fun getOpenOrders(): NetworkResult<List<Order>> =
         RemoteDataSource.safeApiCall { driverApi.getOpenOrders() }
             .mapData { it.toDomainList() }
 
+    // Lấy danh sách các đơn hàng của tài xế hiện tại
     suspend fun getMyOrders(): NetworkResult<List<Order>> =
         RemoteDataSource.safeApiCall { driverApi.getMyOrders() }
             .mapData { it.toDomainList() }
 
+    // Gửi yêu cầu nhận đơn hàng lên backend
     suspend fun acceptOrder(orderId: Long): NetworkResult<Order> {
         val result = RemoteDataSource.safeApiCall { driverApi.acceptOrder(orderId) }
         if (result is NetworkResult.Error) {
@@ -54,6 +58,7 @@ class ShipperRepository(
         return result.mapData { it.toDomain() }
     }
 
+    // Gửi yêu cầu từ chối đơn hàng kèm lý do
     suspend fun rejectOrder(
         orderId: Long,
         reasonCode: String,
@@ -66,6 +71,7 @@ class ShipperRepository(
             )
         }.mapData { it.toDomain() }
 
+    // Gửi cập nhật trạng thái đơn hàng (đang đi lấy, đã lấy, đang giao, đã giao)
     suspend fun updateOrderStatus(
         orderId: Long,
         newStatus: DeliveryStatus,
@@ -78,22 +84,27 @@ class ShipperRepository(
             )
         }.mapData { it.toDomain() }
 
+    // Lấy thông tin chi tiết đơn hàng theo ID
     suspend fun getOrderById(orderId: Long): NetworkResult<Order> =
         RemoteDataSource.safeApiCall { orderApi.getOrderById(orderId) }
             .mapData { it.toDomain() }
 
+    // Lấy lịch sử chuyển đổi trạng thái của đơn hàng
     suspend fun getOrderHistory(orderId: Long): NetworkResult<List<StatusHistory>> =
         RemoteDataSource.safeApiCall { orderApi.getOrderHistory(orderId) }
             .mapData { it.toDomainHistoryList() }
 
+    // Lấy danh mục các lý do từ chối đơn hàng
     suspend fun getRejectionReasons(): NetworkResult<List<RejectionReason>> =
         RemoteDataSource.safeApiCall { driverApi.getRejectionReasons() }
             .mapData { it.toDomainReasonList() }
 
+    // Lấy thống kê hiệu suất cá nhân và điểm uy tín
     suspend fun getMyStatistics(): NetworkResult<DriverStatistics> =
         RemoteDataSource.safeApiCall { driverApi.getMyStatistics() }
             .mapData { it.toDomain() }
 
+    // Cập nhật trạng thái trực tuyến / ngoại tuyến lên hệ thống
     suspend fun updateAvailability(availability: String): NetworkResult<String> =
         RemoteDataSource.safeApiCall {
             driverApi.updateAvailability(UpdateAvailabilityRequestDto(availability))

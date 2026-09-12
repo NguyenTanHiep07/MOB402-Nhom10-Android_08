@@ -1,5 +1,6 @@
 package com.mob10.deliveryapp.data.model
 
+// Danh mục trạng thái tiến trình đơn giao hàng
 enum class DeliveryStatus {
     CHO_TIEP_NHAN,
     DA_CHAP_NHAN,

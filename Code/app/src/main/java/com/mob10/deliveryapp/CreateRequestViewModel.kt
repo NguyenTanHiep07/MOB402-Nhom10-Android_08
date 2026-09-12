@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.roundToLong
 
+// State UI lưu trữ toàn bộ trạng thái form tạo đơn giao hàng
 data class CreateRequestUiState(
     val senderName: String = "", val senderPhone: String = "", val pickupAddress: String = "",
     val receiverName: String = "", val receiverPhone: String = "", val deliveryAddress: String = "",
@@ -34,6 +35,7 @@ data class CreateRequestUiState(
     val isFormValid: Boolean = false, val formError: String? = null
 )
 
+// ViewModel xử lý logic tạo yêu cầu giao hàng, tìm kiếm địa chỉ và tính giá
 class CreateRequestViewModel(
     private val locations: LocationRepository? = null,
     private val savedState: SavedStateHandle = SavedStateHandle()
@@ -46,26 +48,52 @@ class CreateRequestViewModel(
     private var pickupJob: Job? = null
     private var deliveryJob: Job? = null
     private var quoteJob: Job? = null
+
+    // Cập nhật StateFlow và lưu tạm trạng thái form
     private fun edit(change: CreateRequestUiState.() -> CreateRequestUiState) {
         _uiState.update { it.change().copy(isFormValid = false, formError = null) }; persist()
     }
+
+    // Lưu state form vào SavedStateHandle để tránh mất dữ liệu khi xoay màn hình
     private fun persist() {
         savedState["form"] = gson.toJson(_uiState.value.copy(searchingPickup = false, searchingDelivery = false, isEstimating = false))
     }
+
+    // Cập nhật tên người gửi
     fun onSenderNameChanged(value: String) = edit { copy(senderName = value.take(120)) }
+
+    // Cập nhật SĐT người gửi
     fun onSenderPhoneChanged(value: String) = edit { copy(senderPhone = value.take(15)) }
+
+    // Cập nhật tên người nhận
     fun onReceiverNameChanged(value: String) = edit { copy(receiverName = value.take(120)) }
+
+    // Cập nhật SĐT người nhận
     fun onReceiverPhoneChanged(value: String) = edit { copy(receiverPhone = value.take(15)) }
+
+    // Cập nhật tên/mô tả hàng hóa
     fun onPackageNameChanged(value: String) = edit { copy(packageName = value.take(150)) }
+
+    // Cập nhật khối lượng và tính lại phí
     fun onWeightChanged(value: String) { edit { copy(weight = value.take(12)) }; estimate() }
+
+    // Cập nhật gói dịch vụ giao hàng
     fun onServiceSelected(value: String) { edit { copy(selectedService = value) }; estimate() }
+
+    // Cập nhật địa chỉ lấy hàng và tìm kiếm gợi ý
     fun onPickupAddressChanged(value: String) {
         edit { copy(pickupAddress = value.take(500), pickup = null, pickupSuggestions = emptyList()) }; estimate(); search(true)
     }
+
+    // Cập nhật địa chỉ giao hàng và tìm kiếm gợi ý
     fun onDeliveryAddressChanged(value: String) {
         edit { copy(deliveryAddress = value.take(500), delivery = null, deliverySuggestions = emptyList()) }; estimate(); search(false)
     }
+
+    // Thử tìm kiếm lại địa chỉ khi gặp lỗi
     fun retryAddress(pickup: Boolean) = search(pickup)
+
+    // Debounce tìm kiếm gợi ý địa chỉ qua LocationRepository
     private fun search(isPickup: Boolean) {
         if (isPickup) pickupJob?.cancel() else deliveryJob?.cancel()
         val query = if (isPickup) _uiState.value.pickupAddress else _uiState.value.deliveryAddress
@@ -87,6 +115,8 @@ class CreateRequestViewModel(
         }
         if (isPickup) pickupJob = job else deliveryJob = job
     }
+
+    // Chọn địa chỉ từ danh sách gợi ý
     fun selectAddress(isPickup: Boolean, address: AddressSuggestion) {
         if (isPickup) pickupJob?.cancel() else deliveryJob?.cancel()
         edit { if (isPickup) copy(pickup = address, pickupAddress = address.formattedAddress,
@@ -95,6 +125,8 @@ class CreateRequestViewModel(
             deliverySuggestions = emptyList(), searchingDelivery = false, deliveryError = null) }
         estimate()
     }
+
+    // Tính toán lộ trình khoảng cách và dự toán cước phí
     fun estimate() {
         quoteJob?.cancel()
         edit { copy(feeQuote = FeeQuote(), distanceKm = "", durationMinutes = null, routeError = null, isEstimating = false) }
@@ -120,6 +152,8 @@ class CreateRequestViewModel(
             }
         }
     }
+
+    // Kiểm tra hợp lệ dữ liệu toàn bộ form trước khi gửi
     fun validateForm(): Boolean {
         val s = _uiState.value
         val weight = s.weight.toDoubleOrNull()
@@ -135,17 +169,21 @@ class CreateRequestViewModel(
         _uiState.update { it.copy(isFormValid = error == null, formError = error) }; persist()
         return error == null
     }
+
+    // Xóa form và reset trạng thái về mặc định
     fun reset() {
         pickupJob?.cancel(); deliveryJob?.cancel(); quoteJob?.cancel()
         _uiState.value = CreateRequestUiState(); persist()
     }
 
+    // Kiểm tra tính hợp lệ của số cân nặng
     private fun validWeight(value: String): Boolean = runCatching {
         val weight = value.toBigDecimal().stripTrailingZeros()
         weight >= java.math.BigDecimal("0.01") && weight <= java.math.BigDecimal("99999999.99") && weight.scale() <= 2
     }.getOrDefault(false)
 }
 
+// Factory khởi tạo CreateRequestViewModel với SavedStateHandle
 class CreateRequestViewModelFactory : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T =

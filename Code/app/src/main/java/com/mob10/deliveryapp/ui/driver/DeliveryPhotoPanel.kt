@@ -29,17 +29,29 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import java.io.ByteArrayOutputStream
 
+// State UI hiển thị và xử lý ảnh chụp giao hàng
 data class PhotoState(val image: String? = null, val busy: Boolean = false, val error: String? = null, val completed: Boolean = false)
 
+// ViewModel xử lý chụp ảnh, nén ảnh Base64 và tải ảnh xác nhận giao hàng
 class DeliveryPhotoViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = DeliveryPhotoRepository()
     private val mutable = MutableStateFlow(PhotoState())
     val state = mutable.asStateFlow()
     private fun file(id: Long) = File(getApplication<Application>().filesDir, "delivery_photos/order_$id.jpg").apply { parentFile?.mkdirs() }
+    
+    // Lấy Uri file thông qua FileProvider để camera lưu ảnh
     fun uri(id: Long) = FileProvider.getUriForFile(getApplication(), "${getApplication<Application>().packageName}.deliveryphotos", file(id))
+    
+    // Báo lỗi khi không thể khởi chạy ứng dụng máy ảnh
     fun cameraError() { mutable.value = mutable.value.copy(error = "Không mở được máy ảnh. Hãy kiểm tra ứng dụng máy ảnh trên thiết bị.") }
+    
+    // Hủy bỏ và xóa ảnh đã chụp
     fun discard(id: Long) { file(id).delete(); mutable.value = PhotoState() }
+    
+    // Khôi phục ảnh đã chụp trong bộ nhớ tạm nếu có
     fun restore(id: Long) { if (mutable.value.image == null && !mutable.value.busy && !mutable.value.completed && file(id).length() > 0) captured(id, true) }
+    
+    // Xử lý nén ảnh Bitmap và chuyển sang định dạng chuỗi Base64
     fun captured(id: Long, success: Boolean) {
         if (!success) { mutable.value = mutable.value.copy(error = "Chưa chụp ảnh. Bạn có thể thử lại."); return }
         viewModelScope.launch {
@@ -78,6 +90,8 @@ class DeliveryPhotoViewModel(app: Application) : AndroidViewModel(app) {
             catch (_: Exception) { mutable.value = PhotoState(error = "Ảnh không đọc được hoặc quá lớn. Hãy chụp lại.") }
         }
     }
+    
+    // Tải ảnh xác nhận giao hàng từ máy chủ
     fun load(id: Long) {
         if (mutable.value.busy) return
         viewModelScope.launch {
@@ -89,6 +103,8 @@ class DeliveryPhotoViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
+    
+    // Gửi ảnh chụp xác nhận hoàn thành giao hàng
     fun complete(id: Long) {
         val photo = mutable.value.image ?: return
         if (mutable.value.busy || mutable.value.completed) return
@@ -103,6 +119,7 @@ class DeliveryPhotoViewModel(app: Application) : AndroidViewModel(app) {
     }
 }
 
+// Panel giao diện chụp và hiển thị ảnh bằng chứng giao hàng (POD)
 @Composable
 fun DeliveryPhotoPanel(orderId: Long, capture: Boolean = false, onCompleted: () -> Unit = {}) {
     val vm: DeliveryPhotoViewModel = viewModel(key = "photo_${orderId}_$capture")

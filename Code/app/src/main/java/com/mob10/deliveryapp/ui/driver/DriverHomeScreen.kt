@@ -79,6 +79,7 @@ import com.mob10.deliveryapp.ui.theme.UthSuccessContainer
 import com.mob10.deliveryapp.ui.theme.UthWarning
 import com.mob10.deliveryapp.ui.theme.UthWarningContainer
 
+// Màn hình chính phân hệ tài xế (Home, Đơn chờ, Đang giao, Hồ sơ)
 @Composable
 fun DriverHomeScreen(
     currentUser: UserEntity? = null,

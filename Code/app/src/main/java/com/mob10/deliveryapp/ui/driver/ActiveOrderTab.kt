@@ -82,6 +82,7 @@ import com.mob10.deliveryapp.ui.theme.UthWarningContainer
 import java.text.NumberFormat
 import java.util.Locale
 
+// Giao diện quản lý các đơn hàng tài xế đang thực hiện giao
 @Composable
 fun ActiveOrderTab(
     activeOrders: List<Order>,

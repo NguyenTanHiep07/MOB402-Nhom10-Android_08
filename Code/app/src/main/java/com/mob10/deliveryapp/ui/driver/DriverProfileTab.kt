@@ -21,6 +21,7 @@ import com.mob10.deliveryapp.data.local.entity.UserEntity
 import com.mob10.deliveryapp.ui.components.SectionTitle
 import com.mob10.deliveryapp.ui.theme.*
 
+// Giao diện thông tin tài xế, điểm tin cậy và ca làm việc
 @Composable
 fun DriverProfileTab(
     currentUser: UserEntity?,
