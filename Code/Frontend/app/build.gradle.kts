@@ -105,7 +105,7 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
-    // Persist the authenticated Room user id across application restarts.
+    // TH - tuần 3,4: datastore giữ userId sau khi tắt và mở lại app
     implementation("androidx.datastore:datastore-preferences:1.2.1")
     // Lottie Animation
     implementation("com.airbnb.android:lottie-compose:6.6.2")

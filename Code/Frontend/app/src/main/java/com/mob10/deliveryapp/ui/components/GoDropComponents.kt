@@ -69,6 +69,7 @@ data class DashboardNavItem(
 
 // ── DashboardScaffold ─────────────────────────────────────────────────
 @Composable
+// TH - tuần 2: khung chung gồm nội dung và thanh điều hướng dưới
 fun DashboardScaffold(
     selectedTab: Int,
     onTabSelected: (Int) -> Unit,
@@ -155,6 +156,7 @@ fun DashboardScaffold(
 
 // ── GoDropHeader ──────────────────────────────────────────────────────
 @Composable
+// TH - tuần 2: header chung hiện logo, role, tên và nút thao tác
 fun GoDropHeader(
     roleLabel: String,
     name: String,
@@ -310,6 +312,7 @@ fun GoDropHeader(
 }
 
 @Composable
+// TH - tuần 2: biểu tượng godrop dùng lại ở các màn home
 fun AppMark(modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier.size(38.dp),
@@ -327,6 +330,7 @@ fun AppMark(modifier: Modifier = Modifier) {
     }
 }
 
+// TH - tuần 2: tạo lời chào theo giờ và ghép với tên người dùng
 fun dashboardGreeting(name: String): Pair<String, String> {
     val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
     val greeting = when (hour) {
@@ -372,6 +376,7 @@ fun SectionTitle(
 
 // ── MetricCard ────────────────────────────────────────────────────────
 @Composable
+// TH - tuần 2: thẻ số liệu dùng chung trên dashboard
 fun MetricCard(
     modifier: Modifier = Modifier,
     label: String,
@@ -455,6 +460,7 @@ fun MetricCard(
 
 // ── QuickActionCard ───────────────────────────────────────────────────
 @Composable
+// TH - tuần 2: thẻ lối tắt; bấm vào sẽ gọi onclick
 fun QuickActionCard(
     title: String,
     subtitle: String,
@@ -634,6 +640,7 @@ fun DashboardHeroCard(
 
 // ── StatusPill ────────────────────────────────────────────────────────
 @Composable
+// TH - tuần 2: nhãn nhỏ dùng để hiển thị trạng thái
 fun StatusPill(
     text: String,
     containerColor: Color = UthSuccessContainer,

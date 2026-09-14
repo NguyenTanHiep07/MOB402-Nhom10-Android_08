@@ -26,6 +26,8 @@ import com.mob10.deliveryapp.ui.theme.Android08Theme
 
 @Composable
 fun DeliveryApp(authViewModel: AuthViewModel) {
+    // TH - demo: login từng role, logout, rồi mở lại app để chứng minh restore
+    // TH - tuần 2-4: theo dõi auth để giao diện tự đổi màn
     val authState by authViewModel.uiState.collectAsStateWithLifecycle()
     val currentUser = authState.currentUser
     val context = LocalContext.current
@@ -41,7 +43,9 @@ fun DeliveryApp(authViewModel: AuthViewModel) {
                 color = androidx.compose.material3.MaterialTheme.colorScheme.background
             ) {
                 when {
+                    // TH - tuần 2-4: có user thì mở màn hình theo role
                     currentUser != null -> {
+                        // TH - tuần 2-4: mỗi role chỉ đi vào đúng home của mình
                         when (currentUser.role) {
                             Role.ADMIN -> {
                                 val adminViewModel: AdminViewModel = viewModel(
@@ -87,6 +91,7 @@ fun DeliveryApp(authViewModel: AuthViewModel) {
                             showRegister = false
                         }
                     }
+                    // TH - tuần 2: chưa đăng nhập thì mở loginscreen
                     else -> {
                         LoginScreen(
                             onLogin = authViewModel::login,

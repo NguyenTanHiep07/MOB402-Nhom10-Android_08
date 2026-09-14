@@ -64,6 +64,7 @@ import com.mob10.deliveryapp.ui.theme.UthPrimary
 import com.mob10.deliveryapp.ui.theme.UthSecondaryContainer
 
 @Composable
+// TH - tuần 2: vẽ form đăng nhập và gửi dữ liệu qua callback
 fun LoginScreen(
     onLogin: (phoneNumber: String, password: String) -> Unit = { _, _ -> },
     onForgotPassword: () -> Unit = {},
@@ -71,11 +72,13 @@ fun LoginScreen(
     isLoading: Boolean = false,
     errorMessage: String? = null
 ) {
+    // TH - tuần 2: giữ dữ liệu người dùng nhập và trạng thái giao diện
     var phoneNumber by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var showValidationError by rememberSaveable { mutableStateOf(false) }
 
+    // TH - tuần 2: box là nền, column xếp form từ trên xuống
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -142,6 +145,7 @@ fun LoginScreen(
                     )
                     Spacer(modifier = Modifier.height(26.dp))
 
+                    // TH - tuần 2: ô nhập số điện thoại
                     LoginTextField(
                         value = phoneNumber,
                         onValueChange = {
@@ -153,6 +157,7 @@ fun LoginScreen(
                         leadingIcon = Icons.Default.Person
                     )
                     Spacer(modifier = Modifier.height(14.dp))
+                    // TH - tuần 2: ô mật khẩu có nút hiện hoặc ẩn
                     LoginTextField(
                         value = password,
                         onValueChange = {
@@ -179,6 +184,7 @@ fun LoginScreen(
                             }
                         }
                     )
+                    // TH - tuần 2: hiện lỗi nhập thiếu hoặc lỗi đăng nhập
                     if (errorMessage != null || showValidationError) {
                         Text(
                             text = errorMessage ?: stringResource(R.string.login_validation_error),
@@ -200,6 +206,7 @@ fun LoginScreen(
                             fontSize = 13.sp
                         )
                     }
+                    // TH - tuần 2: kiểm tra rỗng rồi gọi authviewmodel qua onlogin
                     Button(
                         onClick = {
                             if (phoneNumber.isBlank() || password.isBlank()) {
@@ -266,6 +273,7 @@ fun LoginScreen(
 }
 
 @Composable
+// TH - tuần 2: dùng chung kiểu ô nhập cho tài khoản và mật khẩu
 private fun LoginTextField(
     value: String,
     onValueChange: (String) -> Unit,
@@ -303,6 +311,7 @@ private fun LoginTextField(
 
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
+// TH - tuần 2: chỉ xem trước giao diện trong android studio
 private fun LoginScreenPreview() {
     Android08Theme {
         LoginScreen()

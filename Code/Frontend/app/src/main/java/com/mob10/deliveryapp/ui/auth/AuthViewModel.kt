@@ -16,13 +16,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class AuthUiState(
+    // TH - tuần 3,4: true khi app đang khởi tạo và restore session
     val isInitializing: Boolean = true,
+    // TH - tuần 3,4: true khi đang đăng nhập hoặc đăng xuất
     val isAuthenticating: Boolean = false,
+    // TH - tuần 2-4: null về login; có user thì mở home theo role
     val currentUser: UserEntity? = null,
     val errorMessage: String? = null,
     val registrationSuccess: Boolean = false
 )
 
+// TH - tuần 2-4: giữ và xử lý trạng thái đăng nhập cho giao diện
 class AuthViewModel(
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,
@@ -47,7 +51,9 @@ class AuthViewModel(
                 }
             }
         }
+        // TH - tuần 3,4: khởi tạo dữ liệu rồi restore session
         viewModelScope.launch {
+            // TH - tuần 3,4: room phải sẵn sàng trước khi đọc user cũ
             val databaseResult = runCatching { initializeDatabase() }
             if (databaseResult.isFailure) {
                 _uiState.value = _uiState.value.copy(
@@ -58,10 +64,12 @@ class AuthViewModel(
             }
 
             runCatching {
+                // TH - phần auth phát triển sau: token hỏng thì về login
                 if (!authRepository.isLoggedIn()) {
                     userRepository.logout()
                     null
                 } else {
+                    // TH - phần auth phát triển sau: token đúng thì restore user
                     userRepository.restoreSession().also { restoredUser ->
                         if (restoredUser == null) authRepository.logout()
                     }
@@ -84,11 +92,13 @@ class AuthViewModel(
         }
     }
 
+    // TH - phần auth phát triển sau: đăng nhập server và cập nhật user
     fun login(phoneNumber: String, password: String) {
         if (_uiState.value.isInitializing) {
             _uiState.value = _uiState.value.copy(errorMessage = "Dữ liệu đang được khởi tạo, vui lòng thử lại.")
             return
         }
+        // TH - tuần 3,4: chặn bấm đăng nhập nhiều lần
         if (_uiState.value.isAuthenticating) return
 
         viewModelScope.launch {
@@ -98,6 +108,7 @@ class AuthViewModel(
             )
             when (val result = authRepository.login(phoneNumber.trim(), password)) {
                 is NetworkResult.Success -> {
+                    // TH - phần auth phát triển sau: đổi user server và lưu session
                     runCatching {
                         result.data.user.toLocalUser().also { userRepository.saveAuthenticatedUser(it) }
                     }.onSuccess { user ->
@@ -116,6 +127,7 @@ class AuthViewModel(
                     }
                 }
                 is NetworkResult.Error -> {
+                    // TH - phần auth phát triển sau: hiện lỗi mạng hoặc server
                     _uiState.value = _uiState.value.copy(
                         isAuthenticating = false,
                         currentUser = null,
@@ -190,9 +202,11 @@ class AuthViewModel(
     }
 
     fun clearError() {
+        // TH - tuần 2-4: xoá lỗi cũ sau khi giao diện đã hiển thị
         _uiState.value = _uiState.value.copy(errorMessage = null)
     }
 
+    // TH - tuần 3,4: xoá phiên và quay về màn đăng nhập
     fun logout() {
         if (_uiState.value.isInitializing || _uiState.value.isAuthenticating) return
 
@@ -222,6 +236,7 @@ class AuthViewModel(
     }
 }
 
+// TH - phần auth phát triển sau: đổi user server sang user room
 private fun UserSummaryDto.toLocalUser(): UserEntity {
     val localId = id.toInt()
     require(localId > 0 && localId.toLong() == id) { "Mã tài khoản không hợp lệ" }
@@ -236,6 +251,7 @@ private fun UserSummaryDto.toLocalUser(): UserEntity {
     )
 }
 
+// TH - tuần 2-4: factory tạo authviewmodel cùng dependency
 class AuthViewModelFactory(
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository,

@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.sp
 
 private val GoDropFontFamily = FontFamily.SansSerif
 
+// TH - tuần 2: quy định cỡ chữ và độ đậm dùng chung
 val GoDropTypography = Typography(
     displaySmall = TextStyle(
         fontFamily = GoDropFontFamily,

@@ -19,13 +19,18 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+
+        // TH - tuần 3,4: tạo room và datastore cho auth/session
         val database = AppDatabase.getDatabase(applicationContext)
         val sessionStorage = DataStoreSessionStorage(applicationContext)
         RetrofitClient.init(applicationContext)
+
+        // TH - tuần 3,4: nối userdao và session vào repository dùng chung
         val userRepository = UserRepository(
             userDao = database.userDao(),
             sessionStorage = sessionStorage
         )
+        // TH - tuần 2-4: tạo authviewmodel dùng chung cho toàn ứng dụng
         val authViewModel = ViewModelProvider(
             this,
             AuthViewModelFactory(
@@ -38,6 +43,7 @@ class MainActivity : ComponentActivity() {
             )
         )[AuthViewModel::class.java]
 
+        // TH - tuần 2: mở giao diện chính và truyền authviewmodel vào
         setContent { DeliveryApp(authViewModel) }
     }
 }
