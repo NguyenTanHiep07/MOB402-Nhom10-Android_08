@@ -7,7 +7,7 @@ import okhttp3.Response
 /**
  * OkHttp Interceptor tự động gắn Authorization header vào mọi request.
  *
- * - Bỏ qua endpoint `/auth/login` (không cần token).
+ * - Bỏ qua các endpoint có tiền tố `/auth/` (đăng nhập, đăng ký và khôi phục không cần token).
  * - Nếu token hết hạn hoặc null → request đi mà không có header Authorization,
  *   server sẽ trả 401 và client xử lý ở Repository layer.
  */
@@ -16,7 +16,7 @@ class AuthInterceptor(private val tokenManager: TokenManager) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
 
-        // Không gắn token cho endpoint login
+        // Không gắn token cho các endpoint xác thực công khai.
         if (originalRequest.url.encodedPath.startsWith("/api/auth/")) {
             return chain.proceed(originalRequest)
         }

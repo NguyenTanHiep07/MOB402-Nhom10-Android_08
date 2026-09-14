@@ -16,7 +16,7 @@ OTP 6 chữ số, 10 phút, dùng một lần, tối đa 5 lần đoán. Gửi l
 
 Giới hạn lưu DB: gửi RESET 3/giờ/số điện thoại, tối thiểu 60 giây giữa hai lần, 20/giờ/IP; xác nhận RESET 60/giờ/IP. Liên kết email 3/giờ/tài khoản, tối thiểu 60 giây. Xác thực lại 20/giờ/tài khoản, sửa hồ sơ 20/giờ/tài khoản. Mã sai vẫn tăng bộ đếm. `429` khi chạm giới hạn, `503 EMAIL_UNAVAILABLE` khi chưa cấu hình email, `400 ACCOUNT_INVALID` cho dữ liệu hoặc mã không hợp lệ. Số điện thoại chuẩn hóa +84 thành 0, chấp nhận 10–11 số để tương thích dữ liệu demo.
 
-Ảnh tối đa 160 KB sau giải mã, chiều không quá 1024 px; backend giải mã và mã hóa lại JPEG. Ảnh lưu trong PostgreSQL cùng hồ sơ, không đưa ảnh/email vào danh sách đơn hàng hay danh sách công khai. Android thu nhỏ ảnh xuống tối đa 384 px trước khi tải lên.
+Ảnh tối đa 160 KB sau giải mã, chiều không quá 1024 px; backend giải mã và mã hóa lại JPEG. Ảnh lưu trong MongoDB cùng hồ sơ, không đưa ảnh/email vào danh sách đơn hàng hay danh sách công khai. Android thu nhỏ ảnh xuống tối đa 384 px trước khi tải lên.
 
 Email dùng SMTP qua Spring Mail, tên hiển thị `GoDrop | Bảo mật tài khoản`. Hàng chờ lưu mã AES-GCM, xóa payload khi gửi/lỗi/hết hạn, chỉ giữ HMAC để xác nhận. Không ghi OTP, mật khẩu hoặc địa chỉ nhận vào log lỗi gửi thư. SMTP tiếp nhận không đồng nghĩa đảm bảo vào Inbox. Khi gửi lỗi phải yêu cầu mã mới. Mặc định tắt email đến khi cấu hình `.env`.
 

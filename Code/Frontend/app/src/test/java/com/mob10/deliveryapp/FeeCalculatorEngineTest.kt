@@ -1,5 +1,7 @@
 package com.mob10.deliveryapp
 
+import com.mob10.deliveryapp.ui.customer.FeeCalculatorEngine
+import com.mob10.deliveryapp.ui.customer.PackageType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

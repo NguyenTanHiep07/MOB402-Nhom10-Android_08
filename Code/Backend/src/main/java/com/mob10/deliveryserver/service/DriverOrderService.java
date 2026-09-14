@@ -7,6 +7,12 @@ import com.mob10.deliveryserver.repository.*;
 import com.mob10.deliveryserver.security.AuthenticatedUser;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.data.mongodb.core.MongoOperations;
+import org.springframework.data.mongodb.core.FindAndModifyOptions;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
@@ -23,18 +29,20 @@ public class DriverOrderService {
     private final DriverStatisticsRepository statistics;
     private final DtoMapper mapper;
     private final SequenceGeneratorService sequences;
+    private final MongoOperations mongoOperations;
     private final int lockThreshold;
     private final int lockDurationMinutes;
 
     public DriverOrderService(DeliveryRequestRepository orders, UserRepository users, StatusHistoryRepository histories,
                               RejectionReasonRepository reasons, OrderRejectionRepository rejections,
                               DriverStatisticsRepository statistics, DtoMapper mapper,
-                              SequenceGeneratorService sequences,
+                              SequenceGeneratorService sequences, MongoOperations mongoOperations,
                               @Value("${app.reliability.lock-threshold-in-24-hours}") int lockThreshold,
                               @Value("${app.reliability.lock-duration-minutes}") int lockDurationMinutes) {
         this.orders = orders; this.users = users; this.histories = histories; this.reasons = reasons;
         this.rejections = rejections; this.statistics = statistics; this.mapper = mapper;
         this.sequences = sequences;
+        this.mongoOperations = mongoOperations;
         this.lockThreshold = lockThreshold; this.lockDurationMinutes = lockDurationMinutes;
     }
 
@@ -56,9 +64,11 @@ public class DriverOrderService {
                 .map(mapper::toOrderResponse).toList();
     }
 
+    @Transactional
     public OrderResponse accept(AuthenticatedUser principal, Long requestId) {
         requireDriver(principal);
-        // Lock the order first, then the driver, consistently with status/cancel/reject.
+        // The transaction and conditional driver update protect two different orders
+        // being accepted simultaneously by the same driver.
         DeliveryRequest assigned = orders.findByIdForUpdate(requestId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", "Không tìm thấy đơn hàng"));
         if (assigned.getStatus() != DeliveryStatus.CHO_TIEP_NHAN || assigned.getDeliveryPerson() != null) {
@@ -76,22 +86,29 @@ public class DriverOrderService {
         if (rejections.existsByDeliveryRequestIdAndDriverId(requestId, driver.getId())) {
             throw new ApiException(HttpStatus.CONFLICT, "ORDER_ALREADY_REJECTED", "Bạn đã từ chối đơn hàng này");
         }
-        assigned.assignDriver(driver, Instant.now());
-        driver.setDriverAvailability(DriverAvailability.BUSY);
+        User claimedDriver = mongoOperations.findAndModify(
+                Query.query(Criteria.where("_id").is(driver.getId())
+                        .and("driverAvailability").is(DriverAvailability.AVAILABLE)),
+                new Update().set("driverAvailability", DriverAvailability.BUSY),
+                FindAndModifyOptions.options().returnNew(true), User.class);
+        if (claimedDriver == null) {
+            throw new ApiException(HttpStatus.CONFLICT, "DRIVER_NOT_AVAILABLE", "Tài xế đã nhận đơn khác hoặc không còn AVAILABLE");
+        }
+        assigned.assignDriver(claimedDriver, Instant.now());
         stats.recordAcceptance();
         try {
             orders.save(assigned);
         } catch (org.springframework.dao.OptimisticLockingFailureException e) {
             throw new ApiException(HttpStatus.CONFLICT, "ORDER_ALREADY_TAKEN", "Đơn hàng đã được nhận bởi tài xế khác");
         }
-        users.save(driver);
         statistics.save(stats);
         saveHistory(new StatusHistory(assigned, DeliveryStatus.CHO_TIEP_NHAN, DeliveryStatus.DA_CHAP_NHAN,
-                driver, "Tài xế đã nhận đơn"));
+                claimedDriver, "Tài xế đã nhận đơn"));
         assigned.getPackages().size();
         return mapper.toOrderResponse(assigned);
     }
 
+    @Transactional
     public RejectResult reject(AuthenticatedUser principal, Long requestId, RejectOrderRequest input) {
         requireDriver(principal);
         DeliveryRequest order = orders.findByIdForUpdate(requestId)
@@ -111,7 +128,12 @@ public class DriverOrderService {
         }
         OrderRejection rejectionToSave = new OrderRejection(order, driver, reason, clean(input.note()));
         rejectionToSave.setId(sequences.generateSequence("order_rejections"));
-        OrderRejection rejection = rejections.save(rejectionToSave);
+        OrderRejection rejection;
+        try {
+            rejection = rejections.save(rejectionToSave);
+        } catch (DuplicateKeyException e) {
+            throw new ApiException(HttpStatus.CONFLICT, "ORDER_ALREADY_REJECTED", "Bạn đã từ chối đơn hàng này");
+        }
         DriverStatistics stats = getStatistics(driver);
         stats.recordRejection(reason.getPenaltyPoints(), rejection.isPenaltyApplied());
         if (rejection.isPenaltyApplied()) {
@@ -124,6 +146,7 @@ public class DriverOrderService {
                 rejection.isPenaltyApplied(), mapper.toStatistics(stats));
     }
 
+    @Transactional
     public OrderResponse updateStatus(AuthenticatedUser principal, Long requestId, UpdateStatusRequest input) {
         requireDriver(principal);
         User driver = getDriver(principal.id());
@@ -171,6 +194,7 @@ public class DriverOrderService {
         return mapper.toStatistics(statistics.findById(driver.getId()).orElseGet(() -> new DriverStatistics(driver)));
     }
 
+    @Transactional
     public DriverAvailability updateAvailability(AuthenticatedUser principal, UpdateAvailabilityRequest input) {
         requireDriver(principal);
         User driver = users.findByIdForUpdate(principal.id()).orElseThrow();

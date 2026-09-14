@@ -1,8 +1,8 @@
 # Android_UTH_08 — GoDrop Delivery App
 
-Hướng dẫn mới: [Cấu hình Gmail, khôi phục mật khẩu và sửa hồ sơ/ảnh đại diện](Backend/docs/EMAIL_ACCOUNT_GUIDE.md).
+Hướng dẫn mới: [Cấu hình Gmail, khôi phục mật khẩu và sửa hồ sơ/ảnh đại diện](Code/Backend/docs/EMAIL_ACCOUNT_GUIDE.md).
 
-MOB402 · Nhóm 10. Ứng dụng **Android native bằng Kotlin + Android SDK**, Compose Material 3 và màn đăng nhập XML. Backend Java 21/Spring Boot và PostgreSQL là nguồn dữ liệu chung cho khách hàng, tài xế và admin. Không có Python trong phần triển khai sản phẩm.
+MOB402 · Nhóm 10. Ứng dụng Android native bằng Kotlin/Compose Material 3. Backend Java 21/Spring Boot và MongoDB là nguồn dữ liệu chung cho khách hàng, tài xế và admin.
 
 ## Thành viên
 
@@ -26,38 +26,39 @@ MOB402 · Nhóm 10. Ứng dụng **Android native bằng Kotlin + Android SDK**,
 
 - Android Studio hỗ trợ Android Gradle Plugin của project, JDK **21** để chạy đồng thời Android/backend; bytecode Android target Java 11.
 - Android SDK compile/target **36**, min **24**; máy ảo hoặc thiết bị thật.
-- Docker Desktop chạy PostgreSQL 16; Internet để tra địa chỉ/định tuyến Photon/OSRM.
-- Maps trong app cần Google Play Services và Google Maps API key của nhóm. Không cần key để đăng nhập/xem đơn hoặc mở chỉ đường bằng ứng dụng ngoài.
+- MongoDB 7 local qua Docker hoặc MongoDB Atlas; Internet để tra địa chỉ/định tuyến Photon/OSRM.
+- Chỉ đường mở Google Maps/trình duyệt bên ngoài, không cần Maps SDK/API key.
 
 ## Chạy backend và Android
 
 Tại thư mục repository:
 
 ```bash
-cd Backend
+cd Code/Backend
 ./setup-local.sh
-docker compose up -d
-../Code/gradlew bootRun
+docker compose up -d --wait
+docker compose exec mongodb mongosh --quiet --eval 'try { rs.status().ok } catch (e) { rs.initiate({_id:"rs0",members:[{_id:0,host:"localhost:27017"}]}) }'
+./gradlew bootRun
 ```
 
-`setup-local.sh` tạo `.env` bị Git bỏ qua, sinh JWT secret/mật khẩu mới. Nếu container PostgreSQL của dự án đã tồn tại, script giữ mật khẩu database đó. **Không đổi mật khẩu của các tài khoản đã có.** Tài khoản seed mới dùng `DEMO_PASSWORD` trong `Backend/.env`; các tài khoản demo cũ tiếp tục dùng mật khẩu đã được tạo trước đó. Không đưa `.env` hoặc token vào commit/ảnh minh chứng.
+`setup-local.sh` chỉ tạo `Code/Backend/.env` khi chưa có; không sửa cấu hình hoặc dữ liệu đang tồn tại. Mặc định `DEMO_ENABLED=false`; chỉ bật `true` trên database demo riêng. Có thể dùng MongoDB Atlas qua `MONGODB_URI`, khi đó không cần Docker local. Nếu `.env` cũ còn biến PostgreSQL, kiểm tra `MONGODB_URI` thủ công trước khi chạy. Không đưa `.env` hoặc token vào commit/ảnh minh chứng.
 
 Khi `DEMO_ENABLED=true`, backend thêm đúng một lần lô 20 đơn demo đa trạng thái, không xóa đơn hiện có và không nhân bản sau mỗi lần khởi động. Lô này phủ đủ 8 trạng thái, chia đơn hoàn tất cho cả 7 shipper, giữ tối đa một đơn hoạt động cho mỗi shipper và tạo tình huống `shipper7` từ chối nhiều lần: 60 điểm tin cậy, bị khóa tạm thời và xuất hiện trong tab Cảnh báo của Admin.
 
-Mở **Code** bằng Android Studio, Sync và Run `app`. Backend phải đang chạy. Địa chỉ mặc định máy ảo là `http://10.0.2.2:8080/api/`. Máy thật cần cùng mạng với máy chạy backend:
+Mở **Code/Frontend** bằng Android Studio, Sync và Run `app`. Backend phải đang chạy. Địa chỉ mặc định máy ảo là `http://10.0.2.2:8080/api/`. Máy thật cần cùng mạng với máy chạy backend:
 
 ```bash
-cd Code
+cd Code/Frontend
 ./gradlew :app:assembleDebug -PAPI_BASE_URL=http://DIA_CHI_IP_LAN:8080/api/
 ```
 
-Bản debug cho phép HTTP để demo LAN. Bản release chặn HTTP; cấu hình API HTTPS trước khi phát hành.
+Bản debug cho phép HTTP để demo LAN. Bản release chỉ build khi truyền `-PAPI_BASE_URL=https://.../api/` và bốn biến môi trường `RELEASE_STORE_FILE`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD` trỏ tới keystore hợp lệ. Không lưu keystore/mật khẩu vào Git. Nếu chưa có server HTTPS và khóa ký, chỉ dùng bản debug; không coi APK release unsigned là bản phát hành.
 
-Tài khoản demo: `client1`…`client5`, `shipper1`…`shipper7`, `admin`. Đăng nhập bằng **username**, không dùng số điện thoại thay username. Đổi vai trò bằng Đăng xuất rồi đăng nhập tài khoản tương ứng.
+Tài khoản demo: `client1`…`client5`, `shipper1`…`shipper7`, `admin`. Đăng nhập bằng **số điện thoại** tương ứng trong dữ liệu seed (xem [backend README](Code/Backend/README.md)); tài khoản khách tự đăng ký cũng dùng số điện thoại. Đổi vai trò bằng Đăng xuất rồi đăng nhập tài khoản tương ứng.
 
 **Swagger có tác dụng gì?** `http://localhost:8080/swagger-ui/index.html` là tài liệu và công cụ thử API. Không phải website bắt buộc mở để Android chạy. Docker ở cấu hình này chạy database; lệnh `bootRun` chạy backend. Android gọi backend trực tiếp dù đã đóng tab Swagger.
 
-Nếu muốn thử Swagger: mở `POST /api/auth/login` → Try it out → nhập username/password → Execute → lấy `accessToken` trong **Response body** mã 200 → Authorize (HTTP Bearer: dán chuỗi token, không thêm dấu ngoặc kép) → gọi API theo quyền của tài khoản.
+Nếu muốn thử Swagger: mở `POST /api/auth/login` → Try it out → nhập `phoneNumber`/`password` → Execute → lấy `accessToken` trong **Response body** mã 200 → Authorize (HTTP Bearer: dán chuỗi token, không thêm dấu ngoặc kép) → gọi API theo quyền của tài khoản.
 
 ## Chỉ đường với Google Maps
 
@@ -72,7 +73,7 @@ Demo: đăng nhập tài xế → Đang giao → chọn đơn → Chỉ đườn
 - Trang chủ tài xế ưu tiên thẻ chuyến hiện tại với địa chỉ cần đến, phí giao, nút chỉ đường/liên hệ và mở tiến trình. Khi thao tác đang gửi, các nút cập nhật bị khóa và có trạng thái xử lý.
 - Khách hàng mở chi tiết đơn để xem hành trình từng bước, thời gian thực tế từ lịch sử và ảnh đại diện tài xế (chữ viết tắt khi chưa có ảnh). Đơn hủy hiển thị riêng, không giả lập đã giao.
 - Tài xế đến điểm giao → chụp ảnh kiện hàng bằng ứng dụng máy ảnh → xem lại → xác nhận giao. App dùng FileProvider trong vùng lưu trữ riêng, nén JPEG và gửi qua `POST /api/driver/orders/{id}/complete-with-photo`. Backend kiểm tra ảnh, quyền tài xế, trạng thái hợp lệ rồi lưu ảnh và trạng thái trong cùng transaction. Gửi lại khi mất phản hồi không tạo thêm mốc giao thành công. API cập nhật trạng thái thông thường cũng yêu cầu có ảnh khi hoàn tất.
-- `GET /api/orders/{id}/delivery-photo` trả ảnh cho người có quyền xem đơn. `GET /api/orders/{id}/driver-avatar` trả ảnh tài xế của đơn. Ảnh giao lưu trong PostgreSQL, không kèm trong danh sách đơn để tránh tải nặng. Đơn demo cũ có thể chưa có ảnh. Ảnh chụp tạm được xóa khi xác nhận thành công hoặc bấm Bỏ ảnh; có thể phục hồi khi mở lại màn.
+- `GET /api/orders/{id}/delivery-photo` trả ảnh cho người có quyền xem đơn. `GET /api/orders/{id}/driver-avatar` trả ảnh tài xế của đơn. Ảnh giao lưu trong MongoDB, không kèm trong danh sách đơn để tránh tải nặng. Đơn demo cũ có thể chưa có ảnh. Ảnh chụp tạm được xóa khi xác nhận thành công hoặc bấm Bỏ ảnh; có thể phục hồi khi mở lại màn.
 - Thông báo trong ứng dụng có thời gian, trạng thái chưa đọc và mở đúng đơn khi bấm. Tài xế nhận thông báo đơn đã được người khác nhận sẽ thấy thông báo hết khả dụng. Hiện thông báo phát sinh khi app tải lại dữ liệu trong phiên sử dụng, chưa phải push notification khi đóng app.
 - Khung chờ có hiệu ứng nhẹ; giao thành công chỉ hiện sau khi backend xác nhận. Không cần quyền CAMERA vì app ủy quyền chụp cho ứng dụng máy ảnh; nếu không có máy ảnh hoặc người dùng hủy, đơn giữ nguyên trạng thái.
 
@@ -81,21 +82,21 @@ Activity / Compose / XML
        ↓ thao tác       ↑ StateFlow, collectAsStateWithLifecycle
 ViewModel / SavedStateHandle
        ↓
-Repository → Retrofit / OkHttp → Spring Boot REST → JPA / Flyway → PostgreSQL
+Repository → Retrofit / OkHttp → Spring Boot REST → Spring Data MongoDB → MongoDB
        └── Room (hồ sơ), DataStore (userId), private Preferences (token)
 ```
 
 - Điều hướng: Login → chọn màn theo role. Client: Home → Create → Confirmation → Orders/Tracking → Detail/Rating; Profile → Logout. Tài xế: Trang chủ/Đơn chờ/Đang giao/Lịch sử/Hồ sơ. Admin: Overview/Orders/Users/Drivers/Alerts.
 - Form tạo đơn và bản nháp xác nhận dùng SavedStateHandle; tab và bộ lọc Admin dùng rememberSaveable. Flow được quan sát theo lifecycle. Client cập nhật khi màn đang hoạt động mỗi 10 giây; driver mỗi 15 giây, có nút tải lại. Lần tải đầu đặt mốc dữ liệu hiện tại; các lần tải sau tạo thông báo trong app cho trạng thái đơn thay đổi hoặc đơn chờ mới, tránh báo hàng loạt dữ liệu seed cũ.
 - Network sử dụng coroutine, timeout kết nối/đọc/ghi và nút retry. Cancellation được truyền tiếp. Mất mạng hiển thị lỗi; không tạo đơn giả/offline rồi báo thành công. HTTP 401 đưa người dùng về đăng nhập.
-- Room v6 có migration từ v5 giữ dữ liệu và xóa password local cũ, export schema tại `Code/app/schemas`. Chưa có migration từ bản lịch sử v1–v4; cần sao lưu/chuyển đổi riêng trước khi nâng từ các bản đó.
+- Room v6 có migration từ v5 giữ dữ liệu và xóa password local cũ, export schema tại `Code/Frontend/app/schemas`. Chưa có migration từ bản lịch sử v1–v4; cần sao lưu/chuyển đổi riêng trước khi nâng từ các bản đó.
 - Liên hệ nhanh dùng `ACTION_DIAL`, chỉ mở màn quay số với số đã điền sẵn nên không cần quyền `CALL_PHONE`. Không có tác vụ cần WorkManager, foreground service, camera, microphone hoặc theo dõi GPS nền trong phạm vi hiện tại. GoDrop chỉ khai báo quyền INTERNET; chỉ đường được xử lý bởi Google Maps hoặc trình duyệt.
 
 ## Data model và API
 
 User có role CLIENT/DELIVERY/ADMIN, trạng thái hoạt động và availability. DeliveryRequest thuộc một client, có tối đa một driver, địa chỉ/tọa độ hai điểm, liên hệ, giá, trạng thái và thời gian. PackageItem thuộc đơn. StatusHistory lưu trạng thái trước/sau, người cập nhật và thời gian. Rating gắn với đơn hoàn tất; RejectionReason/OrderRejection/DriverStatistics lưu lý do từ chối và độ tin cậy.
 
-API đầy đủ tại `/v3/api-docs`; các nhóm chính: `/api/auth/login`, `/api/orders`, `/api/driver/**`, `/api/admin/**`, `/api/ratings`, `/api/locations/autocomplete`, `/api/routes/estimate`. Phân quyền và quyền sở hữu được kiểm tra ở backend, không chỉ ẩn nút trên Android. Nhận đơn khóa order rồi driver trong transaction; đồng thời chỉ một tài xế nhận một đơn, một tài xế chỉ có một đơn hoạt động.
+API đầy đủ tại `/v3/api-docs`; các nhóm chính: `/api/auth/login`, `/api/auth/register` (chỉ tạo CLIENT), `/api/orders`, `/api/driver/**`, `/api/admin/**`, `/api/ratings`, `/api/locations/autocomplete`, `/api/routes/estimate`. Phân quyền và quyền sở hữu được kiểm tra ở backend, không chỉ ẩn nút trên Android. Nhận đơn được xử lý với kiểm soát đồng thời; một tài xế chỉ có một đơn hoạt động.
 
 ## Trạng thái và tính phí
 
@@ -104,22 +105,22 @@ CHO_TIEP_NHAN → DA_CHAP_NHAN → DA_DEN_NHA_HANG → DA_LAY_HANG → DANG_VAN_
 Pending         Accepted      Đến điểm lấy      Picked Up      In Transit        Tới điểm giao       Delivered
 ```
 
-Hủy (`DA_HUY`/Cancelled) được phép ở ba trạng thái trước lấy hàng. Sau `DA_LAY_HANG` không hủy. Server chặn nhảy cóc, cập nhật bởi tài xế khác và hủy bởi khách khác. Hai mốc đã lấy hàng và đang vận chuyển được tách riêng; Flyway V4 nâng constraint mà giữ dữ liệu cũ. **Cập nhật Android và khởi động lại backend cùng phiên bản** trước demo luồng trạng thái mới.
+Hủy (`DA_HUY`/Cancelled) được phép ở ba trạng thái trước lấy hàng. Sau `DA_LAY_HANG` không hủy. Server chặn nhảy cóc, cập nhật bởi tài xế khác và hủy bởi khách khác. Hai mốc đã lấy hàng và đang vận chuyển được tách riêng; không có Flyway trong bản MongoDB. **Cập nhật Android và khởi động lại backend cùng phiên bản** trước demo luồng trạng thái mới.
 
-Phí backend: 15.000đ cơ bản + 5.000đ × km + 3.000đ × tổng kg; phụ phí theo loại hàng, xem [PricingService](Backend/src/main/java/com/mob10/deliveryserver/service/PricingService.java) là nguồn quy tắc chính thức. Khoảng cách lấy từ OSRM; server tính lại khi tạo đơn, không tin giá do client gửi. Màn xác nhận dùng báo giá server; gián đoạn nhà cung cấp có thể khiến không lấy được báo giá/tạo đơn.
+Phí backend: 15.000đ cơ bản + 5.000đ × km + 3.000đ × tổng kg; phụ phí theo loại hàng, xem [PricingService](Code/Backend/src/main/java/com/mob10/deliveryserver/service/PricingService.java) là nguồn quy tắc chính thức. Khoảng cách lấy từ OSRM; server tính lại khi tạo đơn, không tin giá do client gửi. Màn xác nhận dùng báo giá server; gián đoạn nhà cung cấp có thể khiến không lấy được báo giá/tạo đơn.
 
 ## Kiểm thử và bàn giao
 
 ```bash
-cd Code
+cd Code/Frontend
 ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:lintDebug
 cd ../Backend
-../Code/gradlew test
+./gradlew test
 ```
 
-Giữ bộ test gốc Java/Kotlin của nhóm; các test đã có được cập nhật khi hợp đồng nghiệp vụ thay đổi. Theo yêu cầu không thêm file test vào đồ án, các ca kiểm tra bổ sung và script PostgreSQL/UI của đợt rà soát được đặt ngoài repository, không có `run-db-tests.sh` trong dự án. Không dùng database demo để chạy các ca nhận/hủy đơn kiểm tra. Kết quả kiểm tra bổ sung được ghi riêng trong báo cáo nghiệm thu, không được hiểu là bộ test đi kèm repository.
+Giữ bộ test gốc Java/Kotlin của nhóm; không thêm file test mới. Kiểm thử thay đổi dữ liệu nên chạy trên MongoDB kiểm thử riêng, không dùng database demo đang có đơn. Kết quả kiểm tra bổ sung cần được ghi trong báo cáo nghiệm thu.
 
-- `Code`: Android Studio project; `Backend`: API; `DOCX`: nơi nộp báo cáo Word/PDF; `Extra`: sơ đồ/bằng chứng; `PPTX`: nơi nộp trình chiếu. **Kiểm tra 04/09: `Report-Android_08.docx`, `Report-Android_08.pdf` và `Presentation-Android_08.pptx` đều là file rỗng 0 byte, chưa phải tài liệu đã hoàn thành.** Các sơ đồ kiến trúc Room tuần trước chỉ là lịch sử; kiến trúc REST hiện tại được mô tả ở trên và trong API_CONTRACT.
+- `Code/Frontend`: Android Studio project; `Code/Backend`: API; `DOCX`: nơi nộp báo cáo Word/PDF; `Extra`: sơ đồ/bằng chứng; `PPTX`: nơi nộp trình chiếu. **Hiện `Report-Android_08.docx`, `Report-Android_08.pdf` và `Presentation-Android_08.pptx` là file rỗng 0 byte, chưa phải tài liệu hoàn thành.** Các sơ đồ kiến trúc Room tuần trước chỉ là lịch sử; kiến trúc REST/MongoDB hiện tại được mô tả ở trên và trong API_CONTRACT.
 
 ## Video demo
 

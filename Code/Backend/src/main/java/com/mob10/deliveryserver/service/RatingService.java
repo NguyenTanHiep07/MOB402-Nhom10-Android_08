@@ -14,6 +14,7 @@ import com.mob10.deliveryserver.repository.RatingRepository;
 import com.mob10.deliveryserver.repository.UserRepository;
 import com.mob10.deliveryserver.security.AuthenticatedUser;
 import org.springframework.http.HttpStatus;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +36,7 @@ public class RatingService {
         this.sequences = sequences;
     }
 
+    @Transactional
     public RatingResponse create(AuthenticatedUser principal, CreateRatingRequest input) {
         requireClient(principal);
         DeliveryRequest order = orders.findByIdForUpdate(input.deliveryRequestId())
@@ -65,7 +67,11 @@ public class RatingService {
                 input.stars(),
                 clean(input.comment()));
         rating.setId(sequences.generateSequence("ratings"));
-        ratings.save(rating);
+        try {
+            ratings.save(rating);
+        } catch (DuplicateKeyException e) {
+            throw new ApiException(HttpStatus.CONFLICT, "RATING_ALREADY_EXISTS", "Đơn hàng này đã được đánh giá");
+        }
         return toResponse(rating);
     }
 

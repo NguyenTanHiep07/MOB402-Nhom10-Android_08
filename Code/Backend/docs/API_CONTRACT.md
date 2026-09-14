@@ -2,7 +2,7 @@
 
 Base URL local: `http://localhost:8080/api`
 
-Trừ endpoint đăng nhập và `/auth/recovery/*`, mọi request phải gửi:
+Trừ đăng nhập, đăng ký và `/auth/recovery/*`, mọi request phải gửi:
 
 ```http
 Authorization: Bearer <accessToken>
@@ -15,12 +15,16 @@ Content-Type: application/json
 
 ```json
 {
-  "username": "shipper2",
+  "phoneNumber": "0917000007",
   "password": "<DEMO_PASSWORD từ cấu hình local>"
 }
 ```
 
 Response chứa `accessToken`, `expiresInMs` và thông tin user. Role luôn được xác định từ token/server, không nhận role hoặc userId do client tự gửi.
+
+### `POST /auth/register`
+
+Endpoint công khai chỉ tạo tài khoản `CLIENT`; không nhận role từ client. Body gồm `phoneNumber` (10 chữ số bắt đầu bằng 0 hoặc dạng `+84` tương đương), `password` (6–128 ký tự, tối đa 72 byte UTF-8) và `fullName` (tối đa 100 ký tự). Số được chuẩn hóa về dạng `0...`; trùng số trả HTTP 409 với mã `PHONE_ALREADY_REGISTERED`. Response gồm `id`, `phoneNumber`, `fullName`, `role`. Đăng ký thành công chưa tự đăng nhập; dùng số điện thoại và mật khẩu vừa tạo tại `/auth/login`.
 
 ## Orders dùng chung
 
