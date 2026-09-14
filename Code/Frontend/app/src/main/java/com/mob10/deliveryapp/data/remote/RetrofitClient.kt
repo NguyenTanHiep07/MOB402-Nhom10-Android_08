@@ -73,7 +73,7 @@ object RetrofitClient {
 
     fun getTokenManager(): TokenManager = tokenManager
 
-    /** Auth API — login, không cần token. */
+    /** Auth API — đăng nhập và đăng ký, không cần token. */
     val authApi: AuthApiService by lazy {
         retrofit.create(AuthApiService::class.java)
     }

@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
+// TH - tuần 2: bộ màu khi thiết bị dùng giao diện sáng
 private val LightColors = lightColorScheme(
     primary = UthPrimary,
     onPrimary = androidx.compose.ui.graphics.Color.White,
@@ -35,6 +36,7 @@ private val LightColors = lightColorScheme(
     errorContainer = UthErrorContainer
 )
 
+// TH - tuần 2: bộ màu khi thiết bị dùng giao diện tối
 private val DarkColors = darkColorScheme(
     primary = Color(0xFF5BE0AF),
     onPrimary = Color(0xFF003828),
@@ -56,11 +58,13 @@ private val DarkColors = darkColorScheme(
 )
 
 @Composable
+// TH - tuần 2: bọc toàn app để dùng chung màu, chữ và bo góc
 fun Android08Theme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
 
+    // TH - tuần 2: tự chọn theme sáng hoặc tối theo thiết bị
     val colorScheme = if (darkTheme) DarkColors else LightColors
     val view = LocalView.current
     if (!view.isInEditMode) {

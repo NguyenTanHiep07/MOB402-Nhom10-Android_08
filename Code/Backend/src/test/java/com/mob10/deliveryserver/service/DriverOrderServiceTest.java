@@ -11,6 +11,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.mongodb.core.MongoOperations;
+import org.springframework.data.mongodb.core.FindAndModifyOptions;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -30,11 +34,12 @@ class DriverOrderServiceTest {
     @Mock DriverStatisticsRepository statistics;
     @Mock DtoMapper mapper;
     @Mock SequenceGeneratorService sequences;
+    @Mock MongoOperations mongoOperations;
     private DriverOrderService service;
 
     @BeforeEach
     void setUp() {
-        service = new DriverOrderService(orders, users, histories, reasons, rejections, statistics, mapper, sequences, 3, 30);
+        service = new DriverOrderService(orders, users, histories, reasons, rejections, statistics, mapper, sequences, mongoOperations, 3, 30);
     }
 
     @Test
@@ -50,6 +55,8 @@ class DriverOrderServiceTest {
         when(rejections.existsByDeliveryRequestIdAndDriverId(99L, 11L)).thenReturn(false);
         when(orders.findByIdForUpdate(99L)).thenReturn(Optional.of(assigned));
         when(assigned.getStatus()).thenReturn(DeliveryStatus.CHO_TIEP_NHAN, DeliveryStatus.DA_CHAP_NHAN);
+        when(mongoOperations.findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(User.class)))
+                .thenReturn(driverOne);
 
         assertDoesNotThrow(() -> service.accept(principal(11L), 99L));
         ApiException loser = assertThrows(ApiException.class, () -> service.accept(principal(12L), 99L));
@@ -57,6 +64,24 @@ class DriverOrderServiceTest {
         assertEquals("ORDER_ALREADY_TAKEN", loser.getCode());
         assertEquals(409, loser.getStatus().value());
         verify(histories, times(1)).save(any(StatusHistory.class));
+    }
+
+    @Test
+    void acceptDoesNotWriteOrderWhenDriverClaimFails() {
+        User driver = availableDriver(11L);
+        when(driver.getDriverAvailability()).thenReturn(DriverAvailability.AVAILABLE);
+        DeliveryRequest order = mock(DeliveryRequest.class);
+        when(order.getStatus()).thenReturn(DeliveryStatus.CHO_TIEP_NHAN);
+        when(orders.findByIdForUpdate(99L)).thenReturn(Optional.of(order));
+        when(users.findByIdForUpdate(11L)).thenReturn(Optional.of(driver));
+        DriverStatistics stats = new DriverStatistics(driver);
+        when(statistics.findById(11L)).thenReturn(Optional.of(stats));
+
+        ApiException result = assertThrows(ApiException.class, () -> service.accept(principal(11L), 99L));
+
+        assertEquals("DRIVER_NOT_AVAILABLE", result.getCode());
+        verify(orders, never()).save(any());
+        verify(histories, never()).save(any());
     }
 
     @Test

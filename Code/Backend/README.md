@@ -5,6 +5,7 @@ Backend REST dùng chung cho ứng dụng Client, Delivery và Admin. Server s�
 ## Phạm vi đã triển khai
 
 - Đăng nhập bằng JWT và phân quyền `CLIENT`, `DELIVERY`, `ADMIN`.
+- Khách tự đăng ký bằng số điện thoại; endpoint công khai chỉ tạo tài khoản `CLIENT`.
 - Client tạo, xem, hủy đơn của chính mình và xem lịch sử trạng thái.
 - Delivery xem Open Pool/My Orders, nhận đơn atomic, từ chối theo lý do, cập nhật đúng chuỗi trạng thái.
 - Reject không đổi trạng thái đơn; đơn chỉ bị ẩn với tài xế đã Reject và vẫn hiện cho tài xế khác.
@@ -16,32 +17,36 @@ Backend REST dùng chung cho ứng dụng Client, Delivery và Admin. Server s�
 - Client tìm địa chỉ thật trong Việt Nam và nhận ước lượng quãng đường chạy xe/thời gian/phí từ backend.
 - Khi tạo đơn, backend tự tính lại quãng đường và phí, không tin số km do Android gửi lên.
 - Lưu trữ trên MongoDB với bộ sinh ID `Long` tự tăng tuần tự đảm bảo tương thích 100% với Android app.
-- Seeder tự động thêm dữ liệu mẫu khi hệ thống chưa có dữ liệu.
+- Seeder thêm dữ liệu mẫu khi `DEMO_ENABLED=true`; mặc định tắt để bảo vệ database thật.
 
 Auto Assignment và FCM là P1 nên chưa triển khai.
 
 ## Yêu cầu môi trường
 
 - Java 21.
-- MongoDB Atlas (Cloud) hoặc MongoDB Community Server cài trên máy (không bắt buộc dùng Docker).
+- MongoDB Atlas (Cloud) hoặc MongoDB local replica set qua Docker Compose trong thư mục này. Giao dịch đa tài liệu không chạy trên MongoDB standalone.
 
 ## Chạy local
 
-Tại thư mục `Backend`:
+Tại thư mục `Code/Backend`:
 
-1. Tạo file `.env` (tham khảo `.env.example`) và điền `MONGODB_URI`:
+1. Chạy `./setup-local.sh` để tạo `.env` nếu chưa có, rồi kiểm tra `MONGODB_URI`. Script không sửa `.env` hiện hữu. Nếu dùng MongoDB Atlas, thay URI local bằng URI riêng của bạn:
    ```bash
    MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/delivery_db?retryWrites=true&w=majority
    JWT_SECRET=your_32_characters_long_jwt_secret_key_here
-   DEMO_ENABLED=true
-   DEMO_PASSWORD=123456
+   DEMO_ENABLED=false
+   DEMO_PASSWORD=<mật khẩu mạnh, chỉ dùng khi bật demo>
    ```
 
-2. Khởi động server (không cần Docker):
+2. Nếu dùng MongoDB local, khởi động và khởi tạo replica set một lần (không xóa volume/dữ liệu):
    ```bash
-   ../Code/gradlew.bat bootRun -p .
-   # hoặc trên Linux/macOS:
-   # ../Code/gradlew bootRun -p .
+   docker compose up -d --wait
+   docker compose exec mongodb mongosh --quiet --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"localhost:27017"}]})'
+   ```
+   Nếu replica set đã khởi tạo, **không chạy lại** `rs.initiate`; kiểm tra bằng `docker compose exec mongodb mongosh --quiet --eval 'rs.status().ok'`. URI local cần có `?replicaSet=rs0`. Script `setup-local.sh` không sửa `.env` hiện hữu, nên nếu file đã có, tự kiểm tra URI mà không chia sẻ bí mật ra log. Nếu dùng Atlas, bỏ qua Docker. Khởi động server:
+   ```bash
+   ./gradlew bootRun
+   # Windows: gradlew.bat bootRun
    ```
 
 Swagger: `http://localhost:8080/swagger-ui.html`
@@ -52,33 +57,31 @@ Android Emulator dùng base URL: `http://10.0.2.2:8080/api/`. Điện thoại th
 
 ## Tài khoản mẫu
 
-Mật khẩu của tài khoản seed **mới** lấy từ `DEMO_PASSWORD` trong `.env`; tài khoản đã có giữ mật khẩu cũ. Script không ghi đè `.env` và không reset tài khoản/database hiện có.
+Chỉ có tài khoản mẫu khi bật `DEMO_ENABLED=true` trên database demo riêng. Đăng nhập bằng **số điện thoại**, không phải username. Mật khẩu tài khoản seed mới lấy từ `DEMO_PASSWORD` trong `.env`; tài khoản đã có giữ mật khẩu cũ. Script không ghi đè `.env` và không reset tài khoản/database hiện có.
 
-| Username | Password | Role |
+| Username nội bộ | Số điện thoại đăng nhập | Password | Role |
 |---|---|---|
-| `client1` - `client5` | Theo `.env` khi seed mới | CLIENT |
-| `shipper1` - `shipper4` | Theo `.env` khi seed mới | DELIVERY, `BUSY`, đang có đơn mẫu |
-| `shipper5` | Theo `.env` khi seed mới | DELIVERY, Reliability 60 và đang bị khóa nhận đơn mẫu |
-| `shipper6` | Theo `.env` khi seed mới | DELIVERY, `OFFLINE` |
-| `shipper7` | Theo `.env` khi seed mới | DELIVERY, `AVAILABLE`, dùng để thử Accept |
-| `admin` | Theo `.env` khi seed mới | ADMIN |
+| `client1`…`client5` | `0123456789`, `0987654321`, `0903000003`, `0904000004`, `0905000005` | Theo `.env` khi seed mới | CLIENT |
+| `shipper1`…`shipper4` | `0111222333`, `0444555666`, `0913000003`, `0914000004` | Theo `.env` khi seed mới | DELIVERY |
+| `shipper5`…`shipper7` | `0915000005`, `0916000006`, `0917000007` | Theo `.env` khi seed mới | DELIVERY |
+| `admin` | `0000000000` | Theo `.env` khi seed mới | ADMIN |
 
 Seeder tạo 15 đơn mẫu có tọa độ quanh TP.HCM, gồm Open Pool, đơn đang giao ở nhiều trạng thái,
 đơn đã giao và đơn đã hủy. Thời gian được phân bổ trong nhiều ngày để thử lịch sử/thu nhập.
 Một số đơn có dữ liệu Reject để kiểm tra việc ẩn đơn theo từng tài xế, Reliability Score và khóa tạm thời.
 
-Đổi `JWT_SECRET`, mật khẩu database và tài khoản mẫu trước khi dùng ngoài môi trường demo.
+Không bật seed demo trên database thật. MongoDB local từ Compose chỉ lắng nghe `127.0.0.1` và không có xác thực, chỉ dùng để phát triển. Dùng MongoDB Atlas hoặc máy chủ được bảo vệ và HTTPS nếu triển khai ngoài mạng nội bộ.
 
 ## Biến môi trường
 
 | Biến | Mặc định | Ý nghĩa |
 |---|---|---|
-| `MONGODB_URI` | `mongodb://localhost:27017/delivery_db` | Connection URI tới MongoDB (Atlas hoặc Local) |
+| `MONGODB_URI` | `mongodb://localhost:27017/delivery_db?replicaSet=rs0` | Connection URI tới MongoDB replica set/Atlas |
 | `JWT_SECRET` | Bắt buộc | Khóa ký JWT, tối thiểu 32 ký tự |
-| `DEMO_ENABLED` | `false` | Bật seed dữ liệu giả cho demo; setup-local đặt true |
+| `DEMO_ENABLED` | `false` | Bật seed dữ liệu giả, chỉ trên database demo riêng |
 | `DEMO_PASSWORD` | Bắt buộc khi bật seed | Mật khẩu cho tài khoản mẫu chưa tồn tại |
 | `JWT_EXPIRATION_MS` | `86400000` | Thời hạn token, mặc định 24 giờ |
-| `CORS_ALLOWED_ORIGINS` | `*` | Origin được phép gọi API |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | Browser origin được phép gọi API; Android native không cần CORS |
 | `SERVER_PORT` | `8080` | Port server |
 | `PHOTON_BASE_URL` | `https://photon.komoot.io` | Provider autocomplete địa chỉ OpenStreetMap |
 | `OSRM_BASE_URL` | `https://router.project-osrm.org` | Provider tính tuyến đường chạy xe |
@@ -97,14 +100,16 @@ Khi `app.demo.enabled=true`, `DatabaseSeeder` giữ dữ liệu đang có và th
 
 ## Kiểm thử
 
-Chạy toàn bộ test backend từ thư mục `Backend`:
+Chạy toàn bộ test backend từ thư mục `Code/Backend`:
 
 ```bash
-../Code/gradlew clean test
+./gradlew test
 ```
 
 Bộ test P0 bao phủ phân quyền/JSON 401-403, hai tài xế cùng nhận một đơn (chỉ một người thắng),
 Reject không làm mất đơn khỏi Open Pool chung, Reliability Score, quyền sở hữu khi cập nhật trạng thái
 và quyền xem lịch sử đơn.
 
-Đợt rà soát 04/09 chạy thêm ca đồng thời trên PostgreSQL thật trong môi trường tạm, không dùng database demo. Script và source kiểm tra bổ sung được đặt ngoài repository theo yêu cầu, không có `run-db-tests.sh` đi kèm. Lệnh trên chỉ chạy bộ test gốc của nhóm. Bản 04/09 bổ sung `DANG_VAN_CHUYEN` sau `DA_LAY_HANG`, Flyway V4 nâng constraint giữ dữ liệu; cần restart backend và dùng Android cùng bản. Luồng hủy cho phép cả `DA_DEN_NHA_HANG`, nhưng chặn từ `DA_LAY_HANG` trở đi.
+Lệnh trên chạy bộ test sẵn có, không tự xác nhận luồng thiết bị/backend/database thật. Kiểm tra tích hợp trên MongoDB kiểm thử riêng; không dùng database demo đang có đơn. Luồng hủy cho phép cả `DA_DEN_NHA_HANG`, nhưng chặn từ `DA_LAY_HANG` trở đi.
+
+Các index unique mới của `ratings.deliveryRequestId` và cặp `order_rejections(deliveryRequestId, driverId)` có thể xung đột với index không-unique hoặc dữ liệu trùng của database cũ. Ứng dụng **không tự xóa index hoặc dữ liệu**. Hãy sao lưu, kiểm tra trùng và lên kế hoạch migration riêng trước khi dùng database đã có dữ liệu.

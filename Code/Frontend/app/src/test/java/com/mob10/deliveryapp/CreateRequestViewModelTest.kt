@@ -5,6 +5,7 @@ import com.mob10.deliveryapp.data.model.AddressSuggestion
 import com.mob10.deliveryapp.data.remote.api.LocationApiService
 import com.mob10.deliveryapp.data.remote.dto.*
 import com.mob10.deliveryapp.data.repository.LocationRepository
+import com.mob10.deliveryapp.ui.customer.CreateRequestViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.*

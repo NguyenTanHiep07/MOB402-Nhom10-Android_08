@@ -36,6 +36,6 @@ public class AccountController {
     @PostMapping("/api/auth/recovery/complete")
     public Message reset(@Valid @RequestBody Reset body, HttpServletRequest request) {
         accounts.reset(body, request.getRemoteAddr());
-        return new Message("Đổi mật khẩu thành công. Hãy đăng nhập bằng tên đăng nhập và mật khẩu mới.");
+        return new Message("Đổi mật khẩu thành công. Hãy đăng nhập bằng số điện thoại và mật khẩu mới.");
     }
 }

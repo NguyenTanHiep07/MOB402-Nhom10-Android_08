@@ -3,9 +3,7 @@ package com.mob10.deliveryapp.ui.theme
 import androidx.compose.ui.graphics.Color
 
 
-// GoDrop delivery palette: energetic green for movement and trust, with
-// orange reserved for attention states. The palette is intentionally its own
-// identity instead of copying another delivery brand.
+// TH - tuần 2: bảng màu dùng chung để các màn hình đồng nhất
 val UthPrimary = Color(0xFF0AA873)
 val UthPrimaryDark = Color(0xFF087A55)
 val UthPrimaryContainer = Color(0xFFDFF6ED)

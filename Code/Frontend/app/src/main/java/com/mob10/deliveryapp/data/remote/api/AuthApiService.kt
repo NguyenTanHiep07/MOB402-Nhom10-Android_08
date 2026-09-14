@@ -17,7 +17,6 @@ interface AuthApiService {
     @POST("auth/login")
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
 
-    // TODO: xác nhận lại với Thịnh endpoint và response thật của register (đang tạm theo pattern login).
     @POST("auth/register")
     suspend fun register(@Body request: RegisterRequest): Response<RegisterResponse>
 }

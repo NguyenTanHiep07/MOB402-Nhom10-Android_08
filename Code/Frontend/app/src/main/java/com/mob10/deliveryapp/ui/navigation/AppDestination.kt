@@ -2,12 +2,8 @@ package com.mob10.deliveryapp.ui.navigation
 
 import com.mob10.deliveryapp.data.model.Role
 
-/**
- * Các đích điều hướng cấp ứng dụng sau bước xác thực.
- *
- * Việc ánh xạ Role thành đích riêng giúp luồng đăng nhập không phụ thuộc trực tiếp
- * vào từng Composable và có thể kiểm thử mà không cần khởi chạy Android UI.
- */
+// TH - tuần 3,4: contract gồm login và ba màn home theo role
+// TH - demo: file này dễ test; runtime hiện rẽ role trong deliveryapp
 enum class AppDestination {
     LOGIN,
     CLIENT_HOME,
@@ -15,6 +11,7 @@ enum class AppDestination {
     ADMIN_HOME
 }
 
+// TH - tuần 3,4: null về login; mỗi role đi đúng home
 fun destinationFor(role: Role?): AppDestination = when (role) {
     Role.CLIENT -> AppDestination.CLIENT_HOME
     Role.DELIVERY -> AppDestination.DELIVERY_HOME

@@ -4,6 +4,7 @@ import com.mob10.deliveryapp.data.model.Role
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
+// TH - tuần 3,4: kiểm tra null và ba role đi đúng màn hình
 class AppDestinationTest {
     @Test
     fun `unauthenticated user goes to login`() {

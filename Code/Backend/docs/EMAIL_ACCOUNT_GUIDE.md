@@ -6,7 +6,7 @@ Tên người gửi: **GoDrop | Bảo mật tài khoản**. Backend Java gửi t
 
 1. Bật **Xác minh 2 bước** trên Google của hộp thư dùng gửi OTP.
 2. Mở https://myaccount.google.com/apppasswords, tạo mật khẩu ứng dụng tên `GoDrop Backend`.
-3. Mở `Backend/.env`, điền:
+3. Mở `Code/Backend/.env`, điền:
 
 ```dotenv
 MAIL_ENABLED=true
@@ -24,10 +24,10 @@ MAIL_TLS=true
 4. Dừng backend bằng Ctrl+C tại terminal đang chạy nó và chạy lại từ thư mục Backend:
 
 ```sh
-../Code/gradlew bootRun
+./gradlew bootRun
 ```
 
-Giữ Docker/PostgreSQL hoạt động. Không cần mở Swagger. Nếu Google không hiện Mật khẩu ứng dụng, kiểm tra xác minh 2 bước; tài khoản tổ chức hoặc bảo vệ nâng cao có thể không hỗ trợ. [Hướng dẫn Google](https://support.google.com/accounts/answer/185833?hl=vi).
+Giữ MongoDB local hoặc kết nối Atlas hoạt động. Không cần mở Swagger. Nếu Google không hiện Mật khẩu ứng dụng, kiểm tra xác minh 2 bước; tài khoản tổ chức hoặc bảo vệ nâng cao có thể không hỗ trợ. [Hướng dẫn Google](https://support.google.com/accounts/answer/185833?hl=vi).
 
 ## Liên kết email trước khi quên mật khẩu
 
@@ -46,7 +46,7 @@ Chỉ sau bước 4, email mới dùng khôi phục mật khẩu. Mỗi email li
 2. Nhập số điện thoại đang lưu trong Hồ sơ → **Gửi mã qua email**.
 3. Backend tìm tài khoản theo số điện thoại và gửi OTP tới email đã xác minh. Đây là email thật, không phải SMS hay mã hiển thị trong app.
 4. Mở email lấy mã, nhập trong app cùng mật khẩu mới và nhập lại mật khẩu.
-5. Bấm **Đổi mật khẩu** → về đăng nhập bằng **tên đăng nhập** và mật khẩu mới. Màn đăng nhập vẫn dùng tên đăng nhập.
+5. Bấm **Đổi mật khẩu** → về đăng nhập bằng **số điện thoại** và mật khẩu mới.
 
 Mã có hạn 10 phút, dùng một lần, tối đa 5 lần nhập sai. Gửi mã cách nhau ít nhất 60 giây, tối đa 3 lần/giờ cho mỗi số điện thoại hoặc tài khoản liên kết. Mật khẩu mới 12–64 ký tự, có chữ và số, tối đa 72 byte UTF-8. Mọi phiên đăng nhập cũ mất hiệu lực sau khi đổi mật khẩu.
 
@@ -56,7 +56,7 @@ Thông báo công khai không tiết lộ số điện thoại có tài khoản 
 
 **Hồ sơ → Chỉnh sửa hồ sơ**: sửa họ tên, tên đăng nhập, số điện thoại, chọn/xóa ảnh. Nhập mật khẩu GoDrop hiện tại rồi lưu. Tên đăng nhập và số điện thoại không được trùng tài khoản khác. Tên đăng nhập 3–80 ký tự chữ không dấu, số, `.`, `_`, `-`.
 
-Trình chọn ảnh hệ thống không yêu cầu đọc toàn bộ thư viện. Android xử lý ảnh ở luồng nền; backend kiểm tra, mã hóa lại JPEG bỏ metadata và lưu trong PostgreSQL. Hồ sơ lấy từ backend; tên/số điện thoại cập nhật vào Room và màn hình hiện tại. Ảnh vẫn còn khi đổi thiết bị.
+Trình chọn ảnh hệ thống không yêu cầu đọc toàn bộ thư viện. Android xử lý ảnh ở luồng nền; backend kiểm tra, mã hóa lại JPEG bỏ metadata và lưu trong MongoDB. Hồ sơ lấy từ backend; tên/số điện thoại cập nhật vào Room và màn hình hiện tại. Ảnh vẫn còn khi đổi thiết bị.
 
 Đổi số điện thoại hủy mã khôi phục đang chờ; lần sau dùng số mới. Email giữ nguyên. Đổi tên đăng nhập không đổi chủ đơn hàng vì đơn liên kết theo ID.
 

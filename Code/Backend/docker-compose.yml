@@ -1,21 +1,18 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: mob402-delivery-postgres
+  mongodb:
+    image: mongo:7
+    container_name: mob402-delivery-mongodb
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-delivery_db}
-      POSTGRES_USER: ${POSTGRES_USER:-delivery_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run ./setup-local.sh first}
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     ports:
-      - "5432:5432"
+      - "127.0.0.1:27017:27017"
     volumes:
-      - delivery_postgres_data:/var/lib/postgresql/data
+      - delivery_mongodb_data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 }).ok"]
+      interval: 10s
       timeout: 5s
       retries: 10
 
 volumes:
-  delivery_postgres_data:
+  delivery_mongodb_data:

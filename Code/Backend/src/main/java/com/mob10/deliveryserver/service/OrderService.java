@@ -33,6 +33,7 @@ public class OrderService {
         this.sequences = sequences;
     }
 
+    @Transactional
     public OrderResponse create(AuthenticatedUser principal, CreateOrderRequest input) {
         requireRole(principal, Role.CLIENT);
         User client = getUser(principal.id());
@@ -92,6 +93,7 @@ public class OrderService {
                 .map(mapper::toHistoryResponse).toList();
     }
 
+    @Transactional
     public OrderResponse cancel(AuthenticatedUser principal, Long id) {
         requireRole(principal, Role.CLIENT);
         DeliveryRequest order = orders.findByIdForUpdate(id).orElseThrow(() -> notFound(id));

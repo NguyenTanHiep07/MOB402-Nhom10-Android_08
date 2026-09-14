@@ -25,7 +25,7 @@ spring:
       mail.smtp.writetimeout: 5000
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017/delivery_db}
+      uri: ${MONGODB_URI:mongodb://localhost:27017/delivery_db?replicaSet=rs0}
       auto-index-creation: false
 
 app:
@@ -33,13 +33,13 @@ app:
     enabled: ${MAIL_ENABLED:false}
     from: ${MAIL_FROM:}
   demo:
-    enabled: ${DEMO_ENABLED:true}
-    password: ${DEMO_PASSWORD:123456}
+    enabled: ${DEMO_ENABLED:false}
+    password: ${DEMO_PASSWORD:}
   jwt:
-    secret: ${JWT_SECRET:dev_secret_key_change_me_in_production_1234567890123456}
+    secret: ${JWT_SECRET:}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
   reliability:
     lock-threshold-in-24-hours: 3
     lock-duration-minutes: 30

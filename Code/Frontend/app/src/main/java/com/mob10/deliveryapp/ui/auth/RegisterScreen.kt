@@ -226,8 +226,17 @@ fun RegisterScreen(
                                 fullName.isBlank() || phoneNumber.isBlank() || password.isBlank() -> {
                                     validationError = "Vui lòng điền đầy đủ thông tin."
                                 }
+                                fullName.trim().length > 100 -> {
+                                    validationError = "Họ tên không được vượt quá 100 ký tự."
+                                }
+                                !phoneNumber.trim().matches(Regex("^(0\\d{9}|\\+84\\d{9})$")) -> {
+                                    validationError = "Số điện thoại cần 10 chữ số bắt đầu bằng 0 hoặc dạng +84."
+                                }
                                 password.length < 6 -> {
                                     validationError = "Mật khẩu phải có ít nhất 6 ký tự."
+                                }
+                                password.length > 128 || password.toByteArray(Charsets.UTF_8).size > 72 -> {
+                                    validationError = "Mật khẩu không được vượt quá 72 byte UTF-8."
                                 }
                                 password != confirmPassword -> {
                                     validationError = "Mật khẩu xác nhận không khớp."

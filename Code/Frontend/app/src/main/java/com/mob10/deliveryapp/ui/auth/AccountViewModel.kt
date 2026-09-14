@@ -141,7 +141,7 @@ class AccountViewModel(
             val before = mutable.value
             mutable.value = before.copy(busy = true, error = null, message = null)
             handleProfile(repo.edit(AccountEdit(username, name.trim(), phone.trim(), password,
-                if (before.avatarChanged) before.avatarDraft else before.profile?.avatarBase64)), "Đã lưu hồ sơ. Lần đăng nhập sau hãy dùng tên đăng nhập mới.")
+                if (before.avatarChanged) before.avatarDraft else before.profile?.avatarBase64)), "Đã lưu hồ sơ. Lần đăng nhập sau hãy dùng số điện thoại hiện tại.")
         }
     }
     fun link(email: String, password: String) {

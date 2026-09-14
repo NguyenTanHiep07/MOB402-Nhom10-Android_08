@@ -2,6 +2,10 @@ package com.mob10.deliveryserver.security;
 
 import com.mob10.deliveryserver.config.SecurityConfig;
 import com.mob10.deliveryserver.controller.OrderController;
+import com.mob10.deliveryserver.controller.AuthController;
+import com.mob10.deliveryserver.domain.Role;
+import com.mob10.deliveryserver.dto.AuthDtos.RegisterResponse;
+import com.mob10.deliveryserver.service.AuthService;
 import com.mob10.deliveryserver.dto.OrderDtos.CreateOrderRequest;
 import com.mob10.deliveryserver.service.OrderService;
 import jakarta.servlet.FilterChain;
@@ -27,12 +31,37 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = OrderController.class)
+@WebMvcTest(controllers = {OrderController.class, AuthController.class})
 @Import({SecurityConfig.class, RestAuthenticationEntryPoint.class, RestAccessDeniedHandler.class,
         SecurityConfigTest.PassThroughJwtFilterConfiguration.class})
 class SecurityConfigTest {
     @Autowired MockMvc mvc;
     @MockitoBean OrderService orderService;
+    @MockitoBean AuthService authService;
+
+    @Test
+    void customerRegistrationIsPublicAndCannotChooseRole() throws Exception {
+        when(authService.register(any())).thenReturn(
+                new RegisterResponse(12L, "0901234567", "Khách mới", Role.CLIENT));
+        mvc.perform(post("/api/auth/register")
+                        .contentType("application/json")
+                        .content("""
+                                {"phoneNumber":"0901234567","password":"abcdef12",
+                                 "fullName":"Khách mới","role":"ADMIN"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("CLIENT"));
+    }
+
+    @Test
+    void registrationRejectsInvalidPhone() throws Exception {
+        mvc.perform(post("/api/auth/register")
+                        .contentType("application/json")
+                        .content("""
+                                {"phoneNumber":"123","password":"abcdef12","fullName":"Khách mới"}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
 
     @Test
     void unauthenticatedRequestReturnsJson401() throws Exception {

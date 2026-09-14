@@ -5,6 +5,14 @@ plugins {
     id("com.google.devtools.ksp") version "2.1.20-1.0.32"
 }
 
+// Keystore credentials come from the machine/CI environment, never the repository.
+val releaseStoreFile = providers.environmentVariable("RELEASE_STORE_FILE").orNull
+val releaseStorePassword = providers.environmentVariable("RELEASE_STORE_PASSWORD").orNull
+val releaseKeyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS").orNull
+val releaseKeyPassword = providers.environmentVariable("RELEASE_KEY_PASSWORD").orNull
+val hasReleaseSigning = listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword)
+    .all { !it.isNullOrBlank() }
+
 android {
     namespace = "com.mob10.deliveryapp"
     compileSdk = 36
@@ -25,11 +33,23 @@ android {
         manifestPlaceholders["allowCleartext"] = "false"
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("production") {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         debug {
             manifestPlaceholders["allowCleartext"] = "true"
         }
         release {
+            if (hasReleaseSigning) signingConfig = signingConfigs.getByName("production")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -47,6 +67,19 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+}
+
+// A default emulator URL and an unsigned APK must never masquerade as a usable release.
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    doFirst {
+        val releaseUrl = providers.gradleProperty("API_BASE_URL").orNull
+        check(releaseUrl != null && releaseUrl.startsWith("https://") && releaseUrl.endsWith("/api/")) {
+            "Release requires -PAPI_BASE_URL=https://your-server.example/api/"
+        }
+        check(hasReleaseSigning && releaseStoreFile?.let { file(it).isFile } == true) {
+            "Release requires a valid RELEASE_STORE_FILE, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS and RELEASE_KEY_PASSWORD in the environment"
+        }
     }
 }
 
@@ -72,7 +105,7 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
-    // Persist the authenticated Room user id across application restarts.
+    // TH - tuần 3,4: datastore giữ userId sau khi tắt và mở lại app
     implementation("androidx.datastore:datastore-preferences:1.2.1")
     // Lottie Animation
     implementation("com.airbnb.android:lottie-compose:6.6.2")

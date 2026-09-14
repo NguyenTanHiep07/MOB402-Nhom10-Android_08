@@ -1,6 +1,6 @@
 package com.mob10.deliveryserver.config;
 
-import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -9,9 +9,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * Manages MongoDB indexes manually since auto-index-creation is disabled.
- * Only creates indexes on the root document collections (users, rejection_reasons).
- * Does NOT create indexes on embedded User fields inside delivery_requests to avoid
- * the unique-index-on-null collision when deliveryPerson is null.
+ * Creates indexes on root collections before demo seeding begins.
+ * Does not create unique indexes on embedded User references in delivery_requests.
  */
 @Component
 public class MongoIndexConfig {
@@ -22,17 +21,16 @@ public class MongoIndexConfig {
         this.mongoTemplate = mongoTemplate;
     }
 
-    @EventListener(ApplicationReadyEvent.class)
+    @EventListener(ApplicationStartedEvent.class)
     public void ensureIndexes() {
-        // Drop all existing indexes (except _id_) on all relevant collections first.
-        for (String col : new String[]{"users", "delivery_requests", "status_histories",
-                "order_rejections", "ratings", "driver_statistics", "rejection_reasons",
-                "account_challenges", "password_recovery_limits"}) {
-            try {
-                mongoTemplate.indexOps(col).dropAllIndexes();
-            } catch (Exception ignored) {}
+        // Sequence upserts happen inside transactions; MongoDB must have the
+        // collection before the first transactional write.
+        if (!mongoTemplate.collectionExists("database_sequences")) {
+            mongoTemplate.createCollection("database_sequences");
         }
-
+        // Never drop existing indexes during application startup: that creates a period
+        // without uniqueness guarantees and can damage a live database's index policy.
+        // Resolve incompatible legacy indexes explicitly as a separate migration.
         // users collection: unique username and phoneNumber
         mongoTemplate.indexOps("users")
                 .ensureIndex(new Index().on("username", Sort.Direction.ASC).unique());
@@ -65,7 +63,8 @@ public class MongoIndexConfig {
         mongoTemplate.indexOps("order_rejections")
                 .ensureIndex(new Index().on("deliveryRequestId", Sort.Direction.ASC));
         mongoTemplate.indexOps("order_rejections")
-                .ensureIndex(new Index().on("deliveryRequestId", Sort.Direction.ASC).on("driverId", Sort.Direction.ASC));
+                .ensureIndex(new Index().on("deliveryRequestId", Sort.Direction.ASC).on("driverId", Sort.Direction.ASC)
+                        .unique().named("uniq_order_rejection"));
         mongoTemplate.indexOps("order_rejections")
                 .ensureIndex(new Index().on("driverId", Sort.Direction.ASC).on("penaltyApplied", Sort.Direction.ASC).on("rejectedAt", Sort.Direction.DESC));
 
@@ -73,7 +72,7 @@ public class MongoIndexConfig {
         mongoTemplate.indexOps("ratings")
                 .ensureIndex(new Index().on("driverId", Sort.Direction.ASC));
         mongoTemplate.indexOps("ratings")
-                .ensureIndex(new Index().on("deliveryRequestId", Sort.Direction.ASC));
+                .ensureIndex(new Index().on("deliveryRequestId", Sort.Direction.ASC).unique().named("uniq_rating_order"));
 
         // driver_statistics
         mongoTemplate.indexOps("driver_statistics")
