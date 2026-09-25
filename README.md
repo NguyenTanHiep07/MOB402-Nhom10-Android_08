@@ -120,7 +120,7 @@ cd ../Backend
 
 Giữ bộ test gốc Java/Kotlin của nhóm; không thêm file test mới. Kiểm thử thay đổi dữ liệu nên chạy trên MongoDB kiểm thử riêng, không dùng database demo đang có đơn. Kết quả kiểm tra bổ sung cần được ghi trong báo cáo nghiệm thu.
 
-- `Code/Frontend`: Android Studio project; `Code/Backend`: API; `DOCX`: nơi nộp báo cáo Word/PDF; `Extra`: sơ đồ/bằng chứng; `PPTX`: nơi nộp trình chiếu. **Hiện `Report-Android_08.docx`, `Report-Android_08.pdf` và `Presentation-Android_08.pptx` là file rỗng 0 byte, chưa phải tài liệu hoàn thành.** Các sơ đồ kiến trúc Room tuần trước chỉ là lịch sử; kiến trúc REST/MongoDB hiện tại được mô tả ở trên và trong API_CONTRACT.
+- `Code/Frontend`: Android Studio project; `Code/Backend`: API; `DOCX`: nơi nộp báo cáo Word; `Extra`: sơ đồ/bằng chứng; `PPTX`: nơi nộp trình chiếu. Báo cáo chính nằm tại `DOCX/Report-Android_08.docx`; bản trình chiếu nằm tại `PPTX/Presentation-Android_08.pptx`. Các sơ đồ kiến trúc Room tuần trước chỉ là lịch sử; kiến trúc REST/MongoDB hiện tại được mô tả ở trên và trong API_CONTRACT.
 
 ## Video demo
 
