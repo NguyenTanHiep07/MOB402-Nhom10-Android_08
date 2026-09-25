@@ -1,37 +1,182 @@
-# Android_UTH_08 — GoDrop Delivery App
+# GoDrop Delivery App — Android_08
 
-Hướng dẫn mới: [Cấu hình Gmail, khôi phục mật khẩu và sửa hồ sơ/ảnh đại diện](Code/Backend/docs/EMAIL_ACCOUNT_GUIDE.md).
+GoDrop là ứng dụng Android native hỗ trợ quy trình giao hàng giữa khách hàng, tài xế và quản trị viên. Ứng dụng được viết bằng Kotlin/Jetpack Compose; backend dùng Java 21, Spring Boot và MongoDB.
 
-MOB402 · Nhóm 10. Ứng dụng Android native bằng Kotlin/Compose Material 3. Backend Java 21/Spring Boot và MongoDB là nguồn dữ liệu chung cho khách hàng, tài xế và admin.
+| Thông tin | Giá trị |
+|---|---|
+| Môn học | MOB402 |
+| Nhóm | Nhóm 10 |
+| Mã đề tài | Android_08 |
+| Tên sản phẩm | GoDrop Delivery App |
+| Nền tảng | Android native, không phải Web App |
+| GitHub | [NguyenTanHiep07/MOB402-Nhom10-Android_08](https://github.com/NguyenTanHiep07/MOB402-Nhom10-Android_08) |
+| Tên gói nộp Course | `MOB402-Nhom10-Android_08.7z` |
 
-## Thành viên
+## 1. Mục tiêu và phạm vi
 
-| Thành viên | MSSV | Phụ trách theo phân công tuần 4 mới |
+Mục tiêu của dự án là xây dựng một hệ thống giao hàng có dữ liệu dùng chung, xử lý đúng quyền của ba vai trò và duy trì lịch sử trạng thái đơn hàng. Android gọi REST API thật; dữ liệu nghiệp vụ chính được lưu trên MongoDB, không dùng danh sách giả trong giao diện để báo thao tác thành công.
+
+### Chức năng theo vai trò
+
+- **Khách hàng (Client):** đăng ký, đăng nhập, sửa hồ sơ/ảnh đại diện, khôi phục mật khẩu, tìm địa chỉ, xem báo giá, tạo và hủy đơn trước khi lấy hàng, theo dõi tiến trình, xem lịch sử, nhận thông báo trong ứng dụng và đánh giá sau giao.
+- **Tài xế (Delivery/Driver):** xem đơn chờ, nhận hoặc từ chối đơn, xem chuyến hiện tại, cập nhật trạng thái đúng thứ tự, gọi người gửi/người nhận, mở chỉ đường, chụp ảnh xác nhận giao, xem lịch sử/thu nhập/điểm tin cậy và đổi trạng thái làm việc.
+- **Quản trị viên (Admin):** xem tổng quan, tìm/lọc và xem chi tiết toàn bộ đơn hàng, người dùng, tài xế và cảnh báo vi phạm.
+
+### Ngoài phạm vi hiện tại
+
+- Màn Admin chỉ đọc; chưa có sửa/xóa tài khoản, sửa bảng giá hoặc phân công lại đơn.
+- Chỉ đường mở Google Maps hoặc trình duyệt bằng Maps URL; ứng dụng không nhúng Maps SDK và không theo dõi GPS nền.
+- Thông báo được tạo khi ứng dụng tải lại dữ liệu trong phiên sử dụng; chưa có push notification khi ứng dụng đã đóng.
+- Không hỗ trợ tạo đơn offline. Khi mất mạng, ứng dụng hiển thị lỗi và cho phép thử lại thay vì ghi nhận thành công giả.
+
+## 2. Thành viên và phân công
+
+| Thành viên | MSSV | Công việc chính |
 |---|---|---|
-| Nguyễn Tấn Hiệp | 087205010642 | Backend, tích hợp và nghiệm thu |
-| Nguyễn Quốc Thịnh | 052206007772 | REST API/DTO/repository, luồng dữ liệu Android |
-| Huỳnh Nhật Nam | 080206015277 | Shipper, Maps/GPS; trước đó Room/ERD |
-| Nguyễn Lâm Hữu Hùng | 079205019508 | Client, Admin, Rating |
+| Nguyễn Tấn Hiệp | 087205010642 | Backend Spring Boot, bảo mật/JWT, MongoDB, tích hợp hệ thống, cấu hình môi trường và nghiệm thu |
+| Nguyễn Quốc Thịnh | 052206007772 | REST API, DTO/repository, kết nối Retrofit và luồng dữ liệu Android |
+| Huỳnh Nhật Nam | 080206015277 | Chức năng tài xế, chỉ đường Google Maps, luồng trạng thái giao hàng; Room/ERD ở giai đoạn đầu |
+| Nguyễn Lâm Hữu Hùng | 079205019508 | Giao diện và chức năng khách hàng, Admin, đánh giá tài xế |
 
-Đánh giá công việc theo yêu cầu, không suy ra mức đóng góp cá nhân chỉ từ số commit. Mỗi thành viên dùng tài khoản Git cá nhân và commit message mô tả rõ thay đổi; không dùng “update”, “fix”, “final” đơn lẻ.
+Mỗi thành viên sử dụng tài khoản Git cá nhân và commit phần việc của mình. Commit message phải mô tả rõ thay đổi, không dùng riêng các nội dung chung chung như `update`, `fix` hoặc `final`.
 
-## Chức năng và phạm vi
+## 3. Đối chiếu yêu cầu chung
 
-- **Client:** đăng nhập, chọn địa chỉ từ gợi ý thật, nhập liên hệ/kiện hàng, xem khoảng cách và phí server, xác nhận tạo đơn, hủy trước lấy hàng, xem đơn/trạng thái/lịch sử, nhận thông báo trong app khi trạng thái đổi và đánh giá sau giao.
-- **Delivery:** nhận/từ chối đơn trong danh sách đơn chờ, nhận thông báo khi có đơn mới, gọi nhanh người gửi/người nhận qua màn quay số, cập nhật đúng thứ tự, xem lịch sử/thu nhập/điểm tin cậy, đổi trạng thái làm việc, bản đồ hai điểm và định vị theo yêu cầu khi đã cấu hình Maps.
-- **Admin (mở rộng):** xem tổng quan, tìm/lọc đơn theo mã, trạng thái, khách hàng hoặc shipper; xem chi tiết, người dùng, tài xế và cảnh báo. Các màn admin chỉ đọc; không có sửa/xóa tài khoản, sửa giá hoặc phân công lại.
-- Dữ liệu mẫu được seed riêng ở backend khi bật `DEMO_ENABLED`; Android không tự sinh tài khoản/đơn giả. Mọi vai trò gọi cùng backend/database. Room lưu hồ sơ tài khoản cục bộ; các repository Room cũ còn được giữ để kiểm thử/mốc tuần trước, không phải nguồn đơn hàng của luồng REST đang dùng.
+| Nhóm yêu cầu | Cách dự án đáp ứng | Bằng chứng chính |
+|---|---|---|
+| Ứng dụng Android | Kotlin, Android SDK và Jetpack Compose; chạy trên máy ảo hoặc thiết bị thật | `Code/Frontend` |
+| Kiến trúc | UI, ViewModel/state holder, repository, nguồn local/remote được tách lớp | Sơ đồ bên dưới và `Code/Frontend/app/src/main` |
+| Lifecycle và trạng thái | StateFlow, `collectAsStateWithLifecycle`, SavedStateHandle; có loading/content/empty/success/error | Các ViewModel và màn hình Compose |
+| Dữ liệu | MongoDB là nguồn nghiệp vụ chung; Room v6 lưu dữ liệu local có cấu trúc; DataStore lưu `userId`; Preferences riêng lưu token | `data/local`, `data/session`, backend domain/repository |
+| File/phần cứng | FileProvider tạo URI ảnh giao hàng trong app storage; chụp ảnh qua ứng dụng camera ngoài | `DeliveryPhotoPanel.kt`, `delivery_photo_paths.xml` |
+| Network | Retrofit/OkHttp, coroutine, timeout, cancellation, xử lý lỗi và retry tại giao diện | `RetrofitClient.kt`, các repository/ViewModel |
+| Bảo mật | JWT, phân quyền backend, kiểm tra quyền sở hữu, secret qua biến môi trường, tắt HTTP log chứa dữ liệu người dùng | `security`, `application.yml`, `.gitignore` |
+| Tính toàn vẹn dữ liệu | Backend kiểm tra chuyển trạng thái; transaction/atomic update cho các thao tác phù hợp; kiểm soát nhận đơn đồng thời | Service backend và automated tests |
+| Kiểm thử | Unit/repository/service/security tests, một instrumented race-condition test và 12 test case giao diện có ảnh | Mục 12 và `Extra` |
+| Báo cáo/demo | DOCX, PPTX và thư mục bằng chứng đã có; video và link chia sẻ phải hoàn thiện trước khi nộp | Mục 13–15 |
 
-## Môi trường
+## 4. Công nghệ và thư viện
 
-- Android Studio hỗ trợ Android Gradle Plugin của project, JDK **21** để chạy đồng thời Android/backend; bytecode Android target Java 11.
-- Android SDK compile/target **36**, min **24**; máy ảo hoặc thiết bị thật.
-- MongoDB 7 local qua Docker hoặc MongoDB Atlas; Internet để tra địa chỉ/định tuyến Photon/OSRM.
-- Chỉ đường mở Google Maps/trình duyệt bên ngoài, không cần Maps SDK/API key.
+### Android
 
-## Chạy backend và Android
+- Kotlin 2.1.20, Android Gradle Plugin 8.13.2.
+- Jetpack Compose Material 3 và Navigation Compose.
+- ViewModel, StateFlow, lifecycle-runtime-compose và SavedStateHandle.
+- Room 2.6.1/KSP cho dữ liệu cục bộ có cấu trúc.
+- DataStore Preferences cho định danh phiên; SharedPreferences private cho access token cần đọc đồng bộ từ interceptor.
+- Retrofit 2.11.0, Gson và OkHttp 4.12.0 cho REST API.
+- Kotlin Coroutines cho tác vụ bất đồng bộ.
+- Lottie Compose 6.6.2 cho hiệu ứng giao diện.
+- JUnit, coroutine-test, Room testing, Robolectric, AndroidX Test và Espresso cho kiểm thử.
 
-Tại thư mục repository:
+### Backend và dịch vụ ngoài
+
+- Java 21, Spring Boot 3.4.5.
+- Spring Web, Validation, Security, Mail và Spring Data MongoDB.
+- JWT (`jjwt`) cho xác thực và phân quyền.
+- Springdoc OpenAPI/Swagger cho tài liệu và thử API.
+- MongoDB 7; Docker Compose dùng cho database local.
+- Photon để gợi ý địa chỉ, OSRM để ước lượng tuyến đường và Google Maps URL để mở chỉ đường.
+
+## 5. Kiến trúc và luồng dữ liệu
+
+```text
+Activity / Jetpack Compose
+        │ thao tác                 ▲ UI state
+        ▼                          │
+ViewModel / SavedStateHandle / StateFlow
+        │
+        ▼
+Repository ── Retrofit / OkHttp ── Spring Boot REST
+    │                                  │
+    ├── Room (dữ liệu local)           ├── Service / transaction
+    ├── DataStore (userId)             ├── Spring Security / JWT
+    └── Preferences (token)            └── Spring Data MongoDB ── MongoDB
+```
+
+- Backend là nguồn chính cho tài khoản, đơn hàng, trạng thái, đánh giá và thống kê.
+- Repository che giấu chi tiết nguồn dữ liệu với ViewModel.
+- Form tạo đơn và báo giá dùng SavedStateHandle để giữ dữ liệu khi tái tạo màn hình. Bộ lọc/tab phù hợp dùng `rememberSaveable`.
+- Client tải lại dữ liệu khi màn hình đang hoạt động theo chu kỳ 10 giây; driver theo chu kỳ 15 giây và có nút tải lại.
+- Room đang ở schema v6, có migration từ các phiên bản v1–v5 lên v6 và export schema tại `Code/Frontend/app/schemas`.
+
+### Luồng điều hướng
+
+```text
+Đăng nhập
+├── Client: Home → Create → Confirmation → Orders/Tracking → Detail → Rating
+│           └── Profile → Edit account / Recovery / Logout
+├── Driver: Home → Open orders → Active order → Delivery history → Profile
+└── Admin: Overview → Orders → Users → Drivers → Alerts
+```
+
+## 6. Data model và trạng thái đơn hàng
+
+- `User`: thông tin tài khoản, vai trò `CLIENT`/`DELIVERY`/`ADMIN`, trạng thái hoạt động và availability.
+- `DeliveryRequest`: khách hàng, tối đa một tài xế, địa chỉ/toạ độ hai đầu, liên hệ, phí, trạng thái và thời gian.
+- `PackageItem`: thông tin kiện hàng thuộc một yêu cầu giao.
+- `StatusHistory`: trạng thái trước/sau, người cập nhật và thời điểm.
+- `Rating`: đánh giá gắn với đơn đã giao.
+- `RejectionReason`, `OrderRejection`, `DriverStatistics`: lý do từ chối, lịch sử từ chối và độ tin cậy của tài xế.
+
+```text
+CHO_TIEP_NHAN → DA_CHAP_NHAN → DA_DEN_NHA_HANG → DA_LAY_HANG
+      → DANG_VAN_CHUYEN → DA_DEN_KHACH_HANG → DA_GIAO
+```
+
+`DA_HUY` chỉ được phép ở ba trạng thái trước khi lấy hàng. Backend chặn nhảy cóc trạng thái, khách hàng khác hủy đơn, tài xế khác cập nhật đơn và nhiều tài xế nhận cùng một đơn.
+
+Phí do backend tính lại: 15.000đ cơ bản + 5.000đ/km + 3.000đ/kg, cộng phụ phí theo loại hàng. Android không được tự quyết định số tiền cuối cùng.
+
+## 7. Storage, permission, phần cứng và tác vụ nền
+
+| Thành phần | Cách sử dụng |
+|---|---|
+| MongoDB | Dữ liệu nghiệp vụ dùng chung giữa các vai trò |
+| Room | Dữ liệu local có cấu trúc và hồ sơ tài khoản; schema v6 |
+| DataStore | Lưu `userId` của phiên đăng nhập |
+| SharedPreferences private | Lưu access token, loại token và thời gian hết hạn |
+| App storage + FileProvider | Ảnh chụp giao hàng tạm thời; URI chỉ được cấp quyền cho ứng dụng camera |
+| Permission | Chỉ khai báo `INTERNET`; không yêu cầu `CAMERA`, `CALL_PHONE`, vị trí, microphone hoặc quyền bộ nhớ |
+| Camera | Gọi ứng dụng camera ngoài; nếu không có camera hoặc người dùng hủy thì đơn giữ nguyên |
+| Gọi điện | `ACTION_DIAL` chỉ mở màn quay số, không tự gọi |
+| Chỉ đường | Google Maps hoặc trình duyệt xử lý vị trí và quyền của chính ứng dụng đó |
+| Tác vụ nền | Không dùng WorkManager/foreground service vì không có công việc trì hoãn hoặc theo dõi nền trong phạm vi hiện tại |
+
+Ảnh tạm được xóa sau khi xác nhận giao thành công hoặc khi người dùng bỏ ảnh. Ảnh giao hàng được gửi qua `POST /api/driver/orders/{id}/complete-with-photo`; backend kiểm tra ảnh, quyền tài xế và trạng thái trước khi lưu ảnh cùng kết quả giao.
+
+## 8. API chính
+
+Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+
+OpenAPI JSON: `http://localhost:8080/v3/api-docs`
+
+Các nhóm endpoint chính:
+
+- `/api/auth/login`, `/api/auth/register`: đăng nhập và đăng ký Client.
+- `/api/account/**`, `/api/auth/recovery/**`: hồ sơ và khôi phục tài khoản.
+- `/api/orders/**`: tạo, liệt kê, xem chi tiết/lịch sử và hủy đơn.
+- `/api/driver/**`: đơn chờ, nhận/từ chối, cập nhật trạng thái, ảnh giao hàng và thống kê.
+- `/api/admin/**`: tổng quan, đơn hàng, người dùng, tài xế và cảnh báo.
+- `/api/ratings/**`: gửi và đọc đánh giá.
+- `/api/locations/autocomplete`, `/api/routes/estimate`: địa chỉ và ước lượng tuyến đường.
+
+Phân quyền và quyền sở hữu được kiểm tra tại backend, không chỉ dựa vào việc ẩn nút trên Android.
+
+## 9. Yêu cầu môi trường
+
+- Android Studio hỗ trợ Android Gradle Plugin 8.13.2.
+- JDK 21 để chạy Android build tools và backend; Android bytecode target Java 11.
+- Android SDK compile/target 36, min SDK 24.
+- Android Emulator hoặc thiết bị thật từ Android 7.0 trở lên.
+- Docker Desktop và Docker Compose nếu chạy MongoDB local, hoặc một MongoDB Atlas URI.
+- Internet để gọi Photon/OSRM và mở Google Maps.
+
+## 10. Cài đặt và chạy
+
+### 10.1 Backend và MongoDB local
+
+Từ thư mục repository:
 
 ```bash
 cd Code/Backend
@@ -41,87 +186,132 @@ docker compose exec mongodb mongosh --quiet --eval 'try { rs.status().ok } catch
 ./gradlew bootRun
 ```
 
-`setup-local.sh` chỉ tạo `Code/Backend/.env` khi chưa có; không sửa cấu hình hoặc dữ liệu đang tồn tại. Mặc định `DEMO_ENABLED=false`; chỉ bật `true` trên database demo riêng. Có thể dùng MongoDB Atlas qua `MONGODB_URI`, khi đó không cần Docker local. Nếu `.env` cũ còn biến PostgreSQL, kiểm tra `MONGODB_URI` thủ công trước khi chạy. Không đưa `.env` hoặc token vào commit/ảnh minh chứng.
+`setup-local.sh` tạo `Code/Backend/.env` với quyền file hạn chế nếu file chưa tồn tại. File chứa secret này bị `.gitignore` loại khỏi Git. Mặc định `DEMO_ENABLED=false`; chỉ bật demo trên database riêng.
 
-Khi `DEMO_ENABLED=true`, backend thêm đúng một lần lô 20 đơn demo đa trạng thái, không xóa đơn hiện có và không nhân bản sau mỗi lần khởi động. Lô này phủ đủ 8 trạng thái, chia đơn hoàn tất cho cả 7 shipper, giữ tối đa một đơn hoạt động cho mỗi shipper và tạo tình huống `shipper7` từ chối nhiều lần: 60 điểm tin cậy, bị khóa tạm thời và xuất hiện trong tab Cảnh báo của Admin.
+Các biến cấu hình quan trọng:
 
-Mở **Code/Frontend** bằng Android Studio, Sync và Run `app`. Backend phải đang chạy. Địa chỉ mặc định máy ảo là `http://10.0.2.2:8080/api/`. Máy thật cần cùng mạng với máy chạy backend:
+| Biến | Mục đích |
+|---|---|
+| `MONGODB_URI` | Kết nối MongoDB local hoặc Atlas |
+| `JWT_SECRET` | Khóa ký JWT, bắt buộc lấy từ môi trường |
+| `DEMO_ENABLED`, `DEMO_PASSWORD` | Bật và bảo vệ dữ liệu demo |
+| `MAIL_ENABLED`, `MAIL_HOST`, `MAIL_USERNAME`, `MAIL_PASSWORD` | Cấu hình email khôi phục tài khoản |
+| `PHOTON_BASE_URL`, `OSRM_BASE_URL` | Dịch vụ địa chỉ và định tuyến |
+
+Khi `DEMO_ENABLED=true`, backend seed một lần bộ dữ liệu đa trạng thái; không xóa dữ liệu có sẵn và không nhân bản sau mỗi lần khởi động.
+
+### 10.2 Android
+
+Mở `Code/Frontend` bằng Android Studio, Sync Gradle và chạy module `app`. Backend phải đang hoạt động.
+
+- Máy ảo Android dùng mặc định: `http://10.0.2.2:8080/api/`.
+- Thiết bị thật phải cùng mạng với máy chạy backend:
 
 ```bash
 cd Code/Frontend
 ./gradlew :app:assembleDebug -PAPI_BASE_URL=http://DIA_CHI_IP_LAN:8080/api/
 ```
 
-Bản debug cho phép HTTP để demo LAN. Bản release chỉ build khi truyền `-PAPI_BASE_URL=https://.../api/` và bốn biến môi trường `RELEASE_STORE_FILE`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD` trỏ tới keystore hợp lệ. Không lưu keystore/mật khẩu vào Git. Nếu chưa có server HTTPS và khóa ký, chỉ dùng bản debug; không coi APK release unsigned là bản phát hành.
+Debug cho phép HTTP để demo LAN. Release chỉ build khi URL là HTTPS và có đủ `RELEASE_STORE_FILE`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`. Không đưa keystore hoặc mật khẩu vào repository.
 
-Tài khoản demo: `client1`…`client5`, `shipper1`…`shipper7`, `admin`. Đăng nhập bằng **số điện thoại** tương ứng trong dữ liệu seed (xem [backend README](Code/Backend/README.md)); tài khoản khách tự đăng ký cũng dùng số điện thoại. Đổi vai trò bằng Đăng xuất rồi đăng nhập tài khoản tương ứng.
+Tài khoản demo gồm `client1`…`client5`, `shipper1`…`shipper7` và `admin`. Đăng nhập bằng số điện thoại tương ứng; xem chi tiết trong [hướng dẫn backend](Code/Backend/README.md). Không ghi mật khẩu thật vào README hoặc ảnh minh chứng.
 
-**Swagger có tác dụng gì?** `http://localhost:8080/swagger-ui/index.html` là tài liệu và công cụ thử API. Không phải website bắt buộc mở để Android chạy. Docker ở cấu hình này chạy database; lệnh `bootRun` chạy backend. Android gọi backend trực tiếp dù đã đóng tab Swagger.
+## 11. Xử lý lỗi và bảo mật
 
-Nếu muốn thử Swagger: mở `POST /api/auth/login` → Try it out → nhập `phoneNumber`/`password` → Execute → lấy `accessToken` trong **Response body** mã 200 → Authorize (HTTP Bearer: dán chuỗi token, không thêm dấu ngoặc kép) → gọi API theo quyền của tài khoản.
+- Form và DTO kiểm tra dữ liệu trước khi lưu/xử lý; backend tiếp tục xác thực dữ liệu nhận từ Android.
+- OkHttp đặt timeout kết nối/đọc/ghi 30 giây và call timeout 45 giây. Coroutine cancellation được truyền tiếp.
+- Giao diện hiển thị loading, dữ liệu, danh sách rỗng, thành công và lỗi; nút thao tác bị khóa khi request đang chạy để tránh gửi lặp.
+- Lỗi mạng không tạo dữ liệu thành công giả; người dùng có thể thử lại. HTTP 401 xóa phiên phù hợp và đưa về đăng nhập.
+- Logging interceptor đặt `NONE`, tránh ghi token, địa chỉ hoặc dữ liệu khách hàng vào Logcat.
+- Secret và cấu hình nhạy cảm dùng biến môi trường hoặc `.env` bị ignore; repository không lưu password, private key hoặc keystore.
+- Backend dùng JWT, Spring Security, kiểm tra vai trò/quyền sở hữu và atomic/transaction cho thao tác cần tính nhất quán.
+- MongoDB local chỉ bind cổng `127.0.0.1:27017` trong Docker Compose.
 
-## Chỉ đường với Google Maps
+## 12. Kiểm thử
 
-GoDrop mở Google Maps bằng [Maps URLs](https://developers.google.com/maps/documentation/urls/get-started), không cần API key, Maps SDK hay Google Cloud billing. Nếu chưa cài Google Maps, ứng dụng mở liên kết chỉ đường trên trình duyệt.
-
-Demo: đăng nhập tài xế → Đang giao → chọn đơn → Chỉ đường đến điểm lấy. Sau khi lấy hàng, nút đổi thành Chỉ đường đến điểm giao. Đích đến ưu tiên tọa độ hợp lệ, nếu thiếu dùng địa chỉ. Google Maps tự xử lý vị trí hiện tại và quyền định vị; nếu chưa có vị trí, nhập điểm xuất phát trên Maps. Quay lại GoDrop để cập nhật trạng thái. Không có bản đồ nhúng hoặc theo dõi GPS trực tiếp trong GoDrop.
-
-## Kiến trúc, storage và luồng
-
-### Trải nghiệm giao hàng
-
-- Trang chủ tài xế ưu tiên thẻ chuyến hiện tại với địa chỉ cần đến, phí giao, nút chỉ đường/liên hệ và mở tiến trình. Khi thao tác đang gửi, các nút cập nhật bị khóa và có trạng thái xử lý.
-- Khách hàng mở chi tiết đơn để xem hành trình từng bước, thời gian thực tế từ lịch sử và ảnh đại diện tài xế (chữ viết tắt khi chưa có ảnh). Đơn hủy hiển thị riêng, không giả lập đã giao.
-- Tài xế đến điểm giao → chụp ảnh kiện hàng bằng ứng dụng máy ảnh → xem lại → xác nhận giao. App dùng FileProvider trong vùng lưu trữ riêng, nén JPEG và gửi qua `POST /api/driver/orders/{id}/complete-with-photo`. Backend kiểm tra ảnh, quyền tài xế, trạng thái hợp lệ rồi lưu ảnh và trạng thái trong cùng transaction. Gửi lại khi mất phản hồi không tạo thêm mốc giao thành công. API cập nhật trạng thái thông thường cũng yêu cầu có ảnh khi hoàn tất.
-- `GET /api/orders/{id}/delivery-photo` trả ảnh cho người có quyền xem đơn. `GET /api/orders/{id}/driver-avatar` trả ảnh tài xế của đơn. Ảnh giao lưu trong MongoDB, không kèm trong danh sách đơn để tránh tải nặng. Đơn demo cũ có thể chưa có ảnh. Ảnh chụp tạm được xóa khi xác nhận thành công hoặc bấm Bỏ ảnh; có thể phục hồi khi mở lại màn.
-- Thông báo trong ứng dụng có thời gian, trạng thái chưa đọc và mở đúng đơn khi bấm. Tài xế nhận thông báo đơn đã được người khác nhận sẽ thấy thông báo hết khả dụng. Hiện thông báo phát sinh khi app tải lại dữ liệu trong phiên sử dụng, chưa phải push notification khi đóng app.
-- Khung chờ có hiệu ứng nhẹ; giao thành công chỉ hiện sau khi backend xác nhận. Không cần quyền CAMERA vì app ủy quyền chụp cho ứng dụng máy ảnh; nếu không có máy ảnh hoặc người dùng hủy, đơn giữ nguyên trạng thái.
-
-```text
-Activity / Compose / XML
-       ↓ thao tác       ↑ StateFlow, collectAsStateWithLifecycle
-ViewModel / SavedStateHandle
-       ↓
-Repository → Retrofit / OkHttp → Spring Boot REST → Spring Data MongoDB → MongoDB
-       └── Room (hồ sơ), DataStore (userId), private Preferences (token)
-```
-
-- Điều hướng: Login → chọn màn theo role. Client: Home → Create → Confirmation → Orders/Tracking → Detail/Rating; Profile → Logout. Tài xế: Trang chủ/Đơn chờ/Đang giao/Lịch sử/Hồ sơ. Admin: Overview/Orders/Users/Drivers/Alerts.
-- Form tạo đơn và bản nháp xác nhận dùng SavedStateHandle; tab và bộ lọc Admin dùng rememberSaveable. Flow được quan sát theo lifecycle. Client cập nhật khi màn đang hoạt động mỗi 10 giây; driver mỗi 15 giây, có nút tải lại. Lần tải đầu đặt mốc dữ liệu hiện tại; các lần tải sau tạo thông báo trong app cho trạng thái đơn thay đổi hoặc đơn chờ mới, tránh báo hàng loạt dữ liệu seed cũ.
-- Network sử dụng coroutine, timeout kết nối/đọc/ghi và nút retry. Cancellation được truyền tiếp. Mất mạng hiển thị lỗi; không tạo đơn giả/offline rồi báo thành công. HTTP 401 đưa người dùng về đăng nhập.
-- Room v6 có migration từ v5 giữ dữ liệu và xóa password local cũ, export schema tại `Code/Frontend/app/schemas`. Chưa có migration từ bản lịch sử v1–v4; cần sao lưu/chuyển đổi riêng trước khi nâng từ các bản đó.
-- Liên hệ nhanh dùng `ACTION_DIAL`, chỉ mở màn quay số với số đã điền sẵn nên không cần quyền `CALL_PHONE`. Không có tác vụ cần WorkManager, foreground service, camera, microphone hoặc theo dõi GPS nền trong phạm vi hiện tại. GoDrop chỉ khai báo quyền INTERNET; chỉ đường được xử lý bởi Google Maps hoặc trình duyệt.
-
-## Data model và API
-
-User có role CLIENT/DELIVERY/ADMIN, trạng thái hoạt động và availability. DeliveryRequest thuộc một client, có tối đa một driver, địa chỉ/tọa độ hai điểm, liên hệ, giá, trạng thái và thời gian. PackageItem thuộc đơn. StatusHistory lưu trạng thái trước/sau, người cập nhật và thời gian. Rating gắn với đơn hoàn tất; RejectionReason/OrderRejection/DriverStatistics lưu lý do từ chối và độ tin cậy.
-
-API đầy đủ tại `/v3/api-docs`; các nhóm chính: `/api/auth/login`, `/api/auth/register` (chỉ tạo CLIENT), `/api/orders`, `/api/driver/**`, `/api/admin/**`, `/api/ratings`, `/api/locations/autocomplete`, `/api/routes/estimate`. Phân quyền và quyền sở hữu được kiểm tra ở backend, không chỉ ẩn nút trên Android. Nhận đơn được xử lý với kiểm soát đồng thời; một tài xế chỉ có một đơn hoạt động.
-
-## Trạng thái và tính phí
-
-```text
-CHO_TIEP_NHAN → DA_CHAP_NHAN → DA_DEN_NHA_HANG → DA_LAY_HANG → DANG_VAN_CHUYEN → DA_DEN_KHACH_HANG → DA_GIAO
-Pending         Accepted      Đến điểm lấy      Picked Up      In Transit        Tới điểm giao       Delivered
-```
-
-Hủy (`DA_HUY`/Cancelled) được phép ở ba trạng thái trước lấy hàng. Sau `DA_LAY_HANG` không hủy. Server chặn nhảy cóc, cập nhật bởi tài xế khác và hủy bởi khách khác. Hai mốc đã lấy hàng và đang vận chuyển được tách riêng; không có Flyway trong bản MongoDB. **Cập nhật Android và khởi động lại backend cùng phiên bản** trước demo luồng trạng thái mới.
-
-Phí backend: 15.000đ cơ bản + 5.000đ × km + 3.000đ × tổng kg; phụ phí theo loại hàng, xem [PricingService](Code/Backend/src/main/java/com/mob10/deliveryserver/service/PricingService.java) là nguồn quy tắc chính thức. Khoảng cách lấy từ OSRM; server tính lại khi tạo đơn, không tin giá do client gửi. Màn xác nhận dùng báo giá server; gián đoạn nhà cung cấp có thể khiến không lấy được báo giá/tạo đơn.
-
-## Kiểm thử và bàn giao
+### 12.1 Automated tests
 
 ```bash
 cd Code/Frontend
 ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:lintDebug
+
 cd ../Backend
 ./gradlew test
 ```
 
-Giữ bộ test gốc Java/Kotlin của nhóm; không thêm file test mới. Kiểm thử thay đổi dữ liệu nên chạy trên MongoDB kiểm thử riêng, không dùng database demo đang có đơn. Kết quả kiểm tra bổ sung cần được ghi trong báo cáo nghiệm thu.
+Instrumented test về cạnh tranh nhận/hủy đơn cần emulator hoặc thiết bị:
 
-- `Code/Frontend`: Android Studio project; `Code/Backend`: API; `DOCX`: nơi nộp báo cáo Word; `Extra`: sơ đồ/bằng chứng; `PPTX`: nơi nộp trình chiếu. Báo cáo chính nằm tại `DOCX/Report-Android_08.docx`; bản trình chiếu nằm tại `PPTX/Presentation-Android_08.pptx`. Các sơ đồ kiến trúc Room tuần trước chỉ là lịch sử; kiến trúc REST/MongoDB hiện tại được mô tả ở trên và trong API_CONTRACT.
+```bash
+cd Code/Frontend
+./gradlew :app:connectedDebugAndroidTest
+```
 
-## Video demo
+Bộ test hiện có kiểm tra tính phí, tạo/hủy/nhận đơn, quyền chủ sở hữu, chuyển trạng thái, lịch sử, đánh giá, repository Admin/location, ViewModel, tái tạo form, Room migration, bảo mật API, timeout/location client, database seeder và tình huống cạnh tranh.
 
-**Chưa có link video Public/Unlisted được xác minh.** Nhóm cần quay đủ ba vai trò, tạo → nhận → giao → xem lịch sử/đánh giá, hủy trước pickup và ít nhất một ca lỗi, có âm thanh hoặc chú thích; sau đó dán link ở đây. Không coi build/test tự động là thay thế video và nghiệm thu UI.
+### 12.2 Functional test và bằng chứng
+
+- Môi trường đã ghi nhận: Android Emulator Pixel 10, Android 15; backend Spring Boot 3.4.5 và MongoDB.
+- Ngày kiểm thử trong báo cáo hiện tại: 11/09/2026.
+- Có 12 test case giao diện cho đăng nhập đa vai trò, Client, Driver và Admin; kết quả thực tế đều được ghi là ổn định.
+- Báo cáo chi tiết: [Extra/BaoCao_KiemThu.xlsx](Extra/BaoCao_KiemThu.xlsx).
+- Ảnh minh chứng: [Extra/TestEvidence](Extra/TestEvidence).
+
+Trước khi nộp cuối kỳ, nhóm cần bổ sung hoặc quay lại bằng chứng cho các ca chưa thể hiện đầy đủ trong báo cáo 12 test case hiện tại:
+
+- Tạo đơn, hủy đơn, đánh giá và giao hàng kèm ảnh.
+- Dữ liệu nhập không hợp lệ và chuyển trạng thái không hợp lệ.
+- Mất mạng/timeout, camera không khả dụng hoặc người dùng hủy chụp.
+- Tái tạo Activity/màn hình sau thay đổi cấu hình hoặc quay lại từ background.
+- Tập dữ liệu đại diện/lớn hơn và thao tác lặp lại.
+- Ghi đủ thiết bị, phiên bản Android, dữ liệu đầu vào, kết quả mong đợi, kết quả thực tế và file minh chứng cho từng ca.
+
+Không chạy test thay đổi dữ liệu trên database demo đang dùng để trình bày; dùng database kiểm thử riêng.
+
+## 13. Cấu trúc repository và tài liệu bàn giao
+
+```text
+MOB402-Nhom10-Android_08/
+├── Code/
+│   ├── Frontend/          # Android Studio project
+│   └── Backend/           # Spring Boot REST API
+├── DOCX/
+│   ├── Report-Android_08.docx
+│   └── GoDrop-Huong-Dan-Ky-Thuat.docx
+├── Extra/
+│   ├── BaoCao_KiemThu.xlsx
+│   ├── Diagrams/          # ERD, use case, activity, state, architecture, screen flow
+│   ├── TestEvidence/      # Ảnh minh chứng test case
+│   └── Video/             # Thông tin video
+├── PPTX/
+│   └── Presentation-Android_08.pptx
+├── .gitignore
+└── README.md
+```
+
+`.gitignore` loại trừ `build/`, `.gradle/`, `.kotlin/`, `.idea/`, `local.properties`, APK/AAB, log, file tạm, `.env`, API key, password, secret, private key và keystore. Gradle wrapper vẫn được giữ để giảng viên có thể build dự án.
+
+## 14. Video demo
+
+**Link YouTube Public/Unlisted: chưa được nhóm cung cấp.**
+
+Video cuối kỳ phải:
+
+- Demo đủ ba vai trò và toàn bộ chức năng bắt buộc.
+- Có ít nhất một tình huống lỗi/thất bại phù hợp.
+- Thể hiện luồng tạo → nhận → giao → lịch sử/đánh giá và hủy trước khi lấy hàng.
+- Có âm thanh hoặc chú thích giải thích thao tác.
+- Mỗi thành viên trình bày phần việc của mình và hiển thị khuôn mặt làm minh chứng.
+- Ghi cùng link chia sẻ trong README và báo cáo Word trước khi nộp.
+
+## 15. Checklist trước khi nộp Course
+
+- [ ] Cập nhật link video YouTube trong README và báo cáo Word.
+- [ ] Kiểm tra báo cáo Word đúng mẫu, không quá 15 trang và có đủ mục bắt buộc.
+- [ ] Kiểm tra PowerPoint mở bình thường và sẵn sàng thuyết trình.
+- [ ] Bổ sung kết quả kiểm thử còn thiếu và đối chiếu từng ảnh minh chứng.
+- [ ] Chạy automated tests, build debug và lint trên phiên bản cuối.
+- [ ] Xóa `build/`, `.gradle/`, `.kotlin/`, `local.properties`, APK/AAB, log và file tạm trước khi đóng gói.
+- [ ] Kiểm tra không có `.env`, password, token, API secret, private key hoặc keystore trong Git/gói nộp.
+- [ ] Kiểm tra GitHub đã có đầy đủ commit của từng thành viên và branch chính ở trạng thái mới nhất.
+- [ ] Nén toàn bộ source theo đúng tên `MOB402-Nhom10-Android_08.7z`.
+- [ ] Nộp source, DOCX, PPTX và link GitHub trước khi Course đóng.
